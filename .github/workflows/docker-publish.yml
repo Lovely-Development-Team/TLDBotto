@@ -16,7 +16,7 @@ on:
 
 env:
   # TODO: Change variable to your image's name.
-  IMAGE_NAME: baby-botto
+  IMAGE_NAME: tld-botto
 
 jobs:
   # Run tests.
@@ -45,14 +45,14 @@ jobs:
             docker-compose --file docker-compose.test.yml build
             docker-compose --file docker-compose.test.yml run sut
           else
-            docker build . -t baby-botto --cache-from=baby-botto-cache
+            docker build . -t tld-botto --cache-from=tld-botto-cache
           fi
 
       - name: Save cache of Docker image
         run: >
-          docker tag baby-botto baby-botto-cache &&
+          docker tag tld-botto tld-botto-cache &&
           mkdir -p /tmp/docker-save &&
-          docker save baby-botto-cache -o /tmp/docker-save/snapshot.tar &&
+          docker save tld-botto-cache -o /tmp/docker-save/snapshot.tar &&
           ls -lh /tmp/docker-save || true
         if: always() && steps.cache-docker.outputs.cache-hit != 'true'
 
@@ -85,7 +85,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Build image
-        run: docker build . --file Dockerfile --tag $IMAGE_NAME --cache-from=baby-botto-cache
+        run: docker build . --file Dockerfile --tag $IMAGE_NAME --cache-from=tld-botto-cache
 
       - name: Log into registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
