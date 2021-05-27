@@ -2,8 +2,7 @@ import os
 import json
 import logging.config
 
-from MottoBotto import MottoBotto
-from motto_storage import AirtableMottoStorage
+from tld_botto import TLDBotto
 from config import parse
 
 # Configure logging
@@ -12,7 +11,7 @@ logging.getLogger("discord").setLevel(logging.CRITICAL)
 logging.getLogger("discord.gateway").setLevel(logging.INFO)
 logging.getLogger("asyncio").setLevel(logging.CRITICAL)
 logging.getLogger("urllib").setLevel(logging.CRITICAL)
-log = logging.getLogger("MottoBotto")
+log = logging.getLogger("TLDBotto")
 
 try:
     config_path = os.getenv("MOTTOBOTTO_CONFIG", "config.json")
@@ -24,11 +23,5 @@ except (IOError, OSError, ValueError) as err:
 
 log.info(f"Triggers: {config['triggers']}")
 
-storage = AirtableMottoStorage(
-    config["authentication"]["airtable_base"],
-    config["authentication"]["airtable_key"],
-    config["id"],
-)
-
-client = MottoBotto(config, storage)
+client = TLDBotto(config)
 client.run(config["authentication"]["discord"])

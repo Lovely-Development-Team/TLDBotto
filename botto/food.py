@@ -5,7 +5,7 @@ from enum import Enum
 
 from emoji import UNICODE_EMOJI
 
-log = logging.getLogger("MottoBotto").getChild("food")
+log = logging.getLogger("TLDBotto").getChild("food")
 log.setLevel(logging.INFO)
 
 default_config = {

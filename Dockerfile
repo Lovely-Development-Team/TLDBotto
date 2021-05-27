@@ -1,5 +1,5 @@
 FROM python:3.9-alpine
-LABEL org.opencontainers.image.source=https://github.com/Lovely-Development-Team/MottoBotto
+LABEL org.opencontainers.image.source=https://github.com/Lovely-Development-Team/TLDBotto
 
 COPY . .
 
