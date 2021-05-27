@@ -139,7 +139,6 @@ class TLDBotto(discord.Client):
                 return
 
         await self.process_suggestion(message)
-        await self.remove_unapproved_messages()
 
     def clean_trigger_message(self, trigger, message) -> str:
         return trigger.sub("", message).strip().strip("'\"”“")
