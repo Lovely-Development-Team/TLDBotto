@@ -65,13 +65,17 @@ def parse(config):
         "special_reactions": {},
         "triggers": {
             "meal_time": [],
+            "timezones": [],
+            "job_schedule": []
         },
         "timezones": [],
         "meals": {
             "auto_reminder_hours": [
                 "8",
                 "13",
-                "18"
+                "18",
+                "20",
+                "1"
             ],
             "guilds": [],
             "intro_text": ["Reminder!"],
@@ -110,7 +114,7 @@ def parse(config):
     if token := os.getenv("TLDBOTTO_AIRTABLE_BASE"):
         defaults["authentication"]["airtable_base"] = token
 
-    for idx, zone in enumerate(defaults["meals"]["timezones"]):
+    for idx, zone in enumerate(defaults["timezones"]):
         defaults["timezones"][idx] = pytz.timezone(zone)
 
     for key, detail in defaults["meals"]["times"].items():
