@@ -17,11 +17,44 @@
         "fishing": "❌"
     },
     "triggers": {
-        "new_motto": [
-            "!motto$",
-            "Accurate[.,!] New motto\\?"
+        "meal_time": [
+            "!meal(?:time)?$"
+        ],
+        "timezones": [
+            "!times"
+        ],
+        "job_schedule": [
+            "!schedule"
         ]
     },
+    "timezones": ["Europe/London"],
+    "meals": {
+        "auto_reminder_hours": [
+                "8",
+                "13",
+                "18",
+                "20",
+                "1"
+            ],
+        "guilds": [
+            {
+                "id": ,
+                "channel":
+            }
+        ],
+        "intro_text": [
+            "Reminder!"
+        ],
+        "times": {
+            "breakfast": {
+                "start":  "6:00:00Z",
+                "end":  "10:00:00Z",
+                "text": [
+                    "have you had breakfast?",
+                ]
+            },
+        }
+    }
     "should_reply": false,
     "delete_unapproved_after_hours": 24
 }

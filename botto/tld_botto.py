@@ -1,7 +1,6 @@
 import logging
 import random
 import re
-import time
 from datetime import datetime
 from typing import Optional, Generator
 
@@ -46,7 +45,7 @@ class TLDBotto(discord.Client):
 
         reminder_hours = ",".join(config["meals"]["auto_reminder_hours"])
         scheduler.add_job(
-            self.send_meal_reminder, trigger="cron", hour=reminder_hours, coalesce=True
+            self.send_meal_reminder, name="Meal Reminder", trigger="cron", hour=reminder_hours, coalesce=True
         )
 
         self.regexes: Optional[SuggestionRegexes] = None
@@ -202,7 +201,11 @@ class TLDBotto(discord.Client):
 
     @property
     def trigger_funcs(self):
-        return {"meal_time": self.send_meal_reminder}
+        return {
+            "meal_time": self.send_meal_reminder,
+            "timezones": self.send_local_times,
+            "job_schedule": self.send_schedule,
+        }
 
     async def process_suggestion(self, message: Message):
         trigger = self.check_triggers(message)
@@ -247,6 +250,11 @@ class TLDBotto(discord.Client):
             f"Received direct message (ID: {message.id}) from {message.author}: {message.content}"
         )
 
+        trigger = self.check_triggers(message)
+        if trigger_func := self.trigger_funcs.get(trigger):
+            await trigger_func(message)
+            return
+
         message_content = message.content.lower().strip()
 
         if message_content in ("!help", "help", "help!", "halp", "halp!", "!halp"):
@@ -260,14 +268,11 @@ class TLDBotto(discord.Client):
 Reply to a great motto in the supported channels with {trigger} to tell me about it! You can nominate a section of a message with \"{trigger} <excerpt>\". (Note: you can't nominate yourself.)
 
 You can DM me the following commands:
-`!random`: Get a random motto.
-`!leaderboard`: Display the top motto authors.
-`!link`: Get a link to the leaderboard.
+`!schedule`: Show the current schedule of reminders
 `!emoji <emoji>`: Set your emoji on the leaderboard. A response of {self.config["reactions"]["invalid_emoji"]} means the emoji you requested is not valid.
 `!emoji`: Clear your emoji from the leaderboard.
 `!nick on`: Use your server-specific nickname on the leaderboard instead of your Discord username. Nickname changes will auto-update the next time you approve a motto.
 `!nick off`: Use your Discord username on the leaderboard instead of your server-specific nickname.
-`!delete`: Remove all your data from MottoBotto. Confirmation is required.
 """.strip()
 
             help_channel = self.config["support_channel"]
@@ -290,6 +295,7 @@ You can DM me the following commands:
             return
 
         if message_content == "!version":
+            await message.channel.trigger_typing()
             git_version = (
                 subprocess.check_output(["git", "describe", "--tags"])
                 .decode("utf-8")
@@ -328,13 +334,32 @@ You can DM me the following commands:
         return f"{intro_text}\n{reminder_text}"
 
     async def send_meal_reminder(self, reply_to: Optional[Message] = None):
-        reminder_text = self.get_meal_reminder_text()
-        if reply_to:
-            await reply_to.reply(reminder_text)
-        else:
-            channels_to_message: list[discord.TextChannel] = [
-                self.get_channel(guild["channel"])
-                for guild in self.config["meals"]["guilds"]
+        async with reply_to.channel.typing():
+            reminder_text = self.get_meal_reminder_text()
+            if reply_to:
+                await reply_to.reply(reminder_text)
+            else:
+                channels_to_message: list[discord.TextChannel] = [
+                    self.get_channel(guild["channel"])
+                    for guild in self.config["meals"]["guilds"]
+                ]
+                for channel in channels_to_message:
+                    await channel.send(reminder_text)
+
+    async def send_local_times(self, reply_to: Message):
+        async with reply_to.channel.typing():
+            local_times_string = "\n".join(
+                [
+                    local_time.strftime("%Z (%z): %a %H:%M:%S")
+                    for local_time in self.local_times
+                ]
+            )
+            await reply_to.reply(local_times_string)
+
+    async def send_schedule(self, reply_to: Message):
+        async with reply_to.channel.typing():
+            job_descs = [
+                f"- `{job.name}` next running at {job.next_run_time.strftime('%a %H:%M:%S')}"
+                for job in self.scheduler.get_jobs()
             ]
-            for channel in channels_to_message:
-                await channel.send(reminder_text)
+            await reply_to.reply("\n".join(job_descs))
