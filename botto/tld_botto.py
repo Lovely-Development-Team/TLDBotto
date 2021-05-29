@@ -1,10 +1,14 @@
 import logging
+import random
 import re
-from typing import Optional
+import time
+from datetime import datetime
+from typing import Optional, Generator
 
 import subprocess
 
 import discord
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from discord import Message, Guild
 
 import reactions
@@ -13,7 +17,6 @@ from message_checks import is_dm
 
 log = logging.getLogger("TLDBotto")
 log.setLevel(logging.DEBUG)
-
 
 CHANNEL_REGEX = re.compile(r"<#(\d+)>")
 NUMBERS = [
@@ -32,13 +35,18 @@ VOTE_EMOJI = ["0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", 
 
 
 class TLDBotto(discord.Client):
-    def __init__(self, config: dict):
+    def __init__(self, config: dict, scheduler: AsyncIOScheduler):
         self.config = config
-
+        self.scheduler = scheduler
         log.info(
             "Replies are enabled"
             if self.config["should_reply"]
             else "Replies are disabled"
+        )
+
+        reminder_hours = ",".join(config["meals"]["auto_reminder_hours"])
+        scheduler.add_job(
+            self.send_meal_reminder, trigger="cron", hour=reminder_hours, coalesce=True
         )
 
         self.regexes: Optional[SuggestionRegexes] = None
@@ -52,6 +60,7 @@ class TLDBotto(discord.Client):
 
     async def on_ready(self):
         log.info("We have logged in as {0.user}".format(self))
+
         if not self.regexes:
             self.regexes = compile_regexes(self.user.id, self.config)
 
@@ -61,6 +70,20 @@ class TLDBotto(discord.Client):
                 name=self.config["watching_status"],
             )
         )
+
+        self.scheduler.start()
+
+        meal_reminder_channels: Generator[discord.TextChannel] = (
+            self.get_channel(guild["channel"])
+            for guild in self.config["meals"]["guilds"]
+        )
+        reminder_log_text = ", ".join(
+            [
+                f"{channel.guild.name} in #{channel.name}"
+                for channel in meal_reminder_channels
+            ]
+        )
+        log.info(f"Meal reminders for: {reminder_log_text}")
 
     async def on_disconnect(self):
         log.warning("Bot disconnected")
@@ -114,7 +137,9 @@ class TLDBotto(discord.Client):
             if len(reacted_users) == 9:
                 await message.add_reaction("🏁")
             else:
-                log.info(f"Waiting for another {9 - len(reacted_users)} people to vote.")
+                log.info(
+                    f"Waiting for another {9 - len(reacted_users)} people to vote."
+                )
 
     async def on_message(self, message: Message):
 
@@ -160,16 +185,35 @@ class TLDBotto(discord.Client):
 
     async def is_repeat_message(self, message: Message, check_id=True) -> bool:
         matching_mottos = await self.storage.get_matching_mottos(
-            self.clean_message(message.content, message.guild), message_id=message.id if check_id else None
+            self.clean_message(message.content, message.guild),
+            message_id=message.id if check_id else None,
         )
         return bool(matching_mottos)
 
+    @property
+    def triggers(self):
+        return self.config["triggers"]
+
+    def check_triggers(self, message: Message):
+        for name, triggers in self.triggers.items():
+            for t in triggers:
+                if t.match(message.content):
+                    return name
+
+    @property
+    def trigger_funcs(self):
+        return {"meal_time": self.send_meal_reminder}
+
     async def process_suggestion(self, message: Message):
+        trigger = self.check_triggers(message)
+
+        if trigger_func := self.trigger_funcs.get(trigger):
+            await trigger_func(message)
 
         if self.regexes.off_topic.search(message.content):
             await reactions.off_topic(self, message)
         if self.regexes.apologising.search(
-                message.content
+            message.content
         ) and not self.regexes.sorry.search(message.content):
             await reactions.rule_1(self, message)
         if self.regexes.party.search(message.content):
@@ -228,7 +272,8 @@ You can DM me the following commands:
 
             help_channel = self.config["support_channel"]
             users = ", ".join(
-                f"<@{user.discord_id}>" for user in await self.storage.get_support_users()
+                f"<@{user.discord_id}>"
+                for user in await self.storage.get_support_users()
             )
 
             if help_channel or users:
@@ -257,3 +302,39 @@ You can DM me the following commands:
             return
 
         await reactions.unknown_dm(self, message)
+
+    @property
+    def local_times(self) -> list[datetime]:
+        time_now = datetime.utcnow()
+        return [zone.fromutc(time_now) for zone in self.config["timezones"]]
+
+    def get_meal_reminder_text(self):
+        localised_times = self.local_times
+        meals = {}
+        for local_timezone in localised_times:
+            for name, meal in self.config["meals"]["times"].items():
+                if meal["start"] < local_timezone.time() < meal["end"]:
+                    meal_text = random.choice(meal.get("text", name))
+                    zones_for_meal = meals.get(name, ([], meal_text))
+                    zones_for_meal[0].append(local_timezone.tzname())
+                    meals.update({name: zones_for_meal})
+
+        intro_text = random.choice(self.config["meals"]["intro_text"])
+        reminder_list = [
+            " & ".join(meal_details[0]) + f", {meal_details[1]}"
+            for meal_details in meals.values()
+        ]
+        reminder_text = "\n".join(reminder_list)
+        return f"{intro_text}\n{reminder_text}"
+
+    async def send_meal_reminder(self, reply_to: Optional[Message] = None):
+        reminder_text = self.get_meal_reminder_text()
+        if reply_to:
+            await reply_to.reply(reminder_text)
+        else:
+            channels_to_message: list[discord.TextChannel] = [
+                self.get_channel(guild["channel"])
+                for guild in self.config["meals"]["guilds"]
+            ]
+            for channel in channels_to_message:
+                await channel.send(reminder_text)

@@ -1,5 +1,8 @@
 import re
 import os
+from datetime import datetime
+
+import pytz as pytz
 
 import food
 
@@ -61,7 +64,18 @@ def parse(config):
         "food": food.default_config,
         "special_reactions": {},
         "triggers": {
-            "new_motto": [],
+            "meal_time": [],
+        },
+        "timezones": [],
+        "meals": {
+            "auto_reminder_hours": [
+                "8",
+                "13",
+                "18"
+            ],
+            "guilds": [],
+            "intro_text": ["Reminder!"],
+            "times": {}
         },
         "should_reply": True,
         "approval_reaction": "mottoapproval",
@@ -79,6 +93,12 @@ def parse(config):
         else:
             defaults[key] = config.get(key, defaults[key])
 
+    # Compile trigger regexes
+    for key, triggers in defaults["triggers"].items():
+        defaults["triggers"][key] = [
+            re.compile(f"^{t}", re.IGNORECASE) for t in triggers
+        ]
+
     # Environment variables override config files
 
     if token := os.getenv("TLDBOTTO_DISCORD_TOKEN"):
@@ -89,5 +109,14 @@ def parse(config):
 
     if token := os.getenv("TLDBOTTO_AIRTABLE_BASE"):
         defaults["authentication"]["airtable_base"] = token
+
+    for idx, zone in enumerate(defaults["meals"]["timezones"]):
+        defaults["timezones"][idx] = pytz.timezone(zone)
+
+    for key, detail in defaults["meals"]["times"].items():
+        start_time = defaults["meals"]["times"][key]["start"]
+        end_time = defaults["meals"]["times"][key]["end"]
+        defaults["meals"]["times"][key]["start"] = datetime.strptime(start_time, "%H:%M:%SZ").time()
+        defaults["meals"]["times"][key]["end"] = datetime.strptime(end_time, "%H:%M:%SZ").time()
 
     return defaults
