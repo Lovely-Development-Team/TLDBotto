@@ -1,7 +1,7 @@
 import logging
 import random
 import re
-from datetime import datetime
+import datetime
 from typing import Optional, Generator
 
 import subprocess
@@ -82,6 +82,8 @@ class TLDBotto(discord.Client):
                 for channel in meal_reminder_channels
             ]
         )
+        meal_count = len(self.config["meals"]["times"])
+        log.info(f"{meal_count} meal times configured")
         log.info(f"Meal reminders for: {reminder_log_text}")
 
     async def on_disconnect(self):
@@ -205,6 +207,7 @@ class TLDBotto(discord.Client):
             "meal_time": self.send_meal_reminder,
             "timezones": self.send_local_times,
             "job_schedule": self.send_schedule,
+            "yell_majd": self.yell_at_majd
         }
 
     async def process_suggestion(self, message: Message):
@@ -311,7 +314,7 @@ You can DM me the following commands:
 
     @property
     def local_times(self) -> list[datetime]:
-        time_now = datetime.utcnow()
+        time_now = datetime.datetime.utcnow()
         return [zone.fromutc(time_now) for zone in self.config["timezones"]]
 
     def get_meal_reminder_text(self):
@@ -334,16 +337,17 @@ You can DM me the following commands:
         return f"{intro_text}\n{reminder_text}"
 
     async def send_meal_reminder(self, reply_to: Optional[Message] = None):
-        async with reply_to.channel.typing():
-            reminder_text = self.get_meal_reminder_text()
-            if reply_to:
+        reminder_text = self.get_meal_reminder_text()
+        if reply_to:
+            async with reply_to.channel.trigger_typing():
                 await reply_to.reply(reminder_text)
-            else:
-                channels_to_message: list[discord.TextChannel] = [
-                    self.get_channel(guild["channel"])
-                    for guild in self.config["meals"]["guilds"]
-                ]
-                for channel in channels_to_message:
+        else:
+            channels_to_message: list[discord.TextChannel] = [
+                self.get_channel(guild["channel"])
+                for guild in self.config["meals"]["guilds"]
+            ]
+            for channel in channels_to_message:
+                async with channel.typing():
                     await channel.send(reminder_text)
 
     async def send_local_times(self, reply_to: Message):
@@ -363,3 +367,8 @@ You can DM me the following commands:
                 for job in self.scheduler.get_jobs()
             ]
             await reply_to.reply("\n".join(job_descs))
+
+    async def yell_at_majd(self, message: Message):
+        channel: discord.TextChannel = message.channel
+        async with channel.typing():
+            await channel.send("MAJD, YOU SHOULD BE SLEEPING!")
