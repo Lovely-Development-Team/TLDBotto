@@ -65,9 +65,18 @@ def parse(config):
         "food": food.default_config,
         "special_reactions": {},
         "triggers": {
-            "meal_time": [],
-            "timezones": [],
-            "job_schedule": []
+            "meal_time": [
+                "!meal(?:time)?s?$"
+            ],
+            "timezones": [
+                "!times?"
+            ],
+            "job_schedule": [
+                "!schedule"
+            ],
+            "yell_majd": [
+                "!bottoyellatmajd"
+            ]
         },
         "timezones": [],
         "meals": {
