@@ -33,8 +33,11 @@ jobs:
           PASSPHRASE: ${{ secrets.DEPLOY_SSHKEY_PASSPHRASE }}
           KEY: ${{ secrets.DEPLOY_SSHKEY }}
           SCRIPT: > 
-            docker run ghcr.io/lovely-development-team/tld-botto:main \
+            docker run \
             -e TLDBOTTO_DISCORD_TOKEN='${{ secrets.TIMEZONES }}' \ 
             -e TLDBOTTO_TIMEZONES='${{ secrets.TIMEZONES }}' \ 
             -e TLDBOTTO_MEAL_CONFIG='${{ secrets.MEAL_CONFIG }}' \ 
-            -e TLDBOTTO_ID='Capys-hosted TLDBotto'
+            -e TLDBOTTO_ID='Capys-hosted TLDBotto' \
+            --name tld_botto \
+            ghcr.io/lovely-development-team/tld-botto:main \
+            
