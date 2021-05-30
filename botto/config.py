@@ -65,31 +65,17 @@ def parse(config):
         "food": food.default_config,
         "special_reactions": {},
         "triggers": {
-            "meal_time": [
-                "!meal(?:time)?s?$"
-            ],
-            "timezones": [
-                "!times?"
-            ],
-            "job_schedule": [
-                "!schedule"
-            ],
-            "yell_majd": [
-                "!bottoyellatmajd"
-            ]
+            "meal_time": ["!meal(?:time)?s?$"],
+            "timezones": ["!times?"],
+            "job_schedule": ["!schedule"],
+            "yell_majd": ["!bottoyellatmajd"],
         },
         "timezones": [],
         "meals": {
-            "auto_reminder_hours": [
-                "8",
-                "13",
-                "18",
-                "20",
-                "1"
-            ],
+            "auto_reminder_hours": ["8", "13", "18", "20", "1"],
             "guilds": [],
             "intro_text": ["Reminder!"],
-            "times": {}
+            "times": {},
         },
         "should_reply": True,
         "approval_reaction": "mottoapproval",
@@ -136,7 +122,11 @@ def parse(config):
     for key, detail in defaults["meals"]["times"].items():
         start_time = defaults["meals"]["times"][key]["start"]
         end_time = defaults["meals"]["times"][key]["end"]
-        defaults["meals"]["times"][key]["start"] = datetime.strptime(start_time, "%H:%M:%SZ").time()
-        defaults["meals"]["times"][key]["end"] = datetime.strptime(end_time, "%H:%M:%SZ").time()
+        defaults["meals"]["times"][key]["start"] = datetime.strptime(
+            start_time, "%H:%M:%SZ"
+        ).time()
+        defaults["meals"]["times"][key]["end"] = datetime.strptime(
+            end_time, "%H:%M:%SZ"
+        ).time()
 
     return defaults
