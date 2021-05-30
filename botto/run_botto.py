@@ -1,6 +1,7 @@
 import os
 import json
 import logging.config
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from tld_botto import TLDBotto
 from config import parse
@@ -23,5 +24,7 @@ except (IOError, OSError, ValueError) as err:
 
 log.info(f"Triggers: {config['triggers']}")
 
-client = TLDBotto(config)
+scheduler = AsyncIOScheduler()
+
+client = TLDBotto(config, scheduler)
 client.run(config["authentication"]["discord"])
