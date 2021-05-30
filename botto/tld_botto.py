@@ -3,6 +3,7 @@ import random
 import re
 import datetime
 from typing import Optional, Generator
+from functools import partial
 
 import subprocess
 
@@ -211,7 +212,15 @@ class TLDBotto(discord.Client):
             "meal_time": self.send_meal_reminder,
             "timezones": self.send_local_times,
             "job_schedule": self.send_schedule,
-            "yell_majd": self.yell_at_majd,
+            "yell_majd": partial(self.yell_at_someone, person="majd"),
+            "yell_david": partial(self.yell_at_someone, person="david"),
+            "yell_ben": partial(self.yell_at_someone, person="ben"),
+            "yell_rose": partial(self.yell_at_someone, person="rose"),
+            "yell_izzy": partial(self.yell_at_someone, person="izzy"),
+            "yell_grey": partial(self.yell_at_someone, person="grey"),
+            "yell_dom": partial(self.yell_at_someone, person="dom"),
+            "yell_madi": partial(self.yell_at_someone, person="madi"),
+            "yell_kirk": partial(self.yell_at_someone, person="kirk"),
         }
 
     async def process_suggestion(self, message: Message):
@@ -372,7 +381,7 @@ You can DM me the following commands:
             ]
             await reply_to.reply("\n".join(job_descs))
 
-    async def yell_at_majd(self, message: Message):
+    async def yell_at_someone(self, message: Message, person: str):
         channel: discord.TextChannel = message.channel
         async with channel.typing():
-            await channel.send("MAJD, YOU SHOULD BE SLEEPING!")
+            await channel.send(f"{person.upper()}, YOU SHOULD BE SLEEPING")
