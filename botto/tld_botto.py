@@ -45,7 +45,11 @@ class TLDBotto(discord.Client):
 
         reminder_hours = ",".join(config["meals"]["auto_reminder_hours"])
         scheduler.add_job(
-            self.send_meal_reminder, name="Meal Reminder", trigger="cron", hour=reminder_hours, coalesce=True
+            self.send_meal_reminder,
+            name="Meal Reminder",
+            trigger="cron",
+            hour=reminder_hours,
+            coalesce=True,
         )
 
         self.regexes: Optional[SuggestionRegexes] = None
@@ -207,7 +211,7 @@ class TLDBotto(discord.Client):
             "meal_time": self.send_meal_reminder,
             "timezones": self.send_local_times,
             "job_schedule": self.send_schedule,
-            "yell_majd": self.yell_at_majd
+            "yell_majd": self.yell_at_majd,
         }
 
     async def process_suggestion(self, message: Message):
