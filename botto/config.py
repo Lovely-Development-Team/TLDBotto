@@ -1,3 +1,4 @@
+import json
 import re
 import os
 from datetime import datetime
@@ -113,6 +114,12 @@ def parse(config):
 
     if token := os.getenv("TLDBOTTO_AIRTABLE_BASE"):
         defaults["authentication"]["airtable_base"] = token
+
+    if timezones := os.getenv("TLDBOTTO_TIMEZONES"):
+        defaults["timezones"] = json.loads(timezones)
+
+    if meals := os.getenv("TLDBOTTO_MEAL_CONFIG"):
+        defaults["meals"] = json.loads(meals)
 
     for idx, zone in enumerate(defaults["timezones"]):
         defaults["timezones"][idx] = pytz.timezone(zone)
