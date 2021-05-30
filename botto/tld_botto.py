@@ -1,10 +1,13 @@
 import logging
+import random
 import re
-from typing import Optional
+import datetime
+from typing import Optional, Generator
 
 import subprocess
 
 import discord
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from discord import Message, Guild
 
 import reactions
@@ -13,7 +16,6 @@ from message_checks import is_dm
 
 log = logging.getLogger("TLDBotto")
 log.setLevel(logging.DEBUG)
-
 
 CHANNEL_REGEX = re.compile(r"<#(\d+)>")
 NUMBERS = [
@@ -32,13 +34,22 @@ VOTE_EMOJI = ["0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", 
 
 
 class TLDBotto(discord.Client):
-    def __init__(self, config: dict):
+    def __init__(self, config: dict, scheduler: AsyncIOScheduler):
         self.config = config
-
+        self.scheduler = scheduler
         log.info(
             "Replies are enabled"
             if self.config["should_reply"]
             else "Replies are disabled"
+        )
+
+        reminder_hours = ",".join(config["meals"]["auto_reminder_hours"])
+        scheduler.add_job(
+            self.send_meal_reminder,
+            name="Meal Reminder",
+            trigger="cron",
+            hour=reminder_hours,
+            coalesce=True,
         )
 
         self.regexes: Optional[SuggestionRegexes] = None
@@ -52,6 +63,7 @@ class TLDBotto(discord.Client):
 
     async def on_ready(self):
         log.info("We have logged in as {0.user}".format(self))
+
         if not self.regexes:
             self.regexes = compile_regexes(self.user.id, self.config)
 
@@ -61,6 +73,22 @@ class TLDBotto(discord.Client):
                 name=self.config["watching_status"],
             )
         )
+
+        self.scheduler.start()
+
+        meal_reminder_channels: Generator[discord.TextChannel] = (
+            self.get_channel(guild["channel"])
+            for guild in self.config["meals"]["guilds"]
+        )
+        reminder_log_text = ", ".join(
+            [
+                f"{channel.guild.name} in #{channel.name}"
+                for channel in meal_reminder_channels
+            ]
+        )
+        meal_count = len(self.config["meals"]["times"])
+        log.info(f"{meal_count} meal times configured")
+        log.info(f"Meal reminders for: {reminder_log_text}")
 
     async def on_disconnect(self):
         log.warning("Bot disconnected")
@@ -114,7 +142,9 @@ class TLDBotto(discord.Client):
             if len(reacted_users) == 9:
                 await message.add_reaction("🏁")
             else:
-                log.info(f"Waiting for another {9 - len(reacted_users)} people to vote.")
+                log.info(
+                    f"Waiting for another {9 - len(reacted_users)} people to vote."
+                )
 
     async def on_message(self, message: Message):
 
@@ -160,16 +190,48 @@ class TLDBotto(discord.Client):
 
     async def is_repeat_message(self, message: Message, check_id=True) -> bool:
         matching_mottos = await self.storage.get_matching_mottos(
-            self.clean_message(message.content, message.guild), message_id=message.id if check_id else None
+            self.clean_message(message.content, message.guild),
+            message_id=message.id if check_id else None,
         )
         return bool(matching_mottos)
 
+    @property
+    def triggers(self):
+        return self.config["triggers"]
+
+    def check_triggers(self, message: Message) -> tuple[str, re.Match]:
+        for name, triggers in self.triggers.items():
+            for t in triggers:
+                if matched := t.match(message.content):
+                    return name, matched
+
+    @property
+    def trigger_funcs(self):
+        return {
+            "meal_time": self.send_meal_reminder,
+            "timezones": self.send_local_times,
+            "job_schedule": self.send_schedule,
+            "yell": self.yell_at_someone,
+        }
+
+    async def handle_trigger(
+        self, message: Message, trigger_details: tuple[str, re.Match]
+    ):
+        if trigger_func := self.trigger_funcs.get(trigger_details[0]):
+            if groups := trigger_details[1].groupdict():
+                await trigger_func(message, **groups)
+            else:
+                await trigger_func(message)
+            return
+
     async def process_suggestion(self, message: Message):
+        if trigger_result := self.check_triggers(message):
+            await self.handle_trigger(message, trigger_result)
 
         if self.regexes.off_topic.search(message.content):
             await reactions.off_topic(self, message)
         if self.regexes.apologising.search(
-                message.content
+            message.content
         ) and not self.regexes.sorry.search(message.content):
             await reactions.rule_1(self, message)
         if self.regexes.party.search(message.content):
@@ -203,6 +265,9 @@ class TLDBotto(discord.Client):
             f"Received direct message (ID: {message.id}) from {message.author}: {message.content}"
         )
 
+        if trigger_result := self.check_triggers(message):
+            await self.handle_trigger(message, trigger_result)
+
         message_content = message.content.lower().strip()
 
         if message_content in ("!help", "help", "help!", "halp", "halp!", "!halp"):
@@ -216,19 +281,17 @@ class TLDBotto(discord.Client):
 Reply to a great motto in the supported channels with {trigger} to tell me about it! You can nominate a section of a message with \"{trigger} <excerpt>\". (Note: you can't nominate yourself.)
 
 You can DM me the following commands:
-`!random`: Get a random motto.
-`!leaderboard`: Display the top motto authors.
-`!link`: Get a link to the leaderboard.
+`!schedule`: Show the current schedule of reminders
 `!emoji <emoji>`: Set your emoji on the leaderboard. A response of {self.config["reactions"]["invalid_emoji"]} means the emoji you requested is not valid.
 `!emoji`: Clear your emoji from the leaderboard.
 `!nick on`: Use your server-specific nickname on the leaderboard instead of your Discord username. Nickname changes will auto-update the next time you approve a motto.
 `!nick off`: Use your Discord username on the leaderboard instead of your server-specific nickname.
-`!delete`: Remove all your data from MottoBotto. Confirmation is required.
 """.strip()
 
             help_channel = self.config["support_channel"]
             users = ", ".join(
-                f"<@{user.discord_id}>" for user in await self.storage.get_support_users()
+                f"<@{user.discord_id}>"
+                for user in await self.storage.get_support_users()
             )
 
             if help_channel or users:
@@ -245,6 +308,7 @@ You can DM me the following commands:
             return
 
         if message_content == "!version":
+            await message.channel.trigger_typing()
             git_version = (
                 subprocess.check_output(["git", "describe", "--tags"])
                 .decode("utf-8")
@@ -257,3 +321,72 @@ You can DM me the following commands:
             return
 
         await reactions.unknown_dm(self, message)
+
+    @property
+    def local_times(self) -> list[datetime]:
+        time_now = datetime.datetime.utcnow()
+        return [zone.fromutc(time_now) for zone in self.config["timezones"]]
+
+    def get_meal_reminder_text(self):
+        localised_times = self.local_times
+        meals = {}
+        for local_timezone in localised_times:
+            for name, meal in self.config["meals"]["times"].items():
+                if meal["start"] < local_timezone.time() < meal["end"]:
+                    meal_text = random.choice(meal.get("text", name))
+                    zones_for_meal = meals.get(name, ([], meal_text))
+                    zones_for_meal[0].append(local_timezone.tzname())
+                    meals.update({name: zones_for_meal})
+
+        intro_text = random.choice(self.config["meals"]["intro_text"])
+        reminder_list = [
+            " & ".join(meal_details[0]) + f", {meal_details[1]}"
+            for meal_details in meals.values()
+        ]
+        reminder_text = "\n".join(reminder_list)
+        return f"{intro_text}\n{reminder_text}"
+
+    async def send_meal_reminder(self, reply_to: Optional[Message] = None):
+        reminder_text = self.get_meal_reminder_text()
+        if reply_to:
+            async with reply_to.channel.typing():
+                await reply_to.reply(reminder_text)
+        else:
+            channels_to_message: list[discord.TextChannel] = [
+                self.get_channel(guild["channel"])
+                for guild in self.config["meals"]["guilds"]
+            ]
+            for channel in channels_to_message:
+                async with channel.typing():
+                    await channel.send(reminder_text)
+
+    async def send_local_times(self, reply_to: Message):
+        async with reply_to.channel.typing():
+            local_times_string = "\n".join(
+                [
+                    local_time.strftime("%Z (%z): %a %H:%M:%S")
+                    for local_time in self.local_times
+                ]
+            )
+            await reply_to.reply(local_times_string)
+
+    async def send_schedule(self, reply_to: Message):
+        async with reply_to.channel.typing():
+            job_descs = [
+                f"- `{job.name}` next running at {job.next_run_time.strftime('%a %H:%M:%S')}"
+                for job in self.scheduler.get_jobs()
+            ]
+            await reply_to.reply("\n".join(job_descs))
+
+    async def yell_at_someone(self, message: Message, **kwargs):
+        """
+        Args:
+            message: The message requesting yelling
+
+        Keyword args:
+            person (str): The person to yell at
+        """
+        channel: discord.TextChannel = message.channel
+        person = kwargs.get("person", "lovely person")
+        async with channel.typing():
+            await channel.send(f"{person.upper()}, YOU SHOULD BE SLEEPING")
