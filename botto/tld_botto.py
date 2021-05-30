@@ -3,7 +3,6 @@ import random
 import re
 import datetime
 from typing import Optional, Generator
-from functools import partial
 
 import subprocess
 
@@ -200,11 +199,11 @@ class TLDBotto(discord.Client):
     def triggers(self):
         return self.config["triggers"]
 
-    def check_triggers(self, message: Message):
+    def check_triggers(self, message: Message) -> tuple[str, re.Match]:
         for name, triggers in self.triggers.items():
             for t in triggers:
-                if t.match(message.content):
-                    return name
+                if matched := t.match(message.content):
+                    return name, matched
 
     @property
     def trigger_funcs(self):
@@ -212,22 +211,22 @@ class TLDBotto(discord.Client):
             "meal_time": self.send_meal_reminder,
             "timezones": self.send_local_times,
             "job_schedule": self.send_schedule,
-            "yell_majd": partial(self.yell_at_someone, person="majd"),
-            "yell_david": partial(self.yell_at_someone, person="david"),
-            "yell_ben": partial(self.yell_at_someone, person="ben"),
-            "yell_rose": partial(self.yell_at_someone, person="rose"),
-            "yell_izzy": partial(self.yell_at_someone, person="izzy"),
-            "yell_grey": partial(self.yell_at_someone, person="grey"),
-            "yell_dom": partial(self.yell_at_someone, person="dom"),
-            "yell_madi": partial(self.yell_at_someone, person="madi"),
-            "yell_kirk": partial(self.yell_at_someone, person="kirk"),
+            "yell": self.yell_at_someone,
         }
 
-    async def process_suggestion(self, message: Message):
-        trigger = self.check_triggers(message)
+    async def handle_trigger(
+        self, message: Message, trigger_details: tuple[str, re.Match]
+    ):
+        if trigger_func := self.trigger_funcs.get(trigger_details[0]):
+            if groups := trigger_details[1].groupdict():
+                await trigger_func(message, **groups)
+            else:
+                await trigger_func(message)
+            return
 
-        if trigger_func := self.trigger_funcs.get(trigger):
-            await trigger_func(message)
+    async def process_suggestion(self, message: Message):
+        if trigger_result := self.check_triggers(message):
+            await self.handle_trigger(message, trigger_result)
 
         if self.regexes.off_topic.search(message.content):
             await reactions.off_topic(self, message)
@@ -266,10 +265,8 @@ class TLDBotto(discord.Client):
             f"Received direct message (ID: {message.id}) from {message.author}: {message.content}"
         )
 
-        trigger = self.check_triggers(message)
-        if trigger_func := self.trigger_funcs.get(trigger):
-            await trigger_func(message)
-            return
+        if trigger_result := self.check_triggers(message):
+            await self.handle_trigger(message, trigger_result)
 
         message_content = message.content.lower().strip()
 
@@ -352,7 +349,7 @@ You can DM me the following commands:
     async def send_meal_reminder(self, reply_to: Optional[Message] = None):
         reminder_text = self.get_meal_reminder_text()
         if reply_to:
-            async with reply_to.channel.trigger_typing():
+            async with reply_to.channel.typing():
                 await reply_to.reply(reminder_text)
         else:
             channels_to_message: list[discord.TextChannel] = [
@@ -381,7 +378,15 @@ You can DM me the following commands:
             ]
             await reply_to.reply("\n".join(job_descs))
 
-    async def yell_at_someone(self, message: Message, person: str):
+    async def yell_at_someone(self, message: Message, **kwargs):
+        """
+        Args:
+            message: The message requesting yelling
+
+        Keyword args:
+            person (str): The person to yell at
+        """
         channel: discord.TextChannel = message.channel
+        person = kwargs.get("person", "lovely person")
         async with channel.typing():
             await channel.send(f"{person.upper()}, YOU SHOULD BE SLEEPING")
