@@ -110,11 +110,17 @@ def parse(config):
     if token := os.getenv("TLDBOTTO_AIRTABLE_BASE"):
         defaults["authentication"]["airtable_base"] = token
 
+    if channels := os.getenv("TLDBOTTO_CHANNELS"):
+        defaults["channels"] = channels
+
     if timezones := os.getenv("TLDBOTTO_TIMEZONES"):
         defaults["timezones"] = json.loads(timezones)
 
     if meals := os.getenv("TLDBOTTO_MEAL_CONFIG"):
         defaults["meals"] = json.loads(meals)
+
+    if id := os.getenv("TLDBOTTO_ID"):
+        defaults["id"] = id
 
     for idx, zone in enumerate(defaults["timezones"]):
         defaults["timezones"][idx] = pytz.timezone(zone)
