@@ -1,4 +1,5 @@
 import logging
+import os
 import random
 import re
 import datetime
@@ -309,11 +310,15 @@ You can DM me the following commands:
 
         if message_content == "!version":
             await message.channel.trigger_typing()
-            git_version = (
-                subprocess.check_output(["git", "describe", "--tags"])
-                .decode("utf-8")
-                .strip()
-            )
+            git_version = os.getenv("TLDBOTTO_VERSION")
+            try:
+                git_version = (
+                    subprocess.check_output(["git", "describe", "--tags"])
+                    .decode("utf-8")
+                    .strip()
+                )
+            except subprocess.CalledProcessError as error:
+                log.warning("Git command failed with code: {code}".format(code=error.returncode))
             response = f"Version: {git_version}"
             if bot_id := self.config["id"]:
                 response = f"{response} ({bot_id})"
