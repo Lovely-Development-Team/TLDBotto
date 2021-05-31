@@ -77,14 +77,10 @@ class TLDBotto(discord.Client):
 
         self.scheduler.start()
 
-        meal_reminder_channels: Generator[discord.TextChannel] = (
-            self.get_channel(guild["channel"])
-            for guild in self.config["meals"]["guilds"]
-        )
         reminder_log_text = ", ".join(
             [
                 f"{channel.guild.name} in #{channel.name}"
-                for channel in meal_reminder_channels
+                async for channel in self.get_meal_channels()
             ]
         )
         meal_count = len(self.config["meals"]["times"])
@@ -93,6 +89,16 @@ class TLDBotto(discord.Client):
 
     async def on_disconnect(self):
         log.warning("Bot disconnected")
+
+    async def get_or_fetch_channel(self, id: int) -> discord.TextChannel:
+        if channel := self.get_channel(id):
+            return channel
+        else:
+            return await self.fetch_channel(id)
+
+    async def get_meal_channels(self):
+        for guild in self.config["meals"]["guilds"]:
+            yield await self.get_or_fetch_channel(guild["channel"])
 
     async def add_reaction(
         self, message: Message, reaction_type: str, default: str = None
@@ -318,7 +324,9 @@ You can DM me the following commands:
                     .strip()
                 )
             except subprocess.CalledProcessError as error:
-                log.warning("Git command failed with code: {code}".format(code=error.returncode))
+                log.warning(
+                    "Git command failed with code: {code}".format(code=error.returncode)
+                )
             response = f"Version: {git_version}"
             if bot_id := self.config["id"]:
                 response = f"{response} ({bot_id})"
@@ -357,11 +365,7 @@ You can DM me the following commands:
             async with reply_to.channel.typing():
                 await reply_to.reply(reminder_text)
         else:
-            channels_to_message: list[discord.TextChannel] = [
-                self.get_channel(guild["channel"])
-                for guild in self.config["meals"]["guilds"]
-            ]
-            for channel in channels_to_message:
+            async for channel in self.get_meal_channels():
                 async with channel.typing():
                     await channel.send(reminder_text)
 
