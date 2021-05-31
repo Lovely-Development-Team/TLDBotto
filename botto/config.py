@@ -88,11 +88,12 @@ def parse(config):
         "watching_status": "for food",
     }
 
-    for key in defaults.keys():
-        if isinstance(defaults[key], dict):
-            defaults[key].update(config.get(key, {}))
-        else:
-            defaults[key] = config.get(key, defaults[key])
+    if isinstance(config, dict):
+        for key in defaults.keys():
+            if isinstance(defaults[key], dict):
+                defaults[key].update(config.get(key, {}))
+            else:
+                defaults[key] = config.get(key, defaults[key])
 
     # Compile trigger regexes
     for key, triggers in defaults["triggers"].items():
