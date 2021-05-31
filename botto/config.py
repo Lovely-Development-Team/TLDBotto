@@ -115,7 +115,7 @@ def parse(config):
         defaults["channels"] = channels
 
     if timezones := os.getenv("TLDBOTTO_TIMEZONES"):
-        defaults["timezones"] = json.loads(base64.b64decode(timezones))
+        defaults["timezones"] = json.loads(timezones)
 
     if meals := os.getenv("TLDBOTTO_MEAL_CONFIG"):
         defaults["meals"] = json.loads(base64.b64decode(meals))
