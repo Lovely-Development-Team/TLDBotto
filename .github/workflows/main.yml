@@ -24,7 +24,11 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
-    
+
+      - name: Set env
+        run: echo "RELEASE_VERSION=${git describe --tags}" >> $GITHUB_ENV
+        continue-on-error: true
+
       - name: Start MottoBotto
         uses: appleboy/ssh-action@v0.1.4
         env:
@@ -40,5 +44,6 @@ jobs:
             -e TLDBOTTO_TIMEZONES='${{ secrets.TIMEZONES }}'
             -e TLDBOTTO_MEAL_CONFIG='${{ secrets.MEAL_CONFIG }}'
             -e TLDBOTTO_ID='Capys-hosted TLDBotto'
+            -e TLDBOTTO_VERSION='${{ env.RELEASE_VERSION }}'
             --name tld_botto ghcr.io/lovely-development-team/tld-botto:main
             
