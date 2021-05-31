@@ -33,8 +33,8 @@ jobs:
           PASSPHRASE: ${{ secrets.DEPLOY_SSHKEY_PASSPHRASE }}
           KEY: ${{ secrets.DEPLOY_SSHKEY }}
           SCRIPT: >
-            docker stop tld_botto &&
-            docker rm tld_botto &&
+            docker stop tld_botto || true &&
+            docker rm tld_botto || true &&
             docker run -d -t
             -e TLDBOTTO_DISCORD_TOKEN='${{ secrets.TIMEZONES }}'
             -e TLDBOTTO_TIMEZONES='${{ secrets.TIMEZONES }}'
