@@ -129,7 +129,7 @@ jobs:
             docker stop tld_botto || true &&
             docker rm tld_botto || true &&
             docker run -d -t
-            -e TLDBOTTO_DISCORD_TOKEN='${{ secrets.TIMEZONES }}'
+            -e TLDBOTTO_DISCORD_TOKEN='${{ secrets.DISCORD_TOKEN }}'
             -e TLDBOTTO_TIMEZONES='${{ secrets.TIMEZONES }}'
             -e TLDBOTTO_MEAL_CONFIG='${{ secrets.MEAL_CONFIG }}'
             -e TLDBOTTO_ID='Capys-hosted TLDBotto'
