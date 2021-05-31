@@ -1,3 +1,4 @@
+import base64
 import json
 import re
 import os
@@ -114,10 +115,10 @@ def parse(config):
         defaults["channels"] = channels
 
     if timezones := os.getenv("TLDBOTTO_TIMEZONES"):
-        defaults["timezones"] = json.loads(timezones)
+        defaults["timezones"] = json.loads(base64.b64decode(timezones))
 
     if meals := os.getenv("TLDBOTTO_MEAL_CONFIG"):
-        defaults["meals"] = json.loads(meals)
+        defaults["meals"] = json.loads(base64.b64decode(meals))
 
     if id := os.getenv("TLDBOTTO_ID"):
         defaults["id"] = id
