@@ -327,6 +327,10 @@ You can DM me the following commands:
                 log.warning(
                     "Git command failed with code: {code}".format(code=error.returncode)
                 )
+            except FileNotFoundError:
+                log.warning(
+                    "Git command not found"
+                )
             response = f"Version: {git_version}"
             if bot_id := self.config["id"]:
                 response = f"{response} ({bot_id})"
