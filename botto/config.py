@@ -1,5 +1,7 @@
 import base64
+import binascii
 import json
+import logging
 import re
 import os
 from datetime import datetime
@@ -8,6 +10,8 @@ import pytz as pytz
 
 import food
 
+log = logging.getLogger("TLDBotto").getChild("config")
+log.setLevel(logging.DEBUG)
 
 def parse(config):
     defaults = {
@@ -119,7 +123,18 @@ def parse(config):
         defaults["timezones"] = json.loads(timezones)
 
     if meals := os.getenv("TLDBOTTO_MEAL_CONFIG"):
-        defaults["meals"] = json.loads(base64.b64decode(meals))
+        decoded = None
+        try:
+            decoded = base64.b64decode(meals)
+            defaults["meals"] = json.loads(decoded)
+        except binascii.Error:
+            log.error("Unable to decode base64 meals config", exc_info=True)
+            raise
+        except json.JSONDecodeError as error:
+            log.error(f"Unable to parse decoded meals config: {error}", exc_info=True)
+            if decoded:
+                log.debug(f"Decoded config file: {decoded}")
+            raise
 
     if id := os.getenv("TLDBOTTO_ID"):
         defaults["id"] = id
