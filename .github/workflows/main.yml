@@ -28,22 +28,22 @@ jobs:
       - name: Set env
         run: echo "RELEASE_VERSION=${git describe --tags}" >> $GITHUB_ENV
         continue-on-error: true
-
-      - name: Start MottoBotto
-        uses: appleboy/ssh-action@v0.1.4
-        env:
-          HOST: ${{ secrets.DEPLOY_HOST }}
-          USERNAME: ${{ secrets.DEPLOY_USERNAME }}
-          PASSPHRASE: ${{ secrets.DEPLOY_SSHKEY_PASSPHRASE }}
-          KEY: ${{ secrets.DEPLOY_SSHKEY }}
-          SCRIPT: >
-            docker stop tld_botto || true &&
-            docker rm tld_botto || true &&
-            docker run -d -t
-            -e TLDBOTTO_DISCORD_TOKEN='${{ secrets.TIMEZONES }}'
-            -e TLDBOTTO_TIMEZONES='${{ secrets.TIMEZONES }}'
-            -e TLDBOTTO_MEAL_CONFIG='${{ secrets.MEAL_CONFIG }}'
-            -e TLDBOTTO_ID='Capys-hosted TLDBotto'
-            -e TLDBOTTO_VERSION='${{ env.RELEASE_VERSION }}'
-            --name tld_botto ghcr.io/lovely-development-team/tld-botto:main
+#
+#      - name: Start MottoBotto
+#        uses: appleboy/ssh-action@v0.1.4
+#        env:
+#          HOST: ${{ secrets.DEPLOY_HOST }}
+#          USERNAME: ${{ secrets.DEPLOY_USERNAME }}
+#          PASSPHRASE: ${{ secrets.DEPLOY_SSHKEY_PASSPHRASE }}
+#          KEY: ${{ secrets.DEPLOY_SSHKEY }}
+#          SCRIPT: >
+#            docker stop tld_botto || true &&
+#            docker rm tld_botto || true &&
+#            docker run -d -t
+#            -e TLDBOTTO_DISCORD_TOKEN='${{ secrets.TIMEZONES }}'
+#            -e TLDBOTTO_TIMEZONES='${{ secrets.TIMEZONES }}'
+#            -e TLDBOTTO_MEAL_CONFIG='${{ secrets.MEAL_CONFIG }}'
+#            -e TLDBOTTO_ID='Capys-hosted TLDBotto'
+#            -e TLDBOTTO_VERSION='${{ env.RELEASE_VERSION }}'
+#            --name tld_botto ghcr.io/lovely-development-team/tld-botto:main
             
