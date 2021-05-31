@@ -34,6 +34,7 @@ jobs:
           KEY: ${{ secrets.DEPLOY_SSHKEY }}
           SCRIPT: >
             docker stop tld_botto &&
+            docker rm tld_botto &&
             docker run -d -t
             -e TLDBOTTO_DISCORD_TOKEN='${{ secrets.TIMEZONES }}'
             -e TLDBOTTO_TIMEZONES='${{ secrets.TIMEZONES }}'
