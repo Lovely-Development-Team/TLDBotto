@@ -125,7 +125,7 @@ jobs:
           PASSPHRASE: ${{ secrets.DEPLOY_SSHKEY_PASSPHRASE }}
           KEY: ${{ secrets.DEPLOY_SSHKEY }}
           SCRIPT: >
-            docker pull ghcr.io/lovely-development-team/tld-botto:main &&
+            docker pull ghcr.io/lovely-development-team/tld-botto:latest &&
             docker stop tld_botto || true &&
             docker rm tld_botto || true &&
             docker run -d -t
