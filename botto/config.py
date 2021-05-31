@@ -13,6 +13,23 @@ import food
 log = logging.getLogger("TLDBotto").getChild("config")
 log.setLevel(logging.DEBUG)
 
+
+def decode_base64_env(key: str):
+    if meals := os.getenv(key):
+        decoded = None
+        try:
+            decoded = base64.b64decode(meals)
+            return json.loads(decoded)
+        except binascii.Error:
+            log.error(f"Unable to decode base64 {key} config", exc_info=True)
+            raise
+        except json.JSONDecodeError as error:
+            log.error(f"Unable to parse decoded {key} config: {error}", exc_info=True)
+            if decoded:
+                log.debug(f"Decoded config file: {decoded}")
+            raise
+
+
 def parse(config):
     defaults = {
         "id": None,
@@ -119,22 +136,11 @@ def parse(config):
     if channels := os.getenv("TLDBOTTO_CHANNELS"):
         defaults["channels"] = channels
 
-    if timezones := os.getenv("TLDBOTTO_TIMEZONES"):
-        defaults["timezones"] = json.loads(timezones)
+    if timezones := decode_base64_env("TLDBOTTO_TIMEZONES"):
+        defaults["timezones"] = timezones
 
-    if meals := os.getenv("TLDBOTTO_MEAL_CONFIG"):
-        decoded = None
-        try:
-            decoded = base64.b64decode(meals)
-            defaults["meals"] = json.loads(decoded)
-        except binascii.Error:
-            log.error("Unable to decode base64 meals config", exc_info=True)
-            raise
-        except json.JSONDecodeError as error:
-            log.error(f"Unable to parse decoded meals config: {error}", exc_info=True)
-            if decoded:
-                log.debug(f"Decoded config file: {decoded}")
-            raise
+    if meals := decode_base64_env("TLDBOTTO_MEAL_CONFIG"):
+        defaults["meals"] = meals
 
     if id := os.getenv("TLDBOTTO_ID"):
         defaults["id"] = id
