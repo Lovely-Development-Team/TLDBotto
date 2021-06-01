@@ -385,11 +385,12 @@ You can DM me the following commands:
 
     async def send_schedule(self, reply_to: Message):
         async with reply_to.channel.typing():
+            current_time = f"\nBotto time is {datetime.datetime.now().strftime('%H:%M:%S %Z')}"
             job_descs = [
                 f"- `{job.name}` next running at {job.next_run_time.strftime('%a %H:%M:%S')}"
                 for job in self.scheduler.get_jobs()
             ]
-            await reply_to.reply("\n".join(job_descs))
+            await reply_to.reply("\n".join(job_descs) + current_time)
 
     async def yell_at_someone(self, message: Message, **kwargs):
         """
