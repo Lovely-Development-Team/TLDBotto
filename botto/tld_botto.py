@@ -2,7 +2,7 @@ import logging
 import os
 import random
 import re
-import datetime
+from datetime import date, datetime, time, timedelta, tzinfo
 from typing import Optional, Generator
 
 import subprocess
@@ -340,9 +340,7 @@ You can DM me the following commands:
                     "Git command failed with code: {code}".format(code=error.returncode)
                 )
             except FileNotFoundError:
-                log.warning(
-                    "Git command not found"
-                )
+                log.warning("Git command not found")
             response = f"Version: {git_version}"
             if bot_id := self.config["id"]:
                 response = f"{response} ({bot_id})"
@@ -353,7 +351,7 @@ You can DM me the following commands:
 
     @property
     def local_times(self) -> list[datetime]:
-        time_now = datetime.datetime.utcnow()
+        time_now = datetime.utcnow()
         return [zone.fromutc(time_now) for zone in self.config["timezones"]]
 
     def get_meal_reminder_text(self):
@@ -361,7 +359,15 @@ You can DM me the following commands:
         meals = {}
         for local_timezone in localised_times:
             for name, meal in self.config["meals"]["times"].items():
-                if meal["start"] < local_timezone.time() < meal["end"]:
+                start_time = datetime.combine(
+                    date.today(), meal["start"], local_timezone.tzinfo
+                )
+                end_time = datetime.combine(
+                    date.today(), meal["end"], local_timezone.tzinfo
+                )
+                if end_time < start_time:
+                    end_time = end_time + timedelta(days=1)
+                if start_time < local_timezone < end_time:
                     meal_text = random.choice(meal.get("text", name))
                     zones_for_meal = meals.get(name, ([], meal_text))
                     zones_for_meal[0].append(local_timezone.tzname())
@@ -397,7 +403,7 @@ You can DM me the following commands:
 
     async def send_schedule(self, reply_to: Message):
         async with reply_to.channel.typing():
-            current_time = f"\nBotto time is {datetime.datetime.now().strftime('%H:%M:%S %Z')}"
+            current_time = f"\nBotto time is {datetime.now().strftime('%H:%M:%S %Z')}"
             job_descs = [
                 f"- `{job.name}` next running at {job.next_run_time.strftime('%a %H:%M:%S')}"
                 for job in self.scheduler.get_jobs()
