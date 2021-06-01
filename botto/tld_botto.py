@@ -401,7 +401,7 @@ You can DM me the following commands:
             person (str): The person to yell at
         """
         channel: discord.TextChannel = message.channel
-        person = kwargs.get("person", "lovely person")
-        message = kwargs.get("text", "YOU SHOULD BE SLEEPING")
+        person = kwargs.get("person") or "lovely person"
+        message = kwargs.get("text") or "YOU SHOULD BE SLEEPING"
         async with channel.typing():
             await channel.send(f"{person.upper()}, {message.lstrip().upper()}")
