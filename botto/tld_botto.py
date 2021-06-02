@@ -286,6 +286,7 @@ class TLDBotto(discord.Client):
 
         if trigger_result := self.check_triggers(message):
             await self.handle_trigger(message, trigger_result)
+            return
 
         message_content = message.content.lower().strip()
 
