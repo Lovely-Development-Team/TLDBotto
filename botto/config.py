@@ -106,7 +106,7 @@ def parse(config):
         "trigger_on_mention": True,
         "confirm_delete_reaction": "🧨",
         "support_channel": None,
-        "watching_status": "for food",
+        "watching_statūs": ["for food", "for snails", "for apologies", "for love"],
     }
 
     if isinstance(config, dict):
