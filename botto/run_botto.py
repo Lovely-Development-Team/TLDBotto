@@ -3,6 +3,7 @@ import json
 import logging.config
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
+from storage import AirtableMealStorage
 from tld_botto import TLDBotto
 from config import parse
 
@@ -29,5 +30,10 @@ log.info(f"Triggers: {config['triggers']}")
 
 scheduler = AsyncIOScheduler()
 
-client = TLDBotto(config, scheduler)
+storage = AirtableMealStorage(
+    config["authentication"]["airtable_base"],
+    config["authentication"]["airtable_key"]
+)
+
+client = TLDBotto(config, scheduler, storage)
 client.run(config["authentication"]["discord"])
