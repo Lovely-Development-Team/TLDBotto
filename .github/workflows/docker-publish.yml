@@ -33,7 +33,7 @@ jobs:
         uses: actions/cache@v1
         with:
           path: /tmp/docker-save
-          key: docker-save-${{ hashFiles('Dockerfile') }}
+          key: docker-save-tld-${{ hashFiles('../Dockerfile') }}
 
       - name: Load cached image into Docker
         run: docker load -i /tmp/docker-save/snapshot.tar || true
@@ -45,12 +45,12 @@ jobs:
             docker-compose --file docker-compose.test.yml build
             docker-compose --file docker-compose.test.yml run sut
           else
-            docker build . -t tld-botto --cache-from=tld-botto-cache
+            docker build . -t $IMAGE_NAME --cache-from=tld-botto-cache
           fi
 
       - name: Save cache of Docker image
         run: >
-          docker tag tld-botto tld-botto-cache &&
+          docker tag $IMAGE_NAME tld-botto-cache &&
           mkdir -p /tmp/docker-save &&
           docker save tld-botto-cache -o /tmp/docker-save/snapshot.tar &&
           ls -lh /tmp/docker-save || true
@@ -75,7 +75,7 @@ jobs:
         uses: actions/cache@v1
         with:
           path: /tmp/docker-save
-          key: docker-save-${{ hashFiles('Dockerfile') }}
+          key: docker-save-tld-${{ hashFiles('../Dockerfile') }}
 
       - name: Load cached image into Docker
         run: docker load -i /tmp/docker-save/snapshot.tar || true
