@@ -90,7 +90,7 @@ def parse(config):
             "meal_time": ["!meal(?:time)?s?$"],
             "timezones": ["!times?"],
             "job_schedule": ["!schedule"],
-            "yell": ["!bottoyellat(?P<person>.*)"],
+            "yell": ["!bottoyellat(?P<person>[^.]*)(?:\.(?P<text>.*))?"],
         },
         "timezones": [],
         "meals": {
