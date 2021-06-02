@@ -12,6 +12,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from discord import Message, Guild
 
 import reactions
+from storage import AirtableMealStorage
 from regexes import SuggestionRegexes, compile_regexes
 from message_checks import is_dm
 
@@ -35,9 +36,12 @@ VOTE_EMOJI = ["0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", 
 
 
 class TLDBotto(discord.Client):
-    def __init__(self, config: dict, scheduler: AsyncIOScheduler):
+    def __init__(
+        self, config: dict, scheduler: AsyncIOScheduler, storage: AirtableMealStorage
+    ):
         self.config = config
         self.scheduler = scheduler
+        self.storage = storage
         log.info(
             "Replies are enabled"
             if self.config["should_reply"]
@@ -56,7 +60,7 @@ class TLDBotto(discord.Client):
             self.random_presence,
             name="Randomise presence",
             trigger="cron",
-            minute="*/12",
+            hour="*/12",
             coalesce=True,
         )
 
@@ -355,26 +359,30 @@ You can DM me the following commands:
         time_now = datetime.utcnow()
         return [zone.fromutc(time_now) for zone in self.config["timezones"]]
 
-    def get_meal_reminder_text(self):
+    async def get_meal_reminder_text(self):
+        intro_fetch = self.storage.get_intros()
+        configured_meals = await self.storage.get_meals()
         localised_times = self.local_times
         meals = {}
         for local_timezone in localised_times:
-            for name, meal in self.config["meals"]["times"].items():
+            for meal in configured_meals:
                 start_time = datetime.combine(
-                    date.today(), meal["start"], local_timezone.tzinfo
+                    date.today(), meal.start, local_timezone.tzinfo
                 )
                 end_time = datetime.combine(
-                    date.today(), meal["end"], local_timezone.tzinfo
+                    date.today(), meal.end, local_timezone.tzinfo
                 )
                 if end_time < start_time:
                     end_time = end_time + timedelta(days=1)
                 if start_time < local_timezone < end_time:
-                    meal_text = random.choice(meal.get("text", name))
-                    zones_for_meal = meals.get(name, ([], meal_text))
+                    meal_text_ref = random.choice(meal.texts)
+                    meal_text = await self.storage.get_text(meal_text_ref)
+                    zones_for_meal = meals.get(meal.name, ([], meal_text))
                     zones_for_meal[0].append(local_timezone.tzname())
-                    meals.update({name: zones_for_meal})
+                    meals.update({meal.name: zones_for_meal})
 
-        intro_text = random.choice(self.config["meals"]["intro_text"])
+        intro_ref = random.choice((await intro_fetch).texts)
+        intro_text = await self.storage.retrieve_text(intro_ref)
         reminder_list = [
             " & ".join(meal_details[0]) + f", {meal_details[1]}"
             for meal_details in meals.values()
@@ -383,16 +391,17 @@ You can DM me the following commands:
         return f"{intro_text}\n{reminder_text}"
 
     async def send_meal_reminder(self, reply_to: Optional[Message] = None):
-        reminder_text = self.get_meal_reminder_text()
         if reply_to:
+            log.info(f"Mealtimes from: {reply_to.author}")
             async with reply_to.channel.typing():
-                await reply_to.reply(reminder_text)
+                await reply_to.reply(await self.get_meal_reminder_text())
         else:
             async for channel in self.get_meal_channels():
                 async with channel.typing():
-                    await channel.send(reminder_text)
+                    await channel.send(await self.get_meal_reminder_text())
 
     async def send_local_times(self, reply_to: Message):
+        log.info(f"Mealtimes from: {reply_to.author}")
         async with reply_to.channel.typing():
             local_times_string = "\n".join(
                 [
@@ -403,6 +412,7 @@ You can DM me the following commands:
             await reply_to.reply(local_times_string)
 
     async def send_schedule(self, reply_to: Message):
+        log.info(f"Schedule from: {reply_to.author}")
         async with reply_to.channel.typing():
             current_time = f"\nBotto time is {datetime.now().strftime('%H:%M:%S %Z')}"
             job_descs = [
@@ -419,6 +429,7 @@ You can DM me the following commands:
         Keyword args:
             person (str): The person to yell at
         """
+        log.info(f"Yelling from: {message.author}")
         channel: discord.TextChannel = message.channel
         person = kwargs.get("person") or "lovely person"
         message = kwargs.get("text") or "YOU SHOULD BE SLEEPING"
