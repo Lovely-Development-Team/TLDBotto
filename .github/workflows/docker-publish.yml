@@ -33,7 +33,7 @@ jobs:
         uses: actions/cache@v1
         with:
           path: /tmp/docker-save
-          key: docker-save-tld-${{ hashFiles('../Dockerfile') }}
+          key: docker-save-tld-${{ hashFiles('Dockerfile') }}
 
       - name: Load cached image into Docker
         run: docker load -i /tmp/docker-save/snapshot.tar || true
@@ -70,19 +70,19 @@ jobs:
       packages: write
 
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        
       - name: Load docker image from cache
         id: cache-docker
         uses: actions/cache@v1
         with:
           path: /tmp/docker-save
-          key: docker-save-tld-${{ hashFiles('../Dockerfile') }}
+          key: docker-save-tld-${{ hashFiles('Dockerfile') }}
 
       - name: Load cached image into Docker
         run: docker load -i /tmp/docker-save/snapshot.tar || true
         if: steps.cache-docker.outputs.cache-hit == 'true'
-        
-      - name: Checkout code
-        uses: actions/checkout@v2
 
       - name: Build image
         run: docker build . --file Dockerfile --tag $IMAGE_NAME --cache-from=tld-botto-cache
