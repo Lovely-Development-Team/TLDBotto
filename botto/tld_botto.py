@@ -2,8 +2,8 @@ import logging
 import os
 import random
 import re
-from datetime import date, datetime, time, timedelta, tzinfo
-from typing import Optional, Generator
+from datetime import date, datetime, timedelta
+from typing import Optional
 
 import subprocess
 
@@ -12,7 +12,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from discord import Message, Guild
 
 import reactions
-from storage import AirtableMealStorage
+from storage import MealStorage
 from regexes import SuggestionRegexes, compile_regexes
 from message_checks import is_dm
 
@@ -36,9 +36,7 @@ VOTE_EMOJI = ["0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", 
 
 
 class TLDBotto(discord.Client):
-    def __init__(
-        self, config: dict, scheduler: AsyncIOScheduler, storage: AirtableMealStorage
-    ):
+    def __init__(self, config: dict, scheduler: AsyncIOScheduler, storage: MealStorage):
         self.config = config
         self.scheduler = scheduler
         self.storage = storage
@@ -61,6 +59,21 @@ class TLDBotto(discord.Client):
             name="Randomise presence",
             trigger="cron",
             hour="*/12",
+            coalesce=True,
+        )
+        scheduler.add_job(
+            self.storage.update_meals_cache,
+            name="Refresh meals cache",
+            trigger="cron",
+            minute="*/30",
+            coalesce=True,
+            next_run_time=datetime.now() + timedelta(seconds=5),
+        )
+        scheduler.add_job(
+            self.storage.update_text_cache,
+            name="Refresh text cache",
+            trigger="cron",
+            hour="*/3",
             coalesce=True,
         )
 
@@ -106,11 +119,11 @@ class TLDBotto(discord.Client):
     async def on_disconnect(self):
         log.warning("Bot disconnected")
 
-    async def get_or_fetch_channel(self, id: int) -> discord.TextChannel:
-        if channel := self.get_channel(id):
+    async def get_or_fetch_channel(self, channel_id: int) -> discord.TextChannel:
+        if channel := self.get_channel(channel_id):
             return channel
         else:
-            return await self.fetch_channel(id)
+            return await self.fetch_channel(channel_id)
 
     async def get_meal_channels(self):
         for guild in self.config["meals"]["guilds"]:
@@ -211,13 +224,6 @@ class TLDBotto(discord.Client):
 
         return actual_motto
 
-    async def is_repeat_message(self, message: Message, check_id=True) -> bool:
-        matching_mottos = await self.storage.get_matching_mottos(
-            self.clean_message(message.content, message.guild),
-            message_id=message.id if check_id else None,
-        )
-        return bool(matching_mottos)
-
     @property
     def triggers(self):
         return self.config["triggers"]
@@ -313,10 +319,11 @@ You can DM me the following commands:
 """.strip()
 
             help_channel = self.config["support_channel"]
-            users = ", ".join(
-                f"<@{user.discord_id}>"
-                for user in await self.storage.get_support_users()
-            )
+            # users = ", ".join(
+            #     f"<@{user.discord_id}>"
+            #     for user in await self.storage.get_support_users()
+            # )
+            users = ""
 
             if help_channel or users:
                 message_add = "\nIf your question was not answered here, please"
@@ -382,7 +389,7 @@ You can DM me the following commands:
                     meals.update({meal.name: zones_for_meal})
 
         intro_ref = random.choice((await intro_fetch).texts)
-        intro_text = await self.storage.retrieve_text(intro_ref)
+        intro_text = await self.storage.get_text(intro_ref)
         reminder_list = [
             " & ".join(meal_details[0]) + f", {meal_details[1]}"
             for meal_details in meals.values()
@@ -421,7 +428,8 @@ You can DM me the following commands:
             ]
             await reply_to.reply("\n".join(job_descs) + current_time)
 
-    async def yell_at_someone(self, message: Message, **kwargs):
+    @staticmethod
+    async def yell_at_someone(message: Message, **kwargs):
         """
         Args:
             message: The message requesting yelling

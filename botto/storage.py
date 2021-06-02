@@ -25,13 +25,19 @@ async def airtable_sleep():
 
 
 class MealStorage:
-    async def get_intros(self) -> list[Intro]:
+    async def get_intros(self) -> Intro:
         raise NotImplementedError
 
     async def get_meals(self) -> list[Meal]:
         raise NotImplementedError
 
-    async def retrieve_text(self, key: str) -> str:
+    async def get_text(self, key: str) -> str:
+        raise NotImplementedError
+
+    async def update_meals_cache(self):
+        raise NotImplementedError
+
+    async def update_text_cache(self):
         raise NotImplementedError
 
     async def _get(
@@ -98,7 +104,8 @@ class AirtableMealStorage(MealStorage):
         )
         self.auth_header = {"Authorization": f"Bearer {self.airtable_key}"}
         self.semaphore = asyncio.Semaphore(5)
-        self.cache = {}
+        self.meals_cache: list[Meal] = []
+        self.text_cache = {}
 
     def _list_all_texts(
         self,
@@ -112,18 +119,35 @@ class AirtableMealStorage(MealStorage):
         texts_iterator = self._list_all_texts(filter_by_formula="{Name}='Intro'")
         return [Intro.from_airtable(x) async for x in texts_iterator][0]
 
-    async def get_meals(self) -> list[Meal]:
+    async def retrieve_meals(self) -> list[Meal]:
         texts_iterator = self._list_all_texts(filter_by_formula="NOT({Name}='Intro')")
-        return [Meal.from_airtable(x) async for x in texts_iterator]
+        meals = [Meal.from_airtable(x) async for x in texts_iterator]
+        self.meals_cache = meals
+        return meals
+
+    async def get_meals(self) -> list[Meal]:
+        if self.meals_cache is not None:
+            return self.meals_cache
+        else:
+            return await self.retrieve_meals()
 
     async def retrieve_text(self, key: str) -> str:
         result = await self._get(f"{self.texts_url}/{key}")
         text = result["fields"]["Text"]
-        self.cache[key] = text
+        self.text_cache[key] = text
         return text
 
     async def get_text(self, key: str) -> str:
-        if (text := self.cache.get(key)) and random.random() > 0.1:
+        if text := self.text_cache.get(key):
             return text
         else:
             return await self.retrieve_text(key)
+
+    async def update_meals_cache(self):
+        for meal in await self.retrieve_meals():
+            for text_ref in meal.texts:
+                await self.get_text(text_ref)
+
+    async def update_text_cache(self):
+        for key in self.text_cache.keys():
+            await self.retrieve_text(key)
