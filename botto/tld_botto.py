@@ -52,6 +52,13 @@ class TLDBotto(discord.Client):
             hour=reminder_hours,
             coalesce=True,
         )
+        scheduler.add_job(
+            self.random_presence,
+            name="Randomise presence",
+            trigger="cron",
+            minute="*/12",
+            coalesce=True,
+        )
 
         self.regexes: Optional[SuggestionRegexes] = None
 
@@ -62,18 +69,23 @@ class TLDBotto(discord.Client):
         if not self.regexes and self.user:
             self.regexes = compile_regexes(self.user.id, self.config)
 
+    async def random_presence(self):
+        chosen_status = random.choice(self.config["watching_statūs"])
+        log.info(f"Chosen status: {chosen_status}")
+        await self.change_presence(
+            activity=discord.Activity(
+                type=discord.ActivityType.watching,
+                name=chosen_status,
+            )
+        )
+
     async def on_ready(self):
         log.info("We have logged in as {0.user}".format(self))
 
         if not self.regexes:
             self.regexes = compile_regexes(self.user.id, self.config)
 
-        await self.change_presence(
-            activity=discord.Activity(
-                type=discord.ActivityType.watching,
-                name=self.config["watching_status"],
-            )
-        )
+        await self.random_presence()
 
         self.scheduler.start()
 
