@@ -146,6 +146,8 @@ jobs:
             docker rm tld_botto || true &&
             docker run -d -t
             -e TLDBOTTO_DISCORD_TOKEN='${{ secrets.DISCORD_TOKEN }}'
+            -e TLDBOTTO_AIRTABLE_BASE='${{ secrets.AIRTABLE_BASE }}'
+            -e TLDBOTTO_AIRTABLE_KEY='${{ secrets.AIRTABLE_KEY }}'
             -e TLDBOTTO_TIMEZONES='${{ secrets.TIMEZONES }}'
             -e TLDBOTTO_MEAL_CONFIG='${{ secrets.MEAL_CONFIG }}'
             -e TLDBOTTO_ID='Capys-hosted TLDBotto'
