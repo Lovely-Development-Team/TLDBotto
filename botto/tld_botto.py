@@ -76,11 +76,42 @@ class TLDBotto(discord.Client):
             hour="*/3",
             coalesce=True,
         )
+        scheduler.add_job(
+            self.refresh_reminders,
+            name="Refresh reminders",
+            trigger="cron",
+            hour="*/1",
+            coalesce=True,
+            next_run_time=datetime.now() + timedelta(seconds=15),
+        )
 
         self.regexes: Optional[SuggestionRegexes] = None
 
         intents = discord.Intents(messages=True, guilds=True, reactions=True)
         super().__init__(intents=intents)
+
+    async def refresh_reminders(self):
+        async for reminder in self.storage.retrieve_reminders():
+            self.scheduler.add_job(
+                self.send_reminder,
+                id=reminder.id,
+                name=f"Reminder: {reminder.notes} in 15 minutes!",
+                trigger="date",
+                next_run_time=reminder.date - timedelta(minutes=15),
+                coalesce=True,
+                replace_existing=True,
+                kwargs={"note": reminder.notes}
+            )
+            self.scheduler.add_job(
+                self.send_reminder,
+                id=reminder.id,
+                name=f"Reminder: {reminder.notes} now ({reminder.date})!",
+                trigger="date",
+                next_run_time=reminder.date,
+                coalesce=True,
+                replace_existing=True,
+                kwargs={"note": reminder.notes}
+            )
 
     async def on_connect(self):
         if not self.regexes and self.user:
@@ -130,7 +161,7 @@ class TLDBotto(discord.Client):
             yield await self.get_or_fetch_channel(guild["channel"])
 
     async def add_reaction(
-        self, message: Message, reaction_type: str, default: str = None
+            self, message: Message, reaction_type: str, default: str = None
     ):
         if reaction := self.config["reactions"].get(reaction_type, default):
             await message.add_reaction(reaction)
@@ -196,8 +227,8 @@ class TLDBotto(discord.Client):
                     await message.add_reaction(emoji)
 
         if (
-            self.config["channels"]["include"]
-            and channel_name not in self.config["channels"]["include"]
+                self.config["channels"]["include"]
+                and channel_name not in self.config["channels"]["include"]
         ):
             return
         else:
@@ -245,10 +276,11 @@ class TLDBotto(discord.Client):
             "timezones": self.send_local_times,
             "job_schedule": self.send_schedule,
             "yell": self.yell_at_someone,
+            "add_reminder": self.add_reminder
         }
 
     async def handle_trigger(
-        self, message: Message, trigger_details: tuple[str, re.Match]
+            self, message: Message, trigger_details: tuple[str, re.Match]
     ):
         if trigger_func := self.trigger_funcs.get(trigger_details[0]):
             if groups := trigger_details[1].groupdict():
@@ -264,7 +296,7 @@ class TLDBotto(discord.Client):
         if self.regexes.off_topic.search(message.content):
             await reactions.off_topic(self, message)
         if self.regexes.apologising.search(
-            message.content
+                message.content
         ) and not self.regexes.sorry.search(message.content):
             await reactions.rule_1(self, message)
         if self.regexes.party.search(message.content):
@@ -348,8 +380,8 @@ You can DM me the following commands:
             try:
                 git_version = (
                     subprocess.check_output(["git", "describe", "--tags"])
-                    .decode("utf-8")
-                    .strip()
+                        .decode("utf-8")
+                        .strip()
                 )
             except subprocess.CalledProcessError as error:
                 log.warning(
@@ -447,3 +479,17 @@ You can DM me the following commands:
         message = kwargs.get("text") or "YOU SHOULD BE SLEEPING"
         async with channel.typing():
             await channel.send(f"{person.upper()}, {message.lstrip().upper()}")
+
+    async def get_reminder_channel(self) -> discord.TextChannel:
+        return await self.get_or_fetch_channel(self.config["reminder_channel"])
+
+    async def send_reminder(self, note: str):
+        channel = await self.get_reminder_channel()
+        async with channel.typing():
+            await channel.send(f"Reminder: {note}", tts=True)
+
+
+    async def add_reminder(self, timestamp: str, text: str):
+        channel = await self.get_reminder_channel()
+        async with channel.typing():
+            await channel.send(f"Reminder: {note}", tts=True)
