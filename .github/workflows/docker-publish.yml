@@ -144,7 +144,7 @@ jobs:
             docker pull ghcr.io/lovely-development-team/tld-botto:latest &&
             docker stop tld_botto || true &&
             docker rm tld_botto || true &&
-            docker run -d -t
+            docker run -d -t --restart unless-stopped
             -e TLDBOTTO_DISCORD_TOKEN='${{ secrets.DISCORD_TOKEN }}'
             -e TLDBOTTO_AIRTABLE_BASE='${{ secrets.AIRTABLE_BASE }}'
             -e TLDBOTTO_AIRTABLE_KEY='${{ secrets.AIRTABLE_KEY }}'
