@@ -39,6 +39,25 @@ class Meal:
             texts=fields.get("Texts"),
         )
 
+@dataclass
+class Reminder:
+    id: str
+    date: datetime
+    notes: str
+
+    @classmethod
+    def from_airtable(cls, data: dict) -> "Reminder":
+        print(data)
+        fields = data["fields"]
+        date_sting = fields.get("Date")
+        parsed_date = datetime.strptime(date_sting, "%Y-%m-%dT%H:%M:%S.%fZ")
+        note = fields.get("Notes")
+        return cls(
+            id=data["id"],
+            date=parsed_date,
+            notes=note
+        )
+
 
 class AirTableError(Exception):
     def __init__(

@@ -1,12 +1,12 @@
 import asyncio
 import random
 from collections import AsyncGenerator
-from typing import Callable, Awaitable, Optional
+from typing import Callable, Awaitable, Optional, Generator, Any
 
 import aiohttp
 from aiohttp import ClientSession
 
-from models import Meal, AirTableError, Intro
+from models import Meal, AirTableError, Intro, Reminder
 
 
 async def run_request(
@@ -40,6 +40,9 @@ class MealStorage:
     async def update_text_cache(self):
         raise NotImplementedError
 
+    async def retrieve_reminders(self) -> AsyncGenerator[Reminder, Any, None]:
+        raise NotImplementedError
+
     async def _get(
         self,
         url: str,
@@ -69,7 +72,9 @@ class MealStorage:
         sort: Optional[list[str]] = None,
         session: Optional[ClientSession] = None,
     ) -> AsyncGenerator[dict]:
-        params = {"filterByFormula": filter_by_formula}
+        params = {}
+        if filter_by_formula:
+            params = {"filterByFormula": filter_by_formula}
         if sort:
             for idx, field in enumerate(sort):
                 params.update({"sort[{index}][field]".format(index=idx): field})
@@ -102,18 +107,30 @@ class AirtableMealStorage(MealStorage):
         self.texts_url = "https://api.airtable.com/v0/{base}/Texts".format(
             base=airtable_base
         )
+        self.reminders_url = "https://api.airtable.com/v0/{base}/Reminders".format(
+            base=airtable_base
+        )
         self.auth_header = {"Authorization": f"Bearer {self.airtable_key}"}
         self.semaphore = asyncio.Semaphore(5)
         self.meals_cache: list[Meal] = []
+        self.text_lock = asyncio.Lock()
         self.text_cache = {}
 
     def _list_all_texts(
         self,
-        filter_by_formula: str,
+        filter_by_formula: Optional[str],
         sort: Optional[list[str]] = None,
         session: Optional[ClientSession] = None,
     ) -> AsyncGenerator[dict]:
         return self._iterate(self.times_url, filter_by_formula, sort, session)
+
+    def _list_all_reminders(
+        self,
+        filter_by_formula: Optional[str],
+        sort: Optional[list[str]] = None,
+        session: Optional[ClientSession] = None,
+    ) -> AsyncGenerator[dict]:
+        return self._iterate(self.reminders_url, filter_by_formula, sort, session)
 
     async def get_intros(self) -> Intro:
         texts_iterator = self._list_all_texts(filter_by_formula="{Name}='Intro'")
@@ -145,9 +162,20 @@ class AirtableMealStorage(MealStorage):
 
     async def update_meals_cache(self):
         for meal in await self.retrieve_meals():
-            for text_ref in meal.texts:
-                await self.get_text(text_ref)
+            async with self.text_lock:
+                for text_ref in meal.texts:
+                    await self.get_text(text_ref)
 
     async def update_text_cache(self):
-        for key in self.text_cache.keys():
-            await self.retrieve_text(key)
+        async with self.text_lock:
+            for key in self.text_cache.keys():
+                await self.retrieve_text(key)
+
+    async def retrieve_reminders(self) -> AsyncGenerator[Reminder, Any, None]:
+        reminders_iterator = self._list_all_reminders(filter_by_formula=None)
+        async for reminder in reminders_iterator:
+            yield Reminder.from_airtable(reminder)
+
+    async def retrieve_reminder(self, key: str) -> Reminder:
+        result = await self._get(f"{self.reminders_url}/{key}")
+        return Reminder.from_airtable(result)
