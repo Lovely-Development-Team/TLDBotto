@@ -91,6 +91,7 @@ def parse(config):
             "timezones": ["!times?"],
             "job_schedule": ["!schedule"],
             "yell": ["!bottoyellat(?P<person>[^.]*)(?:\.(?P<text>.*))?"],
+            "add_reminder": ["!remind(?:er) (?P<timestamp>[^\s]) (?P<text>.*)"],
         },
         "timezones": [],
         "meals": {
@@ -99,6 +100,7 @@ def parse(config):
             "intro_text": ["Reminder!"],
             "times": {},
         },
+        "reminder_channel": "847579062669934602",
         "should_reply": True,
         "approval_reaction": "mottoapproval",
         "leaderboard_link": None,
