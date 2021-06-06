@@ -8,6 +8,7 @@ from typing import Optional, Callable
 
 import subprocess
 
+import apscheduler.events
 import dateutil.parser
 import discord
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -88,11 +89,17 @@ class TLDBotto(discord.Client):
             coalesce=True,
             next_run_time=initial_refresh_run,
         )
+        self.missed_job_ids = []
+        scheduler.add_listener(self.handle_scheduler_event, apscheduler.events.EVENT_JOB_MISSED)
 
         self.regexes: Optional[SuggestionRegexes] = None
 
         intents = discord.Intents(messages=True, guilds=True, reactions=True)
         super().__init__(intents=intents)
+
+    def handle_scheduler_event(self, event: apscheduler.events.JobEvent):
+        if not event.job_id.endswith("_advance"):
+            self.missed_job_ids.append(event.job_id)
 
     async def refresh_reminders(self):
         reminders_processed = 0
@@ -100,7 +107,7 @@ class TLDBotto(discord.Client):
             if reminder.remind_15_minutes_before:
                 self.scheduler.add_job(
                     self.send_reminder,
-                    id=reminder.id+"_advance",
+                    id=reminder.id + "_advance",
                     name=f"Reminder: {reminder.notes.strip()} in 15 minutes!",
                     trigger="date",
                     next_run_time=reminder.date - timedelta(minutes=15),
@@ -170,7 +177,7 @@ class TLDBotto(discord.Client):
             yield await self.get_or_fetch_channel(guild["channel"])
 
     async def add_reaction(
-        self, message: Message, reaction_type: str, default: str = None
+            self, message: Message, reaction_type: str, default: str = None
     ):
         if reaction := self.config["reactions"].get(reaction_type, default):
             await message.add_reaction(reaction)
@@ -236,8 +243,8 @@ class TLDBotto(discord.Client):
                     await message.add_reaction(emoji)
 
         if (
-            self.config["channels"]["include"]
-            and channel_name not in self.config["channels"]["include"]
+                self.config["channels"]["include"]
+                and channel_name not in self.config["channels"]["include"]
         ):
             return
         else:
@@ -316,7 +323,7 @@ class TLDBotto(discord.Client):
 
     @staticmethod
     async def handle_trigger(
-        message: Message, trigger_details: tuple[Callable, re.Match]
+            message: Message, trigger_details: tuple[Callable, re.Match]
     ):
         if trigger_func := trigger_details[0]:
             if groups := trigger_details[1].groupdict():
@@ -332,7 +339,7 @@ class TLDBotto(discord.Client):
         if self.regexes.off_topic.search(message.content):
             await reactions.off_topic(self, message)
         if self.regexes.apologising.search(
-            message.content
+                message.content
         ) and not self.regexes.sorry.search(message.content):
             await reactions.rule_1(self, message)
         if self.regexes.party.search(message.content):
@@ -418,8 +425,8 @@ You can DM me the following commands:
             try:
                 git_version = (
                     subprocess.check_output(["git", "describe", "--tags"])
-                    .decode("utf-8")
-                    .strip()
+                        .decode("utf-8")
+                        .strip()
                 )
             except subprocess.CalledProcessError as error:
                 log.warning(
@@ -551,6 +558,8 @@ You can DM me the following commands:
             await channel.send(f"Reminder: {reminder.notes.strip()}", tts=True)
             if not reminder.id.endswith("_advance"):
                 await self.storage.remove_reminder(reminder.id)
+                for job_id in self.missed_job_ids:
+                    await self.storage.remove_reminder(job_id)
 
     async def add_reminder(self, reply_to: Message, timestamp: str, text: str):
         log.info(f"Reminder request from: {reply_to.author}")
