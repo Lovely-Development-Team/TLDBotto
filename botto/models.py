@@ -44,19 +44,36 @@ class Reminder:
     id: str
     date: datetime
     notes: str
+    remind_15_minutes_before: bool
+    msg_id: str
 
     @classmethod
     def from_airtable(cls, data: dict) -> "Reminder":
-        print(data)
         fields = data["fields"]
         date_sting = fields.get("Date")
         parsed_date = datetime.strptime(date_sting, "%Y-%m-%dT%H:%M:%S.%fZ")
         note = fields.get("Notes")
+        advance_reminder = fields.get("15 Minutes Before")
+        msg_id = fields.get("Message ID")
         return cls(
             id=data["id"],
             date=parsed_date,
-            notes=note
+            notes=note,
+            remind_15_minutes_before=advance_reminder,
+            msg_id=msg_id
         )
+
+    def to_airtable(self, fields=None) -> dict:
+        fields = fields if fields else ["id", "date", "notes"]
+        data = {}
+        if "date" in fields:
+            data["Date"] = self.date.isoformat()
+        if "notes" in fields:
+            data["Notes"] = self.notes
+        return {
+            "id": self.id,
+            "fields": data,
+        }
 
 
 class AirTableError(Exception):
