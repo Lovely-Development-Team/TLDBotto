@@ -100,8 +100,8 @@ class TLDBotto(discord.Client):
             if reminder.remind_15_minutes_before:
                 self.scheduler.add_job(
                     self.send_reminder,
-                    id=reminder.id,
-                    name=f"Reminder: {reminder.notes} in 15 minutes!",
+                    id=reminder.id+"_advance",
+                    name=f"Reminder: {reminder.notes.strip()} in 15 minutes!",
                     trigger="date",
                     next_run_time=reminder.date - timedelta(minutes=15),
                     coalesce=True,
@@ -111,7 +111,7 @@ class TLDBotto(discord.Client):
             self.scheduler.add_job(
                 self.send_reminder,
                 id=reminder.id,
-                name=f"Reminder: {reminder.notes} now ({reminder.date})!",
+                name=f"Reminder: {reminder.notes.strip()} now ({reminder.date})!",
                 trigger="date",
                 next_run_time=reminder.date,
                 coalesce=True,
@@ -549,7 +549,8 @@ You can DM me the following commands:
         channel = await self.get_reminder_channel()
         async with channel.typing():
             await channel.send(f"Reminder: {reminder.notes.strip()}", tts=True)
-            await self.storage.remove_reminder(reminder.id)
+            if not reminder.id.endswith("_advance"):
+                await self.storage.remove_reminder(reminder.id)
 
     async def add_reminder(self, reply_to: Message, timestamp: str, text: str):
         log.info(f"Reminder request from: {reply_to.author}")
