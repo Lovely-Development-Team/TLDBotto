@@ -91,6 +91,9 @@ def parse(config):
             "timezones": ["!times?"],
             "job_schedule": ["!schedule"],
             "yell": ["!bottoyellat(?P<person>[^.]*)(?:\.(?P<text>.*))?"],
+            "reminder_explain": ["!remind(?:er)? (?P<timestamp>[^.]*).(?P<text>.*)"]
+        },
+        "at_triggers": {
             "add_reminder": ["!remind(?:er)? (?P<timestamp>[^.]*).(?P<text>.*)"],
         },
         "timezones": [],
@@ -121,6 +124,12 @@ def parse(config):
     # Compile trigger regexes
     for key, triggers in defaults["triggers"].items():
         defaults["triggers"][key] = [
+            re.compile(f"^{t}", re.IGNORECASE) for t in triggers
+        ]
+
+    # Compile at trigger regexes
+    for key, triggers in defaults["at_triggers"].items():
+        defaults["at_triggers"][key] = [
             re.compile(f"^{t}", re.IGNORECASE) for t in triggers
         ]
 

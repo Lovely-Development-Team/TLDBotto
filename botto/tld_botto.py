@@ -4,7 +4,7 @@ import os
 import random
 import re
 from datetime import date, datetime, timedelta, timezone
-from typing import Optional
+from typing import Optional, Callable
 
 import subprocess
 
@@ -64,13 +64,14 @@ class TLDBotto(discord.Client):
             hour="*/12",
             coalesce=True,
         )
+        initial_refresh_run = datetime.now() + timedelta(seconds=5)
         scheduler.add_job(
             self.storage.update_meals_cache,
             name="Refresh meals cache",
             trigger="cron",
             minute="*/30",
             coalesce=True,
-            next_run_time=datetime.now() + timedelta(seconds=5),
+            next_run_time=initial_refresh_run,
         )
         scheduler.add_job(
             self.storage.update_text_cache,
@@ -85,7 +86,7 @@ class TLDBotto(discord.Client):
             trigger="cron",
             hour="*/1",
             coalesce=True,
-            next_run_time=datetime.now() + timedelta(seconds=5),
+            next_run_time=initial_refresh_run,
         )
 
         self.regexes: Optional[SuggestionRegexes] = None
@@ -139,7 +140,8 @@ class TLDBotto(discord.Client):
 
         await self.random_presence()
 
-        self.scheduler.start()
+        if self.scheduler.state == 0:
+            self.scheduler.start()
 
         reminder_log_text = ", ".join(
             [
@@ -264,14 +266,39 @@ class TLDBotto(discord.Client):
         return actual_motto
 
     @property
-    def triggers(self):
+    def triggers(self) -> dict:
         return self.config["triggers"]
 
-    def check_triggers(self, message: Message) -> tuple[str, re.Match]:
-        for name, triggers in self.triggers.items():
-            for t in triggers:
-                if matched := t.match(message.content):
-                    return name, matched
+    @property
+    def at_triggers(self) -> dict:
+        return self.config["at_triggers"]
+
+    @property
+    def reminder_syntax(self) -> str:
+        return "`@TLDBotto !reminder <datetime>. <message>`"
+
+    def check_triggers(self, message: Message) -> tuple[Callable, re.Match]:
+        def search_triggers(content: str, trigger_dict: dict):
+            for name, triggers in trigger_dict.items():
+                for t in triggers:
+                    if matched := t.match(content):
+                        return name, matched
+
+        at_command = None
+        for t in self.regexes.trigger:
+            if match := t.match(message.content):
+                if command_group := match.group("command"):
+                    at_command = command_group.strip()
+        if at_command:
+            trigger_details = search_triggers(at_command, self.at_triggers)
+        else:
+            trigger_details = search_triggers(message.content, self.triggers)
+
+        if trigger_details:
+            resolved_name = trigger_details[0]
+            resolved_matched = trigger_details[1]
+            if trigger_func := self.trigger_funcs.get(resolved_name):
+                return trigger_func, resolved_matched
 
     @property
     def trigger_funcs(self):
@@ -281,12 +308,14 @@ class TLDBotto(discord.Client):
             "job_schedule": self.send_schedule,
             "yell": self.yell_at_someone,
             "add_reminder": self.add_reminder,
+            "reminder_explain": self.send_reminder_syntax
         }
 
+    @staticmethod
     async def handle_trigger(
-        self, message: Message, trigger_details: tuple[str, re.Match]
+            message: Message, trigger_details: tuple[Callable, re.Match]
     ):
-        if trigger_func := self.trigger_funcs.get(trigger_details[0]):
+        if trigger_func := trigger_details[0]:
             if groups := trigger_details[1].groupdict():
                 await trigger_func(message, **groups)
             else:
@@ -352,6 +381,8 @@ Reply to a great motto in the supported channels with {trigger} to tell me about
 
 You can DM me the following commands:
 `!schedule`: Show the current schedule of reminders
+`!bottoyellat<name>. <message>`: Get Tildy to yell at someone.
+{self.reminder_syntax}: Get Tidly to remind you. Include '🕰' in `message` to also receive a reminder 15 minutes prior.
 `!emoji <emoji>`: Set your emoji on the leaderboard. A response of {self.config["reactions"]["invalid_emoji"]} means the emoji you requested is not valid.
 `!emoji`: Clear your emoji from the leaderboard.
 `!nick on`: Use your server-specific nickname on the leaderboard instead of your Discord username. Nickname changes will auto-update the next time you approve a motto.
@@ -505,6 +536,9 @@ You can DM me the following commands:
         async with channel.typing():
             await channel.send(f"{person.upper()}, {message.lstrip().upper()}")
 
+    async def send_reminder_syntax(self, message: Message, **kwargs):
+        await message.reply(f"Syntax for setting a reminder is: {self.reminder_syntax}")
+
     async def get_reminder_channel(self) -> discord.TextChannel:
         return await self.get_or_fetch_channel(self.config["reminder_channel"])
 
@@ -525,8 +559,10 @@ You can DM me the following commands:
                     await asyncio.gather(
                         reactions.reject(self, reply_to),
                         reply_to.reply(
-                            """Reminder data parsed as {parsed_date} but it is now {now}.\n
-                            I'm sorry, time travel is difficult 😢.""".format(
+                            (
+                                "Reminder data parsed as {parsed_date} but it is now {now}.\n"
+                                "I'm sorry, time travel is difficult 😢."
+                            ).format(
                                 parsed_date=parsed_date_string,
                                 now=near_now.strftime("%a %H:%M:%S"),
                             )
