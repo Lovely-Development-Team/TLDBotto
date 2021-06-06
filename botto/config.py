@@ -91,7 +91,7 @@ def parse(config):
             "timezones": ["!times?"],
             "job_schedule": ["!schedule"],
             "yell": ["!bottoyellat(?P<person>[^.]*)(?:\.(?P<text>.*))?"],
-            "add_reminder": ["!remind(?:er) (?P<timestamp>[^\s]) (?P<text>.*)"],
+            "add_reminder": ["!remind(?:er)? (?P<timestamp>[^.]*).(?P<text>.*)"],
         },
         "timezones": [],
         "meals": {

@@ -10,10 +10,12 @@ from food import SpecialAction
 log = logging.getLogger("MottoBotto").getChild("reactions")
 log.setLevel(logging.DEBUG)
 
+async def reject(botto: tld_botto, message: Message):
+    await message.add_reaction(botto.config["reactions"]["reject"])
 
 async def skynet_prevention(botto: tld_botto, message: Message):
     log.info(f"{message.author} attempted to activate Skynet!")
-    await message.add_reaction(botto.config["reactions"]["reject"])
+    await reject(botto, message)
     await message.add_reaction(botto.config["reactions"]["skynet"])
     if botto.config["should_reply"]:
         await message.reply("Skynet prevention")
@@ -75,13 +77,13 @@ async def not_reply(botto: tld_botto, message: Message):
 
 async def fishing(botto: tld_botto, message: Message):
     log.info(f"Motto fishing from: {message.author}")
-    await message.add_reaction(botto.config["reactions"]["reject"])
+    await reject(botto, message)
     await message.add_reaction(botto.config["reactions"]["fishing"])
 
 
 async def invalid(botto: tld_botto, message: Message):
     log.info(f"Motto from {message.author} is invalid according to rules.")
-    await message.add_reaction(botto.config["reactions"]["reject"])
+    await reject(botto, message)
     await message.add_reaction(botto.config["reactions"]["invalid"])
 
 
@@ -94,7 +96,7 @@ async def duplicate(botto: tld_botto, message: Message):
 async def deleted(botto: tld_botto, message: Message):
     log.debug("Ignoring motto, it's been deleted.")
     await message.add_reaction(botto.config["reactions"]["deleted"])
-    await message.add_reaction(botto.config["reactions"]["reject"])
+    await reject(botto, message)
     await message.remove_reaction(botto.config["reactions"]["pending"], botto.user)
 
 

@@ -1,17 +1,20 @@
+import asyncio
 import logging
 import os
 import random
 import re
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 
 import subprocess
 
+import dateutil.parser
 import discord
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from discord import Message, Guild
 
 import reactions
+from models import Reminder
 from storage import MealStorage
 from regexes import SuggestionRegexes, compile_regexes
 from message_checks import is_dm
@@ -82,7 +85,7 @@ class TLDBotto(discord.Client):
             trigger="cron",
             hour="*/1",
             coalesce=True,
-            next_run_time=datetime.now() + timedelta(seconds=15),
+            next_run_time=datetime.now() + timedelta(seconds=5),
         )
 
         self.regexes: Optional[SuggestionRegexes] = None
@@ -92,16 +95,17 @@ class TLDBotto(discord.Client):
 
     async def refresh_reminders(self):
         async for reminder in self.storage.retrieve_reminders():
-            self.scheduler.add_job(
-                self.send_reminder,
-                id=reminder.id,
-                name=f"Reminder: {reminder.notes} in 15 minutes!",
-                trigger="date",
-                next_run_time=reminder.date - timedelta(minutes=15),
-                coalesce=True,
-                replace_existing=True,
-                kwargs={"note": reminder.notes}
-            )
+            if reminder.remind_15_minutes_before:
+                self.scheduler.add_job(
+                    self.send_reminder,
+                    id=reminder.id,
+                    name=f"Reminder: {reminder.notes} in 15 minutes!",
+                    trigger="date",
+                    next_run_time=reminder.date - timedelta(minutes=15),
+                    coalesce=True,
+                    replace_existing=True,
+                    kwargs={"reminder": reminder},
+                )
             self.scheduler.add_job(
                 self.send_reminder,
                 id=reminder.id,
@@ -110,7 +114,7 @@ class TLDBotto(discord.Client):
                 next_run_time=reminder.date,
                 coalesce=True,
                 replace_existing=True,
-                kwargs={"note": reminder.notes}
+                kwargs={"reminder": reminder},
             )
 
     async def on_connect(self):
@@ -161,7 +165,7 @@ class TLDBotto(discord.Client):
             yield await self.get_or_fetch_channel(guild["channel"])
 
     async def add_reaction(
-            self, message: Message, reaction_type: str, default: str = None
+        self, message: Message, reaction_type: str, default: str = None
     ):
         if reaction := self.config["reactions"].get(reaction_type, default):
             await message.add_reaction(reaction)
@@ -227,8 +231,8 @@ class TLDBotto(discord.Client):
                     await message.add_reaction(emoji)
 
         if (
-                self.config["channels"]["include"]
-                and channel_name not in self.config["channels"]["include"]
+            self.config["channels"]["include"]
+            and channel_name not in self.config["channels"]["include"]
         ):
             return
         else:
@@ -276,11 +280,11 @@ class TLDBotto(discord.Client):
             "timezones": self.send_local_times,
             "job_schedule": self.send_schedule,
             "yell": self.yell_at_someone,
-            "add_reminder": self.add_reminder
+            "add_reminder": self.add_reminder,
         }
 
     async def handle_trigger(
-            self, message: Message, trigger_details: tuple[str, re.Match]
+        self, message: Message, trigger_details: tuple[str, re.Match]
     ):
         if trigger_func := self.trigger_funcs.get(trigger_details[0]):
             if groups := trigger_details[1].groupdict():
@@ -296,7 +300,7 @@ class TLDBotto(discord.Client):
         if self.regexes.off_topic.search(message.content):
             await reactions.off_topic(self, message)
         if self.regexes.apologising.search(
-                message.content
+            message.content
         ) and not self.regexes.sorry.search(message.content):
             await reactions.rule_1(self, message)
         if self.regexes.party.search(message.content):
@@ -380,8 +384,8 @@ You can DM me the following commands:
             try:
                 git_version = (
                     subprocess.check_output(["git", "describe", "--tags"])
-                        .decode("utf-8")
-                        .strip()
+                    .decode("utf-8")
+                    .strip()
                 )
             except subprocess.CalledProcessError as error:
                 log.warning(
@@ -458,11 +462,32 @@ You can DM me the following commands:
         log.info(f"Schedule from: {reply_to.author}")
         async with reply_to.channel.typing():
             current_time = f"\nBotto time is {datetime.now().strftime('%H:%M:%S %Z')}"
+            regular_jobs = (
+                job
+                for job in self.scheduler.get_jobs()
+                if not job.name.startswith("Reminder: ")
+            )
+            reminder_jobs = (
+                job
+                for job in self.scheduler.get_jobs()
+                if job.name.startswith("Reminder:")
+            )
             job_descs = [
                 f"- `{job.name}` next running at {job.next_run_time.strftime('%a %H:%M:%S')}"
-                for job in self.scheduler.get_jobs()
+                for job in regular_jobs
             ]
-            await reply_to.reply("\n".join(job_descs) + current_time)
+            reminder_job_descs = [
+                f"- `{job.name.lstrip('Reminder:')}` running at {job.next_run_time.strftime('%a %H:%M:%S')}. Ref `{job.id}`"
+                for job in reminder_jobs
+            ]
+            regular_jobs_text = "Regular jobs:\n" + "\n".join(job_descs)
+            reminder_jobs_text = "\nReminder jobs:\n" + "\n".join(reminder_job_descs)
+            response_text = (
+                regular_jobs_text + reminder_jobs_text
+                if len(reminder_job_descs) > 0
+                else regular_jobs_text
+            )
+            await reply_to.reply(response_text + current_time)
 
     @staticmethod
     async def yell_at_someone(message: Message, **kwargs):
@@ -483,13 +508,48 @@ You can DM me the following commands:
     async def get_reminder_channel(self) -> discord.TextChannel:
         return await self.get_or_fetch_channel(self.config["reminder_channel"])
 
-    async def send_reminder(self, note: str):
+    async def send_reminder(self, reminder: Reminder):
         channel = await self.get_reminder_channel()
         async with channel.typing():
-            await channel.send(f"Reminder: {note}", tts=True)
+            await channel.send(f"Reminder: {reminder.notes.strip()}", tts=True)
+            await self.storage.remove_reminder(reminder.id)
 
-
-    async def add_reminder(self, timestamp: str, text: str):
-        channel = await self.get_reminder_channel()
-        async with channel.typing():
-            await channel.send(f"Reminder: {note}", tts=True)
+    async def add_reminder(self, reply_to: Message, timestamp: str, text: str):
+        log.info(f"Reminder request from: {reply_to.author}")
+        async with reply_to.channel.typing():
+            try:
+                parsed_date = dateutil.parser.parse(timestamp)
+                parsed_date_string = parsed_date.strftime("%a %H:%M:%S")
+                near_now = datetime.now(timezone.utc) + timedelta(minutes=1)
+                if parsed_date < near_now:
+                    await asyncio.gather(
+                        reactions.reject(self, reply_to),
+                        reply_to.reply(
+                            """Reminder data parsed as {parsed_date} but it is now {now}.\n
+                            I'm sorry, time travel is difficult 😢.""".format(
+                                parsed_date=parsed_date_string,
+                                now=near_now.strftime("%a %H:%M:%S"),
+                            )
+                        ),
+                    )
+                    return
+            except (TypeError, dateutil.parser.ParserError):
+                log.error("Failed to process reminder time", exc_info=True)
+                await asyncio.gather(
+                    reactions.reject(self, reply_to),
+                    reply_to.reply(f"I'm sorry, I was unable to process this time 😢."),
+                )
+                return
+            advance_reminder = "🕰" in text
+            log.info(f"Creating reminder. Advance warning: {advance_reminder}")
+            reminder_notes = text.replace("🕰", "").strip()
+            created_reminder = await self.storage.add_reminder(
+                parsed_date,
+                notes=reminder_notes,
+                msg_id=reply_to.id,
+                advance_reminder=advance_reminder,
+            )
+            await reply_to.reply(
+                f"Added reminder '{reminder_notes}' at {parsed_date_string}. Reference `{created_reminder.id}`"
+            )
+        await self.refresh_reminders()
