@@ -37,9 +37,9 @@ class ReminderManager:
         scheduler.add_listener(self.handle_scheduler_event, events.EVENT_JOB_MISSED)
 
     def handle_scheduler_event(self, event: events.JobEvent):
-        job = self.scheduler.get_job(event.job_id)
-        if job.name.startswith("Reminder:") and not event.job_id.endswith("_advance"):
-            self.missed_job_ids.append(event.job_id)
+        if job := self.scheduler.get_job(event.job_id):
+            if job.name.startswith("Reminder:") and not event.job_id.endswith("_advance"):
+                self.missed_job_ids.append(event.job_id)
 
     async def refresh_reminders(self):
         reminders_processed = 0
