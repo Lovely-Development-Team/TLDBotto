@@ -95,6 +95,7 @@ class TLDBotto(discord.Client):
         super().__init__(intents=intents)
 
     async def refresh_reminders(self):
+        reminders_processed = 0
         async for reminder in self.storage.retrieve_reminders():
             if reminder.remind_15_minutes_before:
                 self.scheduler.add_job(
@@ -117,6 +118,8 @@ class TLDBotto(discord.Client):
                 replace_existing=True,
                 kwargs={"reminder": reminder},
             )
+            reminders_processed += 1
+        log.debug(f"Refreshed {reminders_processed} reminders")
 
     async def on_connect(self):
         if not self.regexes and self.user:
@@ -308,12 +311,12 @@ class TLDBotto(discord.Client):
             "job_schedule": self.send_schedule,
             "yell": self.yell_at_someone,
             "add_reminder": self.add_reminder,
-            "reminder_explain": self.send_reminder_syntax
+            "reminder_explain": self.send_reminder_syntax,
         }
 
     @staticmethod
     async def handle_trigger(
-            message: Message, trigger_details: tuple[Callable, re.Match]
+        message: Message, trigger_details: tuple[Callable, re.Match]
     ):
         if trigger_func := trigger_details[0]:
             if groups := trigger_details[1].groupdict():
@@ -585,7 +588,12 @@ You can DM me the following commands:
                 msg_id=reply_to.id,
                 advance_reminder=advance_reminder,
             )
-            await reply_to.reply(
-                f"Added reminder '{reminder_notes}' at {parsed_date_string}. Reference `{created_reminder.id}`"
+            advance_reminder_string = (
+                " with 15 minute reminder" if advance_reminder else ""
             )
+            confirmation_message = (
+                f"Added reminder '{reminder_notes}' at "
+                f"{parsed_date_string}{advance_reminder_string}. Reference `{created_reminder.id}` "
+            )
+            await reply_to.reply(confirmation_message)
         await self.refresh_reminders()
