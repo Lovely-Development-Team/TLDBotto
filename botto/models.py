@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from datetime import time, datetime
 from typing import Union
 
-from dateutil import parser
 from yarl import URL
 
 
