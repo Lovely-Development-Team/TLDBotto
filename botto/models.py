@@ -1,3 +1,4 @@
+from collections import namedtuple
 from dataclasses import dataclass
 from datetime import time, datetime
 from typing import Union
@@ -38,6 +39,7 @@ class Meal:
             texts=fields.get("Texts"),
         )
 
+
 @dataclass
 class Reminder:
     id: str
@@ -45,6 +47,7 @@ class Reminder:
     notes: str
     remind_15_minutes_before: bool
     msg_id: str
+    channel_id: str
 
     @classmethod
     def from_airtable(cls, data: dict) -> "Reminder":
@@ -54,12 +57,14 @@ class Reminder:
         note = fields.get("Notes")
         advance_reminder = fields.get("15 Minutes Before")
         msg_id = fields.get("Message ID")
+        channel_id = fields.get("Channel ID")
         return cls(
             id=data["id"],
             date=parsed_date,
             notes=note,
             remind_15_minutes_before=advance_reminder,
-            msg_id=msg_id
+            msg_id=msg_id,
+            channel_id=channel_id
         )
 
     def to_airtable(self, fields=None) -> dict:
@@ -75,9 +80,12 @@ class Reminder:
         }
 
 
+MessageAndChannel = namedtuple("MessageAndChannel", ["channel_id", "msg_id"])
+
+
 class AirTableError(Exception):
     def __init__(
-        self, url: URL, response_dict: Union[dict, str], *args: object
+            self, url: URL, response_dict: Union[dict, str], *args: object
     ) -> None:
         error_dict: dict = response_dict["error"]
         self.url = url

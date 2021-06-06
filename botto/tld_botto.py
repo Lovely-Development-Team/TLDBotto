@@ -119,7 +119,7 @@ class TLDBotto(discord.Client):
         await self.random_presence()
 
         self.reminders.start(
-            await self.get_or_fetch_channel(self.config["reminder_channel"])
+            self.get_or_fetch_channel
         )
 
         reminder_log_text = ", ".join(
