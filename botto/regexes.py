@@ -26,7 +26,7 @@ def compile_regexes(bot_user_id: str, config: dict) -> SuggestionRegexes:
     self_id = rf"<@!?{bot_user_id}>"
 
     regexes = SuggestionRegexes(
-        trigger=[re.compile(rf"^{self_id}")],
+        trigger=[re.compile(rf"^{self_id}(?P<command>.*)")],
         pokes=re.compile(rf"pokes? {self_id}", re.IGNORECASE),
         sorry=re.compile(rf"sorry,? {self_id}", re.IGNORECASE),
         apologising=re.compile(
