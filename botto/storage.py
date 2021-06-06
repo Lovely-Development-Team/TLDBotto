@@ -268,13 +268,15 @@ class ReminderStorage(MealStorage):
         timestamp: datetime,
         notes: str,
         msg_id: Optional[str],
+        channel_id: Optional[str],
         advance_reminder: bool = False,
     ) -> Reminder:
         reminder_data = {
             "Date": timestamp.isoformat(),
             "Notes": notes,
             "15 Minutes Before": advance_reminder,
-            "Message ID": msg_id
+            "Message ID": msg_id,
+            "Channel ID": channel_id
         }
         response = await self._insert(self.reminders_url, reminder_data)
         return Reminder.from_airtable(response)
