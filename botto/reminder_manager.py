@@ -54,8 +54,8 @@ class ReminderManager:
                     coalesce=True,
                     replace_existing=True,
                     kwargs={
-                        "reminder_id": reminder.id,
-                        "notes": f"Reminder: {reminder.notes.strip()} now ({reminder.date})!",
+                        "reminder_id": reminder.id + "_advance",
+                        "notes": f"{reminder.notes.strip()} now ({reminder.date})!",
                     },
                 )
             self.scheduler.add_job(
