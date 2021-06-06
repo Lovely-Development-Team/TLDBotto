@@ -138,7 +138,8 @@ class ReminderManager:
                 return
             advance_reminder = "🕰" in text
             log.info(f"Creating reminder. Advance warning: {advance_reminder}")
-            reminder_notes = text.replace("🕰", "").strip()
+            reminder_notes = text.replace("🕰\ufe0f", "").strip()
+            log.debug(reminder_notes.encode("unicode_escape"))
             created_reminder = await self.storage.add_reminder(
                 parsed_date,
                 notes=reminder_notes,
