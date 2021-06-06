@@ -51,7 +51,7 @@ class Reminder:
     def from_airtable(cls, data: dict) -> "Reminder":
         fields = data["fields"]
         date_sting = fields.get("Date")
-        parsed_date = datetime.strptime(date_sting, "%Y-%m-%dT%H:%M:%S.%fZ")
+        parsed_date = datetime.strptime(date_sting, "%Y-%m-%dT%H:%M:%S.%f%z")
         note = fields.get("Notes")
         advance_reminder = fields.get("15 Minutes Before")
         msg_id = fields.get("Message ID")
