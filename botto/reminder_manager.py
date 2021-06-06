@@ -37,7 +37,8 @@ class ReminderManager:
         scheduler.add_listener(self.handle_scheduler_event, events.EVENT_JOB_MISSED)
 
     def handle_scheduler_event(self, event: events.JobEvent):
-        if not event.job_id.endswith("_advance"):
+        job = self.scheduler.get_job(event.job_id)
+        if job.name.startswith("Reminder:") and not event.job_id.endswith("_advance"):
             self.missed_job_ids.append(event.job_id)
 
     async def refresh_reminders(self):
@@ -67,7 +68,7 @@ class ReminderManager:
                 replace_existing=True,
                 kwargs={
                     "reminder_id": reminder.id,
-                    "notes": f"Reminder: {reminder.notes.strip()} now ({reminder.date})!",
+                    "notes": f"{reminder.notes.strip()} now ({reminder.date})!",
                 },
             )
             reminders_processed += 1
@@ -83,18 +84,23 @@ class ReminderManager:
         return "`@TLDBotto !reminder <datetime>. <message>`"
 
     async def cleanup_missed_reminders(self):
+        log.info("Cleaning missed reminders")
         deletions = [
             self.storage.remove_reminder(job_id) for job_id in self.missed_job_ids
         ]
         await asyncio.gather(*deletions)
+        log.info(f"Deleted job IDs: {self.missed_job_ids}")
+        self.missed_job_ids = []
 
     async def send_reminder_syntax(self, message: discord.Message, **kwargs):
+        log.info("Sending reminder syntax")
         await asyncio.gather(
             message.reply(f"Syntax for setting a reminder is: {self.reminder_syntax}"),
             self.cleanup_missed_reminders(),
         )
 
     async def send_reminder(self, reminder_id: str, notes: str):
+        log.info(f"Sending reminder '{reminder_id}': {notes}")
         channel = self.reminder_channel
         async with channel.typing():
             await channel.send(f"Reminder: {notes.strip()}", tts=True)
@@ -136,7 +142,7 @@ class ReminderManager:
             created_reminder = await self.storage.add_reminder(
                 parsed_date,
                 notes=reminder_notes,
-                msg_id=reply_to.id,
+                msg_id=str(reply_to.id),
                 advance_reminder=advance_reminder,
             )
             advance_reminder_string = (
