@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from collections import AsyncGenerator
 from datetime import datetime
 from typing import Callable, Awaitable, Optional, Any, Literal
@@ -8,6 +9,7 @@ from aiohttp import ClientSession
 
 from models import Meal, AirTableError, Intro, Reminder
 
+log = logging.getLogger(__name__)
 
 async def run_request(
     action_to_run: Callable[[ClientSession], Awaitable[dict]],
@@ -236,15 +238,21 @@ class AirtableMealStorage(MealStorage):
             return await self.retrieve_text(key)
 
     async def update_meals_cache(self):
-        for meal in await self.retrieve_meals():
-            async with self.text_lock:
-                for text_ref in meal.texts:
-                    await self.get_text(text_ref)
+        total_fetches = 0
+        async with self.text_lock:
+            for meal in await self.retrieve_meals():
+                fetches = [self.get_text(text_ref) for text_ref in meal.texts]
+                await asyncio.gather(*fetches)
+                total_fetches += len(fetches)
+        log.debug(f"Ensured {total_fetches} texts are cached")
 
     async def update_text_cache(self):
+        total_fetches = 0
         async with self.text_lock:
-            for key in self.text_cache.keys():
-                await self.retrieve_text(key)
+            fetches = [self.retrieve_text(key) for key in self.text_cache.keys()]
+            await asyncio.gather(*fetches)
+            total_fetches += len(fetches)
+        log.debug(f"Retrieved {total_fetches} texts")
 
     async def retrieve_reminders(self) -> AsyncGenerator[Reminder, Any, None]:
         reminders_iterator = self._list_all_reminders(filter_by_formula=None)
@@ -271,4 +279,6 @@ class AirtableMealStorage(MealStorage):
         return Reminder.from_airtable(response)
 
     async def remove_reminder(self, *reminder_ids: str):
+        log.debug(f"Deleting reminders: {reminder_ids}")
         await self._delete(self.reminders_url, list(reminder_ids))
+        log.debug(f"Deleted reminders: {reminder_ids}")
