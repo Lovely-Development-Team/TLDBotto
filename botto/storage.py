@@ -11,6 +11,7 @@ from models import Meal, AirTableError, Intro, Reminder
 
 log = logging.getLogger(__name__)
 
+
 async def run_request(
     action_to_run: Callable[[ClientSession], Awaitable[dict]],
     session: Optional[ClientSession] = None,
@@ -27,6 +28,8 @@ async def airtable_sleep():
 
 
 class MealStorage:
+    semaphore = asyncio.Semaphore(5)
+
     async def get_intros(self) -> Intro:
         raise NotImplementedError
 
@@ -40,21 +43,6 @@ class MealStorage:
         raise NotImplementedError
 
     async def update_text_cache(self):
-        raise NotImplementedError
-
-    async def retrieve_reminders(self) -> AsyncGenerator[Reminder, Any, None]:
-        raise NotImplementedError
-
-    async def add_reminder(
-        self,
-        timestamp: datetime,
-        notes: str,
-        msg_id: Optional[str],
-        advance_reminder: bool,
-    ) -> Reminder:
-        raise NotImplementedError
-
-    async def remove_reminder(self, *reminder_ids: str):
         raise NotImplementedError
 
     async def _get(
@@ -188,7 +176,6 @@ class AirtableMealStorage(MealStorage):
             base=airtable_base
         )
         self.auth_header = {"Authorization": f"Bearer {self.airtable_key}"}
-        self.semaphore = asyncio.Semaphore(5)
         self.meals_cache: list[Meal] = []
         self.text_lock = asyncio.Lock()
         self.text_cache = {}
@@ -200,14 +187,6 @@ class AirtableMealStorage(MealStorage):
         session: Optional[ClientSession] = None,
     ) -> AsyncGenerator[dict]:
         return self._iterate(self.times_url, filter_by_formula, sort, session)
-
-    def _list_all_reminders(
-        self,
-        filter_by_formula: Optional[str],
-        sort: Optional[list[str]] = None,
-        session: Optional[ClientSession] = None,
-    ) -> AsyncGenerator[dict]:
-        return self._iterate(self.reminders_url, filter_by_formula, sort, session)
 
     async def get_intros(self) -> Intro:
         texts_iterator = self._list_all_texts(filter_by_formula="{Name}='Intro'")
@@ -254,6 +233,27 @@ class AirtableMealStorage(MealStorage):
             total_fetches += len(fetches)
         log.debug(f"Retrieved {total_fetches} texts")
 
+
+class ReminderStorage(MealStorage):
+    def __init__(
+        self,
+        airtable_base: str,
+        airtable_key: str,
+    ):
+        self.airtable_key = airtable_key
+        self.reminders_url = "https://api.airtable.com/v0/{base}/Reminders".format(
+            base=airtable_base
+        )
+        self.auth_header = {"Authorization": f"Bearer {self.airtable_key}"}
+
+    def _list_all_reminders(
+        self,
+        filter_by_formula: Optional[str],
+        sort: Optional[list[str]] = None,
+        session: Optional[ClientSession] = None,
+    ) -> AsyncGenerator[dict]:
+        return self._iterate(self.reminders_url, filter_by_formula, sort, session)
+
     async def retrieve_reminders(self) -> AsyncGenerator[Reminder, Any, None]:
         reminders_iterator = self._list_all_reminders(filter_by_formula=None)
         async for reminder in reminders_iterator:
@@ -274,6 +274,7 @@ class AirtableMealStorage(MealStorage):
             "Date": timestamp.isoformat(),
             "Notes": notes,
             "15 Minutes Before": advance_reminder,
+            "Message ID": msg_id
         }
         response = await self._insert(self.reminders_url, reminder_data)
         return Reminder.from_airtable(response)
