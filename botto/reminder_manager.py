@@ -131,8 +131,9 @@ class ReminderManager:
             channel = await self.get_channel_func(self.config["reminder_channel"])
             async with channel.typing():
                 await channel.send(f"Reminder: {notes.strip()}", tts=True)
-                if not reminder_id.endswith("_advance"):
-                    await self.storage.remove_reminder(reminder_id)
+
+        if not reminder_id.endswith("_advance"):
+            await self.storage.remove_reminder(reminder_id)
         await self.cleanup_missed_reminders()
 
     async def add_reminder(self, reply_to: discord.Message, timestamp: str, text: str):
