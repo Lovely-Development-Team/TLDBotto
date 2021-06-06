@@ -1,7 +1,7 @@
 import asyncio
-import random
 from collections import AsyncGenerator
-from typing import Callable, Awaitable, Optional, Generator, Any
+from datetime import datetime
+from typing import Callable, Awaitable, Optional, Any, Literal
 
 import aiohttp
 from aiohttp import ClientSession
@@ -41,6 +41,18 @@ class MealStorage:
         raise NotImplementedError
 
     async def retrieve_reminders(self) -> AsyncGenerator[Reminder, Any, None]:
+        raise NotImplementedError
+
+    async def add_reminder(
+        self,
+        timestamp: datetime,
+        notes: str,
+        msg_id: Optional[str],
+        advance_reminder: bool,
+    ) -> Reminder:
+        raise NotImplementedError
+
+    async def remove_reminder(self, *reminder_ids: str):
         raise NotImplementedError
 
     async def _get(
@@ -92,6 +104,69 @@ class MealStorage:
             offset = response.get("offset")
             if not offset:
                 break
+
+    async def _delete(
+        self,
+        base_url: str,
+        records_to_delete: [str],
+        session: Optional[ClientSession] = None,
+    ):
+        async def run_delete(session_to_use: ClientSession):
+            async with session_to_use.delete(
+                (
+                    base_url
+                    if len(records_to_delete) > 1
+                    else base_url + f"/{records_to_delete[0]}"
+                ),
+                params=(
+                    {"records": records_to_delete}
+                    if len(records_to_delete) > 1
+                    else None
+                ),
+                headers=self.auth_header,
+            ) as r:
+                if r.status != 200:
+                    raise AirTableError(r.url, await r.json())
+
+        async with self.semaphore:
+            result = await run_request(run_delete, session)
+            await airtable_sleep()
+            return result
+
+    async def _modify(
+        self,
+        url: str,
+        method: Literal["post", "patch"],
+        record: dict,
+        session: Optional[ClientSession] = None,
+    ):
+        async def run_insert(session_to_use: ClientSession):
+            data = {"fields": record}
+            async with session_to_use.request(
+                method,
+                url,
+                json=data,
+                headers=self.auth_header,
+            ) as r:
+                if r.status != 200:
+                    raise AirTableError(r.url, await r.json())
+                motto_response: dict = await r.json()
+                return motto_response
+
+        async with self.semaphore:
+            result = await run_request(run_insert, session)
+            await airtable_sleep()
+            return result
+
+    async def _insert(
+        self, url: str, record: dict, session: Optional[ClientSession] = None
+    ) -> dict:
+        return await self._modify(url, "post", record, session)
+
+    async def _update(
+        self, url: str, record: dict, session: Optional[ClientSession] = None
+    ) -> dict:
+        return await self._modify(url, "patch", record, session)
 
 
 class AirtableMealStorage(MealStorage):
@@ -179,3 +254,21 @@ class AirtableMealStorage(MealStorage):
     async def retrieve_reminder(self, key: str) -> Reminder:
         result = await self._get(f"{self.reminders_url}/{key}")
         return Reminder.from_airtable(result)
+
+    async def add_reminder(
+        self,
+        timestamp: datetime,
+        notes: str,
+        msg_id: Optional[str],
+        advance_reminder: bool = False,
+    ) -> Reminder:
+        reminder_data = {
+            "Date": timestamp.isoformat(),
+            "Notes": notes,
+            "15 Minutes Before": advance_reminder,
+        }
+        response = await self._insert(self.reminders_url, reminder_data)
+        return Reminder.from_airtable(response)
+
+    async def remove_reminder(self, *reminder_ids: str):
+        await self._delete(self.reminders_url, list(reminder_ids))
