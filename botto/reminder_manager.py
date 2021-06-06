@@ -55,7 +55,12 @@ class ReminderManager:
                     replace_existing=True,
                     kwargs={
                         "reminder_id": reminder.id + "_advance",
-                        "notes": f"{reminder.notes.strip()} now ({reminder.date})!",
+                        "notes": f"{reminder.notes.strip()} in 15 minutes!",
+                        "message_and_channel": MessageAndChannel(
+                            reminder.channel_id, reminder.msg_id
+                        )
+                        if reminder.channel_id and reminder.msg_id
+                        else None,
                     },
                 )
             self.scheduler.add_job(
