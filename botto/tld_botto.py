@@ -204,6 +204,10 @@ class TLDBotto(discord.Client):
             if channel_name in self.config["channels"]["exclude"]:
                 return
 
+        if message.author.id == self.user.id:
+            log.info("Ignoring message from self")
+            return
+
         await self.process_suggestion(message)
 
     def clean_trigger_message(self, trigger, message) -> str:
