@@ -103,7 +103,7 @@ def parse(config):
             "intro_text": ["Reminder!"],
             "times": {},
         },
-        "reminder_channel": "847579062669934602",
+        "reminder_channel": "833842753799848019",
         "should_reply": True,
         "approval_reaction": "mottoapproval",
         "leaderboard_link": None,
