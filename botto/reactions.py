@@ -64,7 +64,7 @@ async def food(botto: TLDBotto, message: Message, food_item: str):
             if reaction == SpecialAction.echo:
                 await message.add_reaction(food_item)
             elif reaction == SpecialAction.party:
-                await party(botto, message)
+                await party(botto, message, food_item)
             else:
                 await message.add_reaction(reaction)
     except KeyError:
