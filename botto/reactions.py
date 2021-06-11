@@ -95,13 +95,13 @@ async def not_reply(botto: TLDBotto, message: Message):
 
 async def fishing(botto: TLDBotto, message: Message):
     log.info(f"Motto fishing from: {message.author}")
-    await reject(botto, message)
+    await reject(botto.config["reactions"], message)
     await message.add_reaction(botto.config["reactions"]["fishing"])
 
 
 async def invalid(botto: TLDBotto, message: Message):
     log.info(f"Motto from {message.author} is invalid according to rules.")
-    await reject(botto, message)
+    await reject(botto.config["reactions"], message)
     await message.add_reaction(botto.config["reactions"]["invalid"])
 
 
@@ -114,7 +114,7 @@ async def duplicate(botto: TLDBotto, message: Message):
 async def deleted(botto: TLDBotto, message: Message):
     log.debug("Ignoring motto, it's been deleted.")
     await message.add_reaction(botto.config["reactions"]["deleted"])
-    await reject(botto, message)
+    await reject(botto.config["reactions"], message)
     await message.remove_reaction(botto.config["reactions"]["pending"], botto.user)
 
 
