@@ -49,16 +49,11 @@ async def hug(botto: TLDBotto, message: Message):
 
 async def party(botto: TLDBotto, message: Message, trigger_word: str):
     log.info(f"Party from: {message.author}")
-    tasks = []
     if trigger_word.isupper():
         log.info("Party harder!")
-        for reaction in botto.config["reactions"]["party"]:
-            tasks.append(message.add_reaction(reaction))
+        tasks = [message.add_reaction(reaction) for reaction in botto.config["reactions"]["party"]]
     else:
-        for _ in range(5):
-            tasks.append(
-                message.add_reaction(random.choice(botto.config["reactions"]["party"]))
-            )
+        tasks = [message.add_reaction(random.choice(botto.config["reactions"]["party"])) for _ in range(5)]
     await asyncio.wait(tasks)
 
 
