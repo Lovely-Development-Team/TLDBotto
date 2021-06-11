@@ -60,6 +60,6 @@ def compile_regexes(bot_user_id: str, config: dict) -> SuggestionRegexes:
         band=re.compile(
             rf"What('|’)?s +your +fav(ou?rite)? +band +{self_id} ?\?*", re.IGNORECASE
         ),
-        party=re.compile(rf"(?<!third)(?<!3rd)(?:^|\s)part(?:a*y|ies)", re.IGNORECASE),
+        party=re.compile(rf"(?<!third)(?<!3rd)(?:^|\s)(?P<partyword>part(?:a*y|ies))", re.IGNORECASE),
     )
     return regexes

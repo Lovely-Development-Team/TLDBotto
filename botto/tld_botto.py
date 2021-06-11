@@ -307,9 +307,9 @@ class TLDBotto(discord.Client):
             message.content
         ) and not self.regexes.sorry.search(message.content):
             await reactions.rule_1(self, message)
-        if self.regexes.party.search(message.content):
-            await reactions.party(self, message)
-
+        if party_match := self.regexes.party.search(message.content):
+            matched_string = party_match.group("partyword")
+            await reactions.party(self, message, matched_string)
         if self.regexes.pokes.search(message.content):
             await reactions.poke(self, message)
         if self.regexes.sorry.search(message.content):
