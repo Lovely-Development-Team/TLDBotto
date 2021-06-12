@@ -98,6 +98,7 @@ def parse(config):
                 "🕺",
                 "🎆",
                 "🎇",
+                "💯"
             ],
             "delete_confirmed": "✅",
         },
