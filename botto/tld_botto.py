@@ -297,10 +297,7 @@ class TLDBotto(discord.Client):
                 await trigger_func(message)
             return
 
-    async def process_suggestion(self, message: Message):
-        if trigger_result := self.check_triggers(message):
-            await self.handle_trigger(message, trigger_result)
-
+    async def process_reaction(self, message):
         if self.regexes.off_topic.search(message.content):
             await reactions.off_topic(self, message)
         if self.regexes.apologising.search(
@@ -327,6 +324,12 @@ class TLDBotto(discord.Client):
             await reactions.food(self, message, food_char)
         elif self.regexes.food.not_food_regex.search(message.content):
             await reactions.unrecognised_food(self, message)
+
+    async def process_suggestion(self, message: Message):
+        if trigger_result := self.check_triggers(message):
+            await self.handle_trigger(message, trigger_result)
+
+        await self.process_reaction(message)
         return
 
     async def process_dm(self, message: Message):
