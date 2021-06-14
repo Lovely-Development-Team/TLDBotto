@@ -3,6 +3,7 @@ import json
 import logging.config
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
+from reactions import Reactions
 from reminder_manager import ReminderManager
 from storage import AirtableMealStorage, ReminderStorage
 from tld_botto import TLDBotto
@@ -43,5 +44,5 @@ reminder_storage = ReminderStorage(
 
 reminder_manager = ReminderManager(config, scheduler, reminder_storage)
 
-client = TLDBotto(config, scheduler, storage, reminder_manager)
+client = TLDBotto(config, Reactions(config), scheduler, storage, reminder_manager)
 client.run(config["authentication"]["discord"])

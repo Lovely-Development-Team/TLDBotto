@@ -13,7 +13,7 @@ from discord import Message, Guild
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 
-import reactions
+from reactions import Reactions
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -45,11 +45,13 @@ class TLDBotto(discord.Client):
     def __init__(
         self,
         config: dict,
+        reactions: Reactions,
         scheduler: AsyncIOScheduler,
         storage: MealStorage,
         reminders: ReminderManager,
     ):
         self.config = config
+        self.reactions = reactions
         self.scheduler = scheduler
         self.storage = storage
         self.reminders = reminders
@@ -118,9 +120,7 @@ class TLDBotto(discord.Client):
 
         await self.random_presence()
 
-        self.reminders.start(
-            self.get_or_fetch_channel
-        )
+        self.reminders.start(self.get_or_fetch_channel)
 
         reminder_log_text = ", ".join(
             [
@@ -255,8 +255,8 @@ class TLDBotto(discord.Client):
     def check_triggers(self, message: Message) -> tuple[Callable, re.Match]:
         def search_triggers(content: str, trigger_dict: dict):
             for name, triggers in trigger_dict.items():
-                for t in triggers:
-                    if matched := t.match(content):
+                for trigger in triggers:
+                    if matched := trigger.match(content):
                         return name, matched
 
         at_command = None
@@ -297,39 +297,39 @@ class TLDBotto(discord.Client):
                 await trigger_func(message)
             return
 
-    async def process_reaction(self, message):
+    async def react(self, message):
         if self.regexes.off_topic.search(message.content):
-            await reactions.off_topic(self, message)
+            await self.reactions.off_topic(message)
         if self.regexes.apologising.search(
             message.content
         ) and not self.regexes.sorry.search(message.content):
-            await reactions.rule_1(self, message)
+            await self.reactions.rule_1(message)
         if party_match := self.regexes.party.search(message.content):
             matched_string = party_match.group("partyword")
-            await reactions.party(self, message, matched_string)
+            await self.reactions.party(message, matched_string)
         if self.regexes.pokes.search(message.content):
-            await reactions.poke(self, message)
+            await self.reactions.poke(message)
         if self.regexes.sorry.search(message.content):
-            await reactions.love(self, message)
+            await self.reactions.love(message)
         if self.regexes.love.search(message.content):
-            await reactions.love(self, message)
+            await self.reactions.love(message)
         if self.regexes.hug.search(message.content):
-            await reactions.hug(self, message)
+            await self.reactions.hug(message)
         if self.regexes.band.search(message.content):
-            await reactions.favorite_band(self, message)
+            await self.reactions.favorite_band(message)
         if message.content.strip().lower() in ("i am 🐌", "i am snail"):
-            await reactions.snail(self, message)
+            await self.reactions.snail(message)
         if food := self.regexes.food.food_regex.search(message.content):
             food_char = food.group(1)
-            await reactions.food(self, message, food_char)
+            await self.reactions.food(self.regexes, message, food_char)
         elif self.regexes.food.not_food_regex.search(message.content):
-            await reactions.unrecognised_food(self, message)
+            await self.reactions.unrecognised_food(message)
 
     async def process_suggestion(self, message: Message):
         if trigger_result := self.check_triggers(message):
             await self.handle_trigger(message, trigger_result)
 
-        await self.process_reaction(message)
+        await self.react(message)
         return
 
     async def process_dm(self, message: Message):
@@ -381,7 +381,10 @@ You can DM me the following commands:
                     if users:
                         message_add = f"{message_add}, or"
                 if users:
-                    message_add = f"{message_add} DM one of the following users: {users}. They are happy to receive your DMs about MottoBotto without prior permission but otherwise usual rules apply"
+                    message_add = (
+                        f"{message_add} DM one of the following users: {users}. They are happy to receive "
+                        f"your DMs about MottoBotto without prior permission but otherwise usual rules apply"
+                    )
                 help_message = f"{help_message}\n{message_add}."
 
             await message.author.dm_channel.send(help_message)
@@ -408,7 +411,7 @@ You can DM me the following commands:
             await message.author.dm_channel.send(response)
             return
 
-        await reactions.unknown_dm(self, message)
+        await self.reactions.unknown_dm(message)
 
     @property
     def local_times(self) -> list[datetime]:
@@ -487,7 +490,8 @@ You can DM me the following commands:
                 for job in regular_jobs
             ]
             reminder_job_descs = [
-                f"- `{job.name.lstrip('Reminder:')}` running at {job.next_run_time.strftime('%a %H:%M:%S %Z')}. Ref `{job.id}`"
+                f"- `{job.name.lstrip('Reminder:')}` running at {job.next_run_time.strftime('%a %H:%M:%S %Z')}."
+                f" Ref `{job.id}`"
                 for job in reminder_jobs
             ]
             regular_jobs_text = "Regular jobs:\n" + "\n".join(job_descs)
