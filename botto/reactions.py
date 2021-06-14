@@ -99,3 +99,6 @@ class Reactions:
     async def unknown_dm(self, message: Message):
         log.info(f"I don't know how to handle {message.content} from {message.author}")
         await message.add_reaction(self.config["reactions"]["unknown"])
+
+    async def shrug(self, message: Message):
+        await message.add_reaction("🤷")

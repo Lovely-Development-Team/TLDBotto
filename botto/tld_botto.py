@@ -324,6 +324,8 @@ class TLDBotto(discord.Client):
             await self.reactions.food(self.regexes, message, food_char)
         elif self.regexes.food.not_food_regex.search(message.content):
             await self.reactions.unrecognised_food(message)
+        if self.regexes.complaint.search(message.content):
+            await self.reactions.shrug(message)
 
     async def process_suggestion(self, message: Message):
         if trigger_result := self.check_triggers(message):
