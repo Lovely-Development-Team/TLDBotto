@@ -17,6 +17,7 @@ class SuggestionRegexes:
     food: FoodLookups
     band: Pattern
     party: Pattern
+    complaint: Pattern
 
 
 laugh_emojis = "[😆😂🤣]"
@@ -61,5 +62,6 @@ def compile_regexes(bot_user_id: str, config: dict) -> SuggestionRegexes:
             rf"What('|’)?s +your +fav(ou?rite)? +band +{self_id} ?\?*", re.IGNORECASE
         ),
         party=re.compile(rf"(?<!third)(?<!3rd)(?:^|\s)(?P<partyword>part(?:a*y|ies))", re.IGNORECASE),
+        complaint=re.compile(r"BOTTO.?\s+COME\.?\s+ON\s*")
     )
     return regexes
