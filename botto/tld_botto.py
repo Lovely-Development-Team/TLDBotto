@@ -297,35 +297,55 @@ class TLDBotto(discord.Client):
                 await trigger_func(message)
             return
 
+    @property
+    def simple_reactions(self) -> list[tuple[Callable, Callable]]:
+        return [
+            (
+                lambda content: self.regexes.off_topic.search(content),
+                self.reactions.off_topic,
+            ),
+            (
+                lambda content: self.regexes.apologising.search(content)
+                and not self.regexes.sorry.search(content),
+                self.reactions.rule_1,
+            ),
+            (lambda content: self.regexes.pokes.search(content), self.reactions.poke),
+            (lambda content: self.regexes.sorry.search(content), self.reactions.love),
+            (lambda content: self.regexes.love.search(content), self.reactions.love),
+            (lambda content: self.regexes.hug.search(content), self.reactions.hug),
+            (
+                lambda content: self.regexes.band.search(content),
+                self.reactions.favorite_band,
+            ),
+            (
+                lambda content: content.strip().lower()
+                in ("i am 🐌", "i am snail"),
+                self.reactions.snail,
+            ),
+            (
+                lambda content: self.regexes.complaint.search(content),
+                self.reactions.shrug,
+            ),
+        ]
+
     async def react(self, message):
-        if self.regexes.off_topic.search(message.content):
-            await self.reactions.off_topic(message)
-        if self.regexes.apologising.search(
-            message.content
-        ) and not self.regexes.sorry.search(message.content):
-            await self.reactions.rule_1(message)
+        has_matched = False
+        for reaction in self.simple_reactions:
+            if reaction[0](message.content):
+                await reaction[1](message)
+                has_matched = True
         if party_match := self.regexes.party.search(message.content):
             matched_string = party_match.group("partyword")
             await self.reactions.party(message, matched_string)
-        if self.regexes.pokes.search(message.content):
-            await self.reactions.poke(message)
-        if self.regexes.sorry.search(message.content):
-            await self.reactions.love(message)
-        if self.regexes.love.search(message.content):
-            await self.reactions.love(message)
-        if self.regexes.hug.search(message.content):
-            await self.reactions.hug(message)
-        if self.regexes.band.search(message.content):
-            await self.reactions.favorite_band(message)
-        if message.content.strip().lower() in ("i am 🐌", "i am snail"):
-            await self.reactions.snail(message)
+            has_matched = True
         if food := self.regexes.food.food_regex.search(message.content):
             food_char = food.group(1)
             await self.reactions.food(self.regexes, message, food_char)
+            has_matched = True
         elif self.regexes.food.not_food_regex.search(message.content):
             await self.reactions.unrecognised_food(message)
-        if self.regexes.complaint.search(message.content):
-            await self.reactions.shrug(message)
+            has_matched = True
+        return has_matched
 
     async def process_suggestion(self, message: Message):
         if trigger_result := self.check_triggers(message):
@@ -413,7 +433,8 @@ You can DM me the following commands:
             await message.author.dm_channel.send(response)
             return
 
-        await self.reactions.unknown_dm(message)
+        if not await self.react(message):
+            await self.reactions.unknown_dm(message)
 
     @property
     def local_times(self) -> list[datetime]:
