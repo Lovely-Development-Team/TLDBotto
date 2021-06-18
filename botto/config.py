@@ -98,9 +98,15 @@ def parse(config):
                 "🕺",
                 "🎆",
                 "🎇",
-                "💯"
+                "💯",
             ],
             "delete_confirmed": "✅",
+        },
+        "pattern_reactions": {
+            "vroom": {
+                "trigger": "^vroom (?:vroom)+",
+                "reactions": ["🚗", "🚘", "🏎️", "🛺", "🛵", "🏍️"],
+            }
         },
         "food": food.default_config,
         "special_reactions": {},
@@ -150,6 +156,12 @@ def parse(config):
         defaults["at_triggers"][key] = [
             re.compile(f"^{t}", re.IGNORECASE) for t in triggers
         ]
+
+    # Compile at trigger regexes
+    for key, triggers in defaults["pattern_reactions"].items():
+        defaults["pattern_reactions"][key]["trigger"] = re.compile(
+            defaults["pattern_reactions"][key]["trigger"], re.IGNORECASE
+        )
 
     # Environment variables override config files
 

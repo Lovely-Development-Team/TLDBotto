@@ -318,8 +318,7 @@ class TLDBotto(discord.Client):
                 self.reactions.favorite_band,
             ),
             (
-                lambda content: content.strip().lower()
-                in ("i am 🐌", "i am snail"),
+                lambda content: content.strip().lower() in ("i am 🐌", "i am snail"),
                 self.reactions.snail,
             ),
             (
@@ -344,6 +343,9 @@ class TLDBotto(discord.Client):
             has_matched = True
         elif self.regexes.food.not_food_regex.search(message.content):
             await self.reactions.unrecognised_food(message)
+            has_matched = True
+        if pattern_name := self.regexes.patterns.matches(message.content):
+            await self.reactions.pattern(pattern_name, message)
             has_matched = True
         return has_matched
 
