@@ -102,3 +102,16 @@ class Reactions:
 
     async def shrug(self, message: Message):
         await message.add_reaction("🤷")
+
+    async def pattern(self, name: str, message: Message):
+        try:
+            pattern_item = self.config.get("pattern_reactions", {})[name]
+        except KeyError:
+            log.warning(f"Failed to find configured pattern '{name}'")
+            return
+        try:
+            reactions = pattern_item["reactions"]
+            await message.add_reaction(random.choice(reactions))
+        except KeyError:
+            log.warning(f"Failed to find configured pattern '{name}'")
+            return

@@ -1,8 +1,20 @@
 import re
 from dataclasses import dataclass
 from re import Pattern
+from typing import Optional
 
 from food import FoodLookups
+
+
+class PatternReactions:
+    def __init__(self, pattern_reactions: dict) -> None:
+        self.reaction_map = pattern_reactions
+        super().__init__()
+
+    def matches(self, text: str) -> Optional[str]:
+        for key, value in self.reaction_map.items():
+            if value["trigger"].search(text):
+                return key
 
 
 @dataclass
@@ -18,6 +30,7 @@ class SuggestionRegexes:
     band: Pattern
     party: Pattern
     complaint: Pattern
+    patterns: PatternReactions
 
 
 laugh_emojis = "[😆😂🤣]"
@@ -61,7 +74,12 @@ def compile_regexes(bot_user_id: str, config: dict) -> SuggestionRegexes:
         band=re.compile(
             rf"What('|’)?s +your +fav(ou?rite)? +band +{self_id} ?\?*", re.IGNORECASE
         ),
-        party=re.compile(rf"(?<!third)(?<!3rd)(?:^|\s)(?P<partyword>part(?:a*y|ies))", re.IGNORECASE),
-        complaint=re.compile(r"(?:BOTTO.?\s+COME\.?\s+ON\s*|COME\.?\s+ON\s+BOTTO.?\s*)")
+        party=re.compile(
+            rf"(?<!third)(?<!3rd)(?:^|\s)(?P<partyword>part(?:a*y|ies))", re.IGNORECASE
+        ),
+        complaint=re.compile(
+            r"(?:BOTTO.?\s+COME\.?\s+ON\s*|COME\.?\s+ON\s+BOTTO.?\s*)"
+        ),
+        patterns=PatternReactions(config["pattern_reactions"]),
     )
     return regexes
