@@ -162,7 +162,7 @@ class TLDBotto(discord.Client):
         log.info(f"Message: {message}")
         log.info(f"Reactions: {message.reactions}")
 
-        if channel.name == "voting":
+        if not isinstance(channel, discord.DMChannel) and channel.name == "voting":
             reacted_users = set()
             for reaction in message.reactions:
                 if reaction.emoji not in VOTE_EMOJI:
