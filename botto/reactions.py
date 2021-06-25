@@ -23,7 +23,11 @@ class Reactions:
         super().__init__()
 
     async def reject(self, message: Message):
-        await message.add_reaction(self.config["reject"])
+        await message.add_reaction(self.config["reactions"]["reject"])
+
+    async def nice_try(self, message: Message):
+        await message.add_reaction(self.config["reactions"]["invalid"])
+        await message.add_reaction(self.config["reactions"]["nice_try"])
 
     async def skynet_prevention(self, message: Message):
         log.info(f"{message.author} attempted to activate Skynet!")
