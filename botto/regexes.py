@@ -19,7 +19,7 @@ class PatternReactions:
 
 @dataclass
 class SuggestionRegexes:
-    trigger: [Pattern]
+    at_command: [Pattern]
     pokes: Pattern
     sorry: Pattern
     apologising: Pattern
@@ -31,16 +31,34 @@ class SuggestionRegexes:
     party: Pattern
     complaint: Pattern
     patterns: PatternReactions
+    triggers: dict[str, list[Pattern]]
+    at_triggers: dict[str, list[Pattern]]
 
 
 laugh_emojis = "[😆😂🤣]"
 
 
+def compile_triggers(self_id: str, trigger_dict: dict) -> dict:
+    for name, triggers in trigger_dict.items():
+        trigger_dict[name] = [
+            re.compile(
+                "^{trigger}".format(trigger=trigger.replace("{bot_id}", self_id)),
+                re.IGNORECASE,
+            )
+            for trigger in triggers
+        ]
+    return trigger_dict
+
+
 def compile_regexes(bot_user_id: str, config: dict) -> SuggestionRegexes:
     self_id = rf"<@!?{bot_user_id}>"
 
+    # Compile trigger regexes
+    trigger_dict = compile_triggers(self_id, config["triggers"])
+    at_trigger_dict = compile_triggers(self_id, config["at_triggers"])
+
     regexes = SuggestionRegexes(
-        trigger=[re.compile(rf"^{self_id}(?P<command>.*)")],
+        at_command=[re.compile(rf"^{self_id}(?P<command>.*)")],
         pokes=re.compile(rf"pokes? {self_id}", re.IGNORECASE),
         sorry=re.compile(rf"sorry,? {self_id}", re.IGNORECASE),
         apologising=re.compile(
@@ -81,5 +99,7 @@ def compile_regexes(bot_user_id: str, config: dict) -> SuggestionRegexes:
             r"(?:BOTTO.?\s+COME\.?\s+ON\s*|COME\.?\s+ON\s+BOTTO.?\s*)"
         ),
         patterns=PatternReactions(config["pattern_reactions"]),
+        triggers=trigger_dict,
+        at_triggers=at_trigger_dict,
     )
     return regexes

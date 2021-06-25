@@ -101,6 +101,7 @@ def parse(config):
                 "💯",
             ],
             "delete_confirmed": "✅",
+            "nice_try": "😝",
         },
         "pattern_reactions": {
             "vroom": {
@@ -116,6 +117,7 @@ def parse(config):
             "job_schedule": ["!schedule"],
             "yell": ["!bottoyellat(?P<person>[^.]*)(?:\.(?P<text>.*))?"],
             "reminder_explain": ["!remind(?:er)? (?P<timestamp>[^.]*).(?P<text>.*)"],
+            "remove_reactions": ["Not now (?:Tildy|{bot_id})$"],
         },
         "at_triggers": {
             "add_reminder": ["!remind(?:er)? (?P<timestamp>[^.]*).(?P<text>.*)"],
@@ -144,18 +146,6 @@ def parse(config):
                 defaults[key].update(config.get(key, {}))
             else:
                 defaults[key] = config.get(key, defaults[key])
-
-    # Compile trigger regexes
-    for key, triggers in defaults["triggers"].items():
-        defaults["triggers"][key] = [
-            re.compile(f"^{t}", re.IGNORECASE) for t in triggers
-        ]
-
-    # Compile at trigger regexes
-    for key, triggers in defaults["at_triggers"].items():
-        defaults["at_triggers"][key] = [
-            re.compile(f"^{t}", re.IGNORECASE) for t in triggers
-        ]
 
     # Compile at trigger regexes
     for key, triggers in defaults["pattern_reactions"].items():
