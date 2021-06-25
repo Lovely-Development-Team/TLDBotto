@@ -1,4 +1,6 @@
 from __future__ import annotations
+
+import asyncio
 import logging
 import os
 import random
@@ -11,7 +13,6 @@ import subprocess
 import discord
 from discord import Message, Guild
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-
 
 from reactions import Reactions
 from typing import TYPE_CHECKING
@@ -244,14 +245,6 @@ class TLDBotto(discord.Client):
 
         return actual_motto
 
-    @property
-    def triggers(self) -> dict:
-        return self.config["triggers"]
-
-    @property
-    def at_triggers(self) -> dict:
-        return self.config["at_triggers"]
-
     def check_triggers(self, message: Message) -> tuple[Callable, re.Match]:
         def search_triggers(content: str, trigger_dict: dict):
             for name, triggers in trigger_dict.items():
@@ -260,14 +253,14 @@ class TLDBotto(discord.Client):
                         return name, matched
 
         at_command = None
-        for t in self.regexes.trigger:
+        for t in self.regexes.at_command:
             if match := t.match(message.content):
                 if command_group := match.group("command"):
                     at_command = command_group.strip()
         if at_command:
-            trigger_details = search_triggers(at_command, self.at_triggers)
+            trigger_details = search_triggers(at_command, self.regexes.at_triggers)
         else:
-            trigger_details = search_triggers(message.content, self.triggers)
+            trigger_details = search_triggers(message.content, self.regexes.triggers)
 
         if trigger_details:
             resolved_name = trigger_details[0]
@@ -284,6 +277,7 @@ class TLDBotto(discord.Client):
             "yell": self.yell_at_someone,
             "add_reminder": self.reminders.add_reminder,
             "reminder_explain": self.reminders.send_reminder_syntax,
+            "remove_reactions": self.remove_reactions,
         }
 
     @staticmethod
@@ -543,3 +537,24 @@ You can DM me the following commands:
         message = kwargs.get("text") or "YOU SHOULD BE SLEEPING"
         async with channel.typing():
             await channel.send(f"{person.upper()}, {message.lstrip().upper()}")
+
+    async def remove_reactions(self, message: Message):
+        if not message.reference:
+            await self.reactions.unknown_dm(message)
+            return
+
+        reference_channel = await self.get_or_fetch_channel(
+            message.reference.channel_id
+        )
+        fetched_message = await reference_channel.fetch_message(
+            message.reference.message_id
+        )
+        if fetched_message.author.id == message.author.id:
+            await self.reactions.nice_try(message)
+            return
+        my_reactions = [r for r in fetched_message.reactions if r.me is True]
+        clearing_reactions = [
+            fetched_message.remove_reaction(r.emoji, self.user) for r in my_reactions
+        ]
+        await message.add_reaction("👍")
+        await asyncio.wait(clearing_reactions)
