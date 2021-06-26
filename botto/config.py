@@ -41,6 +41,7 @@ def parse(config):
         "channels": {
             "include": [],
             "exclude": [],
+            "voting": ["voting"]
         },
         "reactions": {
             "success": "📥",
@@ -165,7 +166,8 @@ def parse(config):
         defaults["authentication"]["airtable_base"] = token
 
     if channels := os.getenv("TLDBOTTO_CHANNELS"):
-        defaults["channels"] = channels
+        for key in channels.keys():
+            defaults["channels"][key] = channels.get(key, [])
 
     if timezones := decode_base64_env("TLDBOTTO_TIMEZONES"):
         defaults["timezones"] = timezones

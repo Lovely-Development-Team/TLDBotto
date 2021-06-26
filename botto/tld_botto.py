@@ -152,6 +152,12 @@ class TLDBotto(discord.Client):
         if reaction := self.config["reactions"].get(reaction_type, default):
             await message.add_reaction(reaction)
 
+    def is_voting_channel(self, channel: discord.abc.Messageable) -> bool:
+        if isinstance(channel, discord.TextChannel):
+            return channel.name in self.config["channels"]["voting"]
+        else:
+            return False
+
     async def on_raw_reaction_remove(self, payload):
 
         if payload.emoji.name not in VOTE_EMOJI:
@@ -163,7 +169,7 @@ class TLDBotto(discord.Client):
         log.info(f"Message: {message}")
         log.info(f"Reactions: {message.reactions}")
 
-        if not isinstance(channel, discord.DMChannel) and channel.name == "voting":
+        if self.is_voting_channel(channel):
             reacted_users = set()
             for reaction in message.reactions:
                 if reaction.emoji not in VOTE_EMOJI:
@@ -185,7 +191,7 @@ class TLDBotto(discord.Client):
         log.info(f"Message: {message}")
         log.info(f"Reactions: {message.reactions}")
 
-        if channel.name == "voting":
+        if self.is_voting_channel(channel):
             reacted_users = set()
             for reaction in message.reactions:
                 if reaction.emoji not in VOTE_EMOJI:
