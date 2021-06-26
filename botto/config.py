@@ -79,7 +79,7 @@ def parse(config):
                 "🥰",
             ],
             "hug": ["🤗", "🫂"],
-            "rule_1": ["⚠️", "1️⃣", "⚠️"],
+            "rule_1": ["🤗", "1️⃣", "⚠️"],
             "favorite_band": ["🇧", "🇹", "🇸"],
             "off_topic": ["😆", "🤣", "😂", "🤪"],
             "party": [
@@ -118,7 +118,7 @@ def parse(config):
             "job_schedule": ["!schedule"],
             "yell": ["!bottoyellat(?P<person>[^.]*)(?:\.(?P<text>.*))?"],
             "reminder_explain": ["!remind(?:er)? (?P<timestamp>[^.]*).(?P<text>.*)"],
-            "remove_reactions": ["Not now (?:Tildy|{bot_id})$", "Wrong party (?:Tildy|{bot_id})$"],
+            "remove_reactions": ["Not now,?\s+(?:Tildy|{bot_id})\.?$", "Wrong party (?:Tildy|{bot_id})$"],
         },
         "at_triggers": {
             "add_reminder": ["!remind(?:er)? (?P<timestamp>[^.]*).(?P<text>.*)"],
