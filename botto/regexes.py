@@ -81,7 +81,7 @@ def compile_regexes(bot_user_id: str, config: dict) -> SuggestionRegexes:
             .?)* # Match any number of "sincerely", "greatest", "so" etc. with or without characters in between
             \s* # Match any number of spaces
             (sorry|apologi([zs]e|es)) # Match sorry/apologise/apologies,etc.
-            (?!\s*{laugh_emojis})
+            (?!\s*(?:{laugh_emojis}|to\s+hear\s+that)\s*)
         """,
             re.IGNORECASE | re.VERBOSE | re.UNICODE,
         ),
