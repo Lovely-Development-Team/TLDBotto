@@ -96,7 +96,7 @@ def compile_regexes(bot_user_id: str, config: dict) -> SuggestionRegexes:
             rf"(?<!third)(?<!3rd)(?:^|\s)(?P<partyword>part(?:a*y|ies))", re.IGNORECASE
         ),
         complaint=re.compile(
-            r"(?:BOTTO.?\s+COME\.?\s+ON\s*|COME\.?\s+ON\s+BOTTO.?\s*)"
+            r"(?:(?:BOTTO|TILDY).?\s+COME\.?\s+ON\s*|COME\.?\s+ON\s+(?:BOTTO|TILDY).?\s*)"
         ),
         patterns=PatternReactions(config["pattern_reactions"]),
         triggers=trigger_dict,
