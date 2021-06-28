@@ -64,7 +64,7 @@ def compile_regexes(bot_user_id: str, config: dict) -> SuggestionRegexes:
         apologising=re.compile(
             rf"""
             (?:
-                I['"’m]+ #Match I/I'm
+                I['"’m]* #Match I/I'm
                 |my
                 |ye[ah|es]* # Match variations on yeah/yes
                 |(n*o+)+
