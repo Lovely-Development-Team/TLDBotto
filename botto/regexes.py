@@ -64,7 +64,7 @@ def compile_regexes(bot_user_id: str, config: dict) -> SuggestionRegexes:
         apologising=re.compile(
             rf"""
             (?:
-                I['"’m]+ #Match I/I'm
+                I['"’m]* #Match I/I'm
                 |my
                 |ye[ah|es]* # Match variations on yeah/yes
                 |(n*o+)+
@@ -96,7 +96,7 @@ def compile_regexes(bot_user_id: str, config: dict) -> SuggestionRegexes:
             rf"(?<!third)(?<!3rd)(?:^|\s)(?P<partyword>part(?:a*y|ies))", re.IGNORECASE
         ),
         complaint=re.compile(
-            r"(?:BOTTO.?\s+COME\.?\s+ON\s*|COME\.?\s+ON\s+BOTTO.?\s*)"
+            r"(?:(?:BOTTO|TILDY).?\s+COME\.?\s+ON\s*|COME\.?\s+ON\s+(?:BOTTO|TILDY).?\s*)"
         ),
         patterns=PatternReactions(config["pattern_reactions"]),
         triggers=trigger_dict,
