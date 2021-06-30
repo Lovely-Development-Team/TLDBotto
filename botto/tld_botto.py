@@ -336,6 +336,7 @@ class TLDBotto(discord.Client):
             await self.reactions.unrecognised_food(message)
             has_matched = True
         if pattern_name := self.regexes.patterns.matches(message.content):
+            log.info(f"{pattern_name.capitalize()} from {message.author}")
             await self.reactions.pattern(pattern_name, message)
             has_matched = True
         return has_matched
