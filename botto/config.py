@@ -106,6 +106,10 @@ def parse(config):
             "nice_try": "😝",
         },
         "pattern_reactions": {
+            "pokes": {
+                "trigger": "pokes? {bot_id}",
+                "reactions": ["👈", "👆", "👇", "👉", "😢", "🤪", "😝"],
+            },
             "vroom": {
                 "trigger": "^vroom (?:vroom)+",
                 "reactions": ["🚗", "🚘", "🏎️", "🛺", "🛵", "🏍️"],
