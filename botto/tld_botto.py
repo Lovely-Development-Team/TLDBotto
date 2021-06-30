@@ -309,10 +309,6 @@ class TLDBotto(discord.Client):
             (lambda content: self.regexes.love.search(content), self.reactions.love),
             (lambda content: self.regexes.hug.search(content), self.reactions.hug),
             (
-                lambda content: self.regexes.band.search(content),
-                self.reactions.favorite_band,
-            ),
-            (
                 lambda content: content.strip().lower() in ("i am 🐌", "i am snail"),
                 self.reactions.snail,
             ),
