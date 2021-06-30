@@ -38,11 +38,15 @@ class SuggestionRegexes:
 laugh_emojis = "[😆😂🤣]"
 
 
+def replace_bot_id(pattern: str, bot_id: str) -> str:
+    return pattern.replace("{bot_id}", bot_id)
+
+
 def compile_triggers(self_id: str, trigger_dict: dict) -> dict:
     for name, triggers in trigger_dict.items():
         trigger_dict[name] = [
             re.compile(
-                "^{trigger}".format(trigger=trigger.replace("{bot_id}", self_id)),
+                "^{trigger}".format(trigger=replace_bot_id(trigger, self_id)),
                 re.IGNORECASE,
             )
             for trigger in triggers
@@ -56,6 +60,12 @@ def compile_regexes(bot_user_id: str, config: dict) -> SuggestionRegexes:
     # Compile trigger regexes
     trigger_dict = compile_triggers(self_id, config["triggers"])
     at_trigger_dict = compile_triggers(self_id, config["at_triggers"])
+
+    # Compile pattern reactions
+    for key, triggers in config["pattern_reactions"].items():
+        config["pattern_reactions"][key]["trigger"] = re.compile(
+            replace_bot_id(config["pattern_reactions"][key]["trigger"], self_id), re.IGNORECASE
+        )
 
     regexes = SuggestionRegexes(
         at_command=[re.compile(rf"^{self_id}(?P<command>.*)")],
