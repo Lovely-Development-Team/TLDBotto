@@ -122,7 +122,7 @@ def parse(config):
                 "reactions": ["🤷"],
             },
             "hello": {
-                "trigger": "h(i|ello|ey)\s+({bot_id}|tildy)",
+                "trigger": "h(i|ello|eya?)\s+({bot_id}|tildy)",
                 "reactions": ["👋"],
             },
         },
