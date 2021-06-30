@@ -2,10 +2,11 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
+from enum import Enum, auto
 
 from discord import Message
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 from regexes import SuggestionRegexes
 
@@ -15,6 +16,37 @@ from food import SpecialAction
 
 log = logging.getLogger("MottoBotto").getChild("reactions")
 log.setLevel(logging.DEBUG)
+
+
+class ReactionType(Enum):
+    RANDOM = auto()
+    ALL = auto()
+    ORDERED = auto()
+
+    async def add_reaction(self, message: Message, reactions: list[str]):
+        await reaction_type_to_func[self](message, reactions)
+
+
+async def _random_reaction(message: Message, reactions: list[str]):
+    await message.add_reaction(random.choice(reactions))
+
+
+async def _all_reactions(message: Message, reactions: list[str]):
+    await asyncio.wait([message.add_reaction(reaction) for reaction in reactions])
+
+
+async def _ordered_reactions(message: Message, reactions: list[str]):
+    for reaction in reactions:
+        await message.add_reaction(reaction)
+
+
+reaction_type_to_func: dict[
+    ReactionType, Callable[[Message, list[str]], any]
+] = {
+    ReactionType.RANDOM: _random_reaction,
+    ReactionType.ALL: _all_reactions,
+    ReactionType.ORDERED: _ordered_reactions,
+}
 
 
 class Reactions:
@@ -113,7 +145,14 @@ class Reactions:
             return
         try:
             reactions = pattern_item["reactions"]
-            await message.add_reaction(random.choice(reactions))
+            try:
+                reaction_type = ReactionType[
+                    pattern_item.get("reaction_type", "RANDOM")
+                ]
+                await reaction_type.add_reaction(message, reactions)
+            except KeyError:
+                log.warning(f"Unknown reaction type '{pattern_item['reaction_type']}'")
+                return
         except KeyError:
             log.warning(f"Failed to find configured pattern '{name}'")
             return
