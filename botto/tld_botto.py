@@ -310,6 +310,7 @@ class TLDBotto(discord.Client):
                 self.reactions.rule_1,
             ),
             (lambda content: self.regexes.pokes.search(content), self.reactions.poke),
+            (lambda content: self.regexes.hello.search(content), self.reactions.wave),
             (lambda content: self.regexes.sorry.search(content), self.reactions.love),
             (lambda content: self.regexes.love.search(content), self.reactions.love),
             (lambda content: self.regexes.hug.search(content), self.reactions.hug),
