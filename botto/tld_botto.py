@@ -301,10 +301,6 @@ class TLDBotto(discord.Client):
     def simple_reactions(self) -> list[tuple[Callable, Callable]]:
         return [
             (
-                lambda content: self.regexes.off_topic.search(content),
-                self.reactions.off_topic,
-            ),
-            (
                 lambda content: self.regexes.apologising.search(content)
                 and not self.regexes.sorry.search(content),
                 self.reactions.rule_1,

@@ -82,7 +82,6 @@ def parse(config):
             "hug": ["🤗", "🫂"],
             "rule_1": ["⚠️", "1️⃣", "⚠️"],
             "favorite_band": ["🇧", "🇹", "🇸"],
-            "off_topic": ["😆", "🤣", "😂", "🤪"],
             "party": [
                 "🎉",
                 "🎂",
@@ -113,6 +112,10 @@ def parse(config):
             "vroom": {
                 "trigger": "^vroom (?:vroom)+",
                 "reactions": ["🚗", "🚘", "🏎️", "🛺", "🛵", "🏍️"],
+            },
+            "off-topic": {
+                "trigger": "off( +|\-)topic",
+                "reactions": ["😆", "🤣", "😂", "🤪"],
             },
             "hello": {
                 "trigger": "h(i|ello|ey)\s+({bot_id}|tildy)",
