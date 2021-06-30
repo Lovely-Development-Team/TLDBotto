@@ -109,6 +109,10 @@ def parse(config):
             "vroom": {
                 "trigger": "^vroom (?:vroom)+",
                 "reactions": ["🚗", "🚘", "🏎️", "🛺", "🛵", "🏍️"],
+            },
+            "hello": {
+                "trigger": "h(i|ello|ey)\s+({bot_id}|tildy)",
+                "reactions": ["👋"],
             }
         },
         "food": food.default_config,
