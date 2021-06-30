@@ -20,7 +20,6 @@ class PatternReactions:
 @dataclass
 class SuggestionRegexes:
     at_command: [Pattern]
-    pokes: Pattern
     sorry: Pattern
     apologising: Pattern
     off_topic: Pattern
@@ -69,7 +68,6 @@ def compile_regexes(bot_user_id: str, config: dict) -> SuggestionRegexes:
 
     regexes = SuggestionRegexes(
         at_command=[re.compile(rf"^{self_id}(?P<command>.*)")],
-        pokes=re.compile(rf"pokes? {self_id}", re.IGNORECASE),
         sorry=re.compile(rf"sorry,? {self_id}", re.IGNORECASE),
         apologising=re.compile(
             rf"""
