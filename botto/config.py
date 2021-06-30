@@ -153,12 +153,6 @@ def parse(config):
             else:
                 defaults[key] = config.get(key, defaults[key])
 
-    # Compile at trigger regexes
-    for key, triggers in defaults["pattern_reactions"].items():
-        defaults["pattern_reactions"][key]["trigger"] = re.compile(
-            defaults["pattern_reactions"][key]["trigger"], re.IGNORECASE
-        )
-
     # Environment variables override config files
 
     if token := os.getenv("TLDBOTTO_DISCORD_TOKEN"):
