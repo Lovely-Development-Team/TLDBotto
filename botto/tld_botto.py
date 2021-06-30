@@ -316,10 +316,6 @@ class TLDBotto(discord.Client):
                 lambda content: content.strip().lower() in ("i am 🐌", "i am snail"),
                 self.reactions.snail,
             ),
-            (
-                lambda content: self.regexes.complaint.search(content),
-                self.reactions.shrug,
-            ),
         ]
 
     async def react(self, message):

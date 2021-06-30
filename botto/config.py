@@ -117,6 +117,10 @@ def parse(config):
                 "trigger": "off( +|\-)topic",
                 "reactions": ["😆", "🤣", "😂", "🤪"],
             },
+            "complaint": {
+                "trigger": "(?:(?:BOTTO|TILDY).?\s+COME\.?\s+ON\s*|COME\.?\s+ON\s+(?:BOTTO|TILDY).?\s*)",
+                "reactions": ["🤷"],
+            },
             "hello": {
                 "trigger": "h(i|ello|ey)\s+({bot_id}|tildy)",
                 "reactions": ["👋"],

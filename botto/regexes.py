@@ -27,7 +27,6 @@ class SuggestionRegexes:
     food: FoodLookups
     band: Pattern
     party: Pattern
-    complaint: Pattern
     patterns: PatternReactions
     triggers: dict[str, list[Pattern]]
     at_triggers: dict[str, list[Pattern]]
@@ -100,9 +99,6 @@ def compile_regexes(bot_user_id: str, config: dict) -> SuggestionRegexes:
         ),
         party=re.compile(
             rf"(?<!third)(?<!3rd)(?:^|\s)(?P<partyword>part(?:a*y|ies))", re.IGNORECASE
-        ),
-        complaint=re.compile(
-            r"(?:(?:BOTTO|TILDY).?\s+COME\.?\s+ON\s*|COME\.?\s+ON\s+(?:BOTTO|TILDY).?\s*)"
         ),
         patterns=PatternReactions(config["pattern_reactions"]),
         triggers=trigger_dict,
