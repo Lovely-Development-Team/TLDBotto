@@ -128,11 +128,6 @@ class Reactions:
             await message.add_reaction(emoji)
         log.info(f"Someone broke rule #1")
 
-    async def favorite_band(self, message: Message):
-        for letter in self.config["reactions"]["favorite_band"]:
-            await message.add_reaction(letter)
-        log.info(f"Someone asked for favorite band")
-
     async def unknown_dm(self, message: Message):
         log.info(f"I don't know how to handle {message.content} from {message.author}")
         await message.add_reaction(self.config["reactions"]["unknown"])
