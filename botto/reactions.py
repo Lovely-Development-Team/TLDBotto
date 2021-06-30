@@ -44,6 +44,10 @@ class Reactions:
         log.info(f"Poke from: {message.author}")
         await message.add_reaction(random.choice(self.config["reactions"]["poke"]))
 
+    async def wave(self, message: Message):
+        log.info(f"Wave to: {message.author}")
+        await message.add_reaction(random.choice(self.config["reactions"]["wave"]))
+
     async def love(self, message: Message):
         log.info(f"Apology/love from: {message.author}")
         await message.add_reaction(random.choice(self.config["reactions"]["love"]))
