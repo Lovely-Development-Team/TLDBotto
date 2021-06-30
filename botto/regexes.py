@@ -22,7 +22,6 @@ class SuggestionRegexes:
     at_command: [Pattern]
     sorry: Pattern
     apologising: Pattern
-    off_topic: Pattern
     love: Pattern
     hug: Pattern
     food: FoodLookups
@@ -93,7 +92,6 @@ def compile_regexes(bot_user_id: str, config: dict) -> SuggestionRegexes:
         """,
             re.IGNORECASE | re.VERBOSE | re.UNICODE,
         ),
-        off_topic=re.compile(rf"off( +|\-)topic", re.IGNORECASE),
         love=re.compile(rf"(?:I )?love( you,?)? {self_id}", re.IGNORECASE),
         hug=re.compile(rf"Hugs? {self_id}|Gives {self_id} a?\s?hugs?", re.IGNORECASE),
         food=FoodLookups(self_id, config["food"]),
