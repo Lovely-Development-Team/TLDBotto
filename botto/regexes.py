@@ -25,7 +25,6 @@ class SuggestionRegexes:
     love: Pattern
     hug: Pattern
     food: FoodLookups
-    band: Pattern
     party: Pattern
     patterns: PatternReactions
     triggers: dict[str, list[Pattern]]
@@ -95,9 +94,6 @@ def compile_regexes(bot_user_id: str, config: dict) -> SuggestionRegexes:
         love=re.compile(rf"(?:I )?love( you,?)? {self_id}", re.IGNORECASE),
         hug=re.compile(rf"Hugs? {self_id}|Gives {self_id} a?\s?hugs?", re.IGNORECASE),
         food=FoodLookups(self_id, config["food"]),
-        band=re.compile(
-            rf"What('|’)?s +your +fav(ou?rite)? +band +{self_id} ?\?*", re.IGNORECASE
-        ),
         party=re.compile(
             rf"(?<!third)(?<!3rd)(?:^|\s)(?P<partyword>part(?:a*y|ies))", re.IGNORECASE
         ),

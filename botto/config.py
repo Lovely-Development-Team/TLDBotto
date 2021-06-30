@@ -77,7 +77,6 @@ def parse(config):
             ],
             "hug": ["🤗", "🫂"],
             "rule_1": ["⚠️", "1️⃣", "⚠️"],
-            "favorite_band": ["🇧", "🇹", "🇸"],
             "party": [
                 "🎉",
                 "🎂",
@@ -112,6 +111,11 @@ def parse(config):
             "off-topic": {
                 "trigger": "off( +|\-)topic",
                 "reactions": ["😆", "🤣", "😂", "🤪"],
+            },
+            "favourite_band": {
+                "trigger": "What('|’)?s +your +fav(ou?rite)? +band +{bot_id} ?\?*",
+                "reactions": ["🇧", "🇹", "🇸"],
+                "reaction_type": "ORDERED",
             },
             "complaint": {
                 "trigger": "(?:(?:BOTTO|TILDY).?\s+COME\.?\s+ON\s*|COME\.?\s+ON\s+(?:BOTTO|TILDY).?\s*)",
