@@ -38,11 +38,7 @@ def parse(config):
             "airtable_key": "",
             "airtable_base": "",
         },
-        "channels": {
-            "include": [],
-            "exclude": [],
-            "voting": ["voting"]
-        },
+        "channels": {"include": [], "exclude": [], "voting": ["voting"]},
         "reactions": {
             "success": "📥",
             "repeat": "♻️",
@@ -124,7 +120,7 @@ def parse(config):
             "hello": {
                 "trigger": "h(i|ello|ey)\s+({bot_id}|tildy)",
                 "reactions": ["👋"],
-            }
+            },
         },
         "food": food.default_config,
         "special_reactions": {},
@@ -134,7 +130,10 @@ def parse(config):
             "job_schedule": ["!schedule"],
             "yell": ["!bottoyellat(?P<person>[^.]*)(?:\.(?P<text>.*))?"],
             "reminder_explain": ["!remind(?:er)? (?P<timestamp>[^.]*).(?P<text>.*)"],
-            "remove_reactions": ["Not now,?\s+(?:Tildy|{bot_id})[.!]?$", "Wrong party,?\s+(?:Tildy|{bot_id})[.!]?$"],
+            "remove_reactions": [
+                "Not now,?\s+(?:Tildy|{bot_id})[.!]?$",
+                "Wrong party,?\s+(?:Tildy|{bot_id})[.!]?$",
+            ],
         },
         "at_triggers": {
             "add_reminder": ["!remind(?:er)? (?P<timestamp>[^.]*).(?P<text>.*)"],
