@@ -135,8 +135,8 @@ def parse(config):
             "yell": ["!bottoyellat(?P<person>[^.]*)(?:\.(?P<text>.*))?"],
             "reminder_explain": ["!remind(?:er)? (?P<timestamp>[^.]*).(?P<text>.*)"],
             "remove_reactions": [
-                "Not now,?\s+(?:Tildy|{bot_id})[.!]?$",
-                "Wrong party,?\s+(?:Tildy|{bot_id})[.!]?$",
+                "\(?Not now,?\s+(?:Tildy|{bot_id})[.!]?\)?$",
+                "\(?Wrong party,?\s+(?:Tildy|{bot_id})[.!]?\)?$",
             ],
         },
         "at_triggers": {
