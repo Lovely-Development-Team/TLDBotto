@@ -11,6 +11,7 @@ from typing import Optional, Callable
 import subprocess
 
 import discord
+import pytz
 from discord import Message, Guild
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
@@ -39,7 +40,21 @@ NUMBERS = [
     "eight",
     "nine",
 ]
-VOTE_EMOJI = ["0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣", "9️⃣", "✅", "👍", "👎"]
+VOTE_EMOJI = [
+    "0️⃣",
+    "1️⃣",
+    "2️⃣",
+    "3️⃣",
+    "4️⃣",
+    "5️⃣",
+    "6️⃣",
+    "7️⃣",
+    "8️⃣",
+    "9️⃣",
+    "✅",
+    "👍",
+    "👎",
+]
 
 
 class TLDBotto(discord.Client):
@@ -437,10 +452,6 @@ You can DM me the following commands:
         localised_times = self.local_times
         meals = {}
         for local_timezone in localised_times:
-            # For the purposes of meal time calculations, we only care about comparing to so need to make sure
-            # the "date" components match our local timezone.
-            time_now = datetime.utcnow()
-            local_timezone = local_timezone.replace(day=time_now.day, month=time_now.month, year=time_now.year)
             for meal in configured_meals:
                 start_time = datetime.combine(
                     date.today(), meal.start, local_timezone.tzinfo
@@ -448,11 +459,23 @@ You can DM me the following commands:
                 end_time = datetime.combine(
                     date.today(), meal.end, local_timezone.tzinfo
                 )
-                # Once again, we're comparing datetimes but really only care about the time.
+                adjusted_local_timezone = local_timezone
+                # We're comparing datetimes but really only care about the time.
                 # If the start and end of the meal crosses midnight, adjust the date to match our local date
                 if end_time < start_time:
-                    end_time = local_timezone.replace(day=time_now.day, month=time_now.month, year=time_now.year)
-                if start_time < local_timezone < end_time:
+                    time_now = datetime.now(pytz.UTC)
+                    end_time = end_time.replace(
+                        day=time_now.day, month=time_now.month, year=time_now.year
+                    ) + timedelta(days=1)
+
+                    local_timezone_today = local_timezone.replace(
+                        day=time_now.day, month=time_now.month, year=time_now.year
+                    )
+                    # We also need to adjust the day for people who are in the past/future, but we only want to do that
+                    # to move them *forward* in time.
+                    if local_timezone_today > time_now:
+                        adjusted_local_timezone = local_timezone_today
+                if start_time < adjusted_local_timezone < end_time:
                     meal_text_ref = random.choice(meal.texts)
                     meal_text = await self.storage.get_text(meal_text_ref)
                     zones_for_meal = meals.get(meal.name, ([], meal_text))
