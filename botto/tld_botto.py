@@ -437,6 +437,10 @@ You can DM me the following commands:
         localised_times = self.local_times
         meals = {}
         for local_timezone in localised_times:
+            # For the purposes of meal time calculations, we only care about comparing to so need to make sure
+            # the "date" components match our local timezone.
+            time_now = datetime.utcnow()
+            local_timezone = local_timezone.replace(day=time_now.day, month=time_now.month, year=time_now.year)
             for meal in configured_meals:
                 start_time = datetime.combine(
                     date.today(), meal.start, local_timezone.tzinfo
@@ -444,8 +448,10 @@ You can DM me the following commands:
                 end_time = datetime.combine(
                     date.today(), meal.end, local_timezone.tzinfo
                 )
+                # Once again, we're comparing datetimes but really only care about the time.
+                # If the start and end of the meal crosses midnight, adjust the date to match our local date
                 if end_time < start_time:
-                    end_time = end_time + timedelta(days=1)
+                    end_time = local_timezone.replace(day=time_now.day, month=time_now.month, year=time_now.year)
                 if start_time < local_timezone < end_time:
                     meal_text_ref = random.choice(meal.texts)
                     meal_text = await self.storage.get_text(meal_text_ref)
