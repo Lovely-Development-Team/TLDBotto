@@ -144,8 +144,6 @@ class TLDBotto(discord.Client):
                 async for channel in self.get_meal_channels()
             ]
         )
-        meal_count = len(self.config["meals"]["times"])
-        log.info(f"{meal_count} meal times configured")
         log.info(f"Meal reminders for: {reminder_log_text}")
 
     async def on_disconnect(self):

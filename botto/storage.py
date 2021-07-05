@@ -196,6 +196,7 @@ class AirtableMealStorage(MealStorage):
         texts_iterator = self._list_all_texts(filter_by_formula="NOT({Name}='Intro')")
         meals = [Meal.from_airtable(x) async for x in texts_iterator]
         self.meals_cache = meals
+        log.info(f"Retrieved {len(meals)} meals")
         return meals
 
     async def get_meals(self) -> list[Meal]:
