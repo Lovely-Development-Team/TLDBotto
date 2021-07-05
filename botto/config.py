@@ -150,8 +150,7 @@ def parse(config):
         "meals": {
             "auto_reminder_hours": ["8", "13", "18", "20", "1"],
             "guilds": [],
-            "intro_text": ["Reminder!"],
-            "times": {},
+            "intro_text": ["Reminder!"]
         },
         "reminder_channel": "833842753799848019",
         "should_reply": True,
