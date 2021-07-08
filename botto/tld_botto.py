@@ -579,3 +579,4 @@ You can DM me the following commands:
         ]
         await message.add_reaction("👍")
         await asyncio.wait(clearing_reactions)
+        await message.delete(delay=5)
