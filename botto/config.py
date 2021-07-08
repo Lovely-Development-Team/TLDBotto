@@ -125,6 +125,10 @@ def parse(config):
                 "trigger": "h(i|ello|eya?)\s+({bot_id}|tildy)",
                 "reactions": ["👋"],
             },
+            "horse": {
+                "trigger": "horse",
+                "reactions": ["🐎"],
+            },
         },
         "food": food.default_config,
         "special_reactions": {},
