@@ -200,7 +200,7 @@ class AirtableMealStorage(MealStorage):
         return meals
 
     async def get_meals(self) -> list[Meal]:
-        if self.meals_cache is not None:
+        if self.meals_cache is not None and len(self.meals_cache) > 0:
             return self.meals_cache
         else:
             return await self.retrieve_meals()
