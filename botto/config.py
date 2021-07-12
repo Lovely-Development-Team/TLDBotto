@@ -118,7 +118,7 @@ def parse(config):
                 "reaction_type": "ORDERED",
             },
             "snail": {
-                "trigger": "^i am\s+(?:also)?\s*(?:🐌|snail)",
+                "trigger": "^i am\s+(?:also)?\s*(?:🐌|snail) .*",
                 "reactions": ["🐌"]
             },
             "complaint": {
