@@ -68,10 +68,6 @@ class Reactions:
         if self.config["should_reply"]:
             await message.reply("Skynet prevention")
 
-    async def snail(self, message: Message):
-        log.info(f"Snail from: {message.author}")
-        await message.add_reaction("🐌")
-
     async def poke(self, message: Message):
         log.info(f"Poke from: {message.author}")
         await message.add_reaction(random.choice(self.config["reactions"]["poke"]))
