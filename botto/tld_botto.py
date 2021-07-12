@@ -452,27 +452,19 @@ You can DM me the following commands:
         for local_timezone in localised_times:
             for meal in configured_meals:
                 start_time = datetime.combine(
-                    date.today(), meal.start, local_timezone.tzinfo
+                    local_timezone, meal.start, local_timezone.tzinfo
                 )
                 end_time = datetime.combine(
-                    date.today(), meal.end, local_timezone.tzinfo
+                    local_timezone, meal.end, local_timezone.tzinfo
                 )
                 adjusted_local_timezone = local_timezone
                 # We're comparing datetimes but really only care about the time.
-                # If the start and end of the meal crosses midnight, adjust the date to match our local date
-                if end_time < start_time:
-                    time_now = datetime.now(pytz.UTC)
-                    end_time = end_time.replace(
-                        day=time_now.day, month=time_now.month, year=time_now.year
-                    ) + timedelta(days=1)
+                # If the start and end of the meal crosses midnight, we can end up with impossible comparisons where
+                # time periods end before they start.
+                # Ween this happens, presume that the start date was meant to be the previous day.
+                if start_time > end_time:
+                    start_time = start_time - timedelta(days=1)
 
-                    local_timezone_today = local_timezone.replace(
-                        day=time_now.day, month=time_now.month, year=time_now.year
-                    )
-                    # We also need to adjust the day for people who are in the past/future, but we only want to do that
-                    # to move them *forward* in time.
-                    if local_timezone_today > time_now:
-                        adjusted_local_timezone = local_timezone_today
                 if start_time < adjusted_local_timezone < end_time:
                     meal_text_ref = random.choice(meal.texts)
                     meal_text = await self.storage.get_text(meal_text_ref)
