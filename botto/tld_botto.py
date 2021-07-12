@@ -5,16 +5,16 @@ import logging
 import os
 import random
 import re
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from typing import Optional, Callable
 
 import subprocess
 
 import discord
-import pytz
 from discord import Message, Guild
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
+from models import Meal
 from reactions import Reactions
 from typing import TYPE_CHECKING
 
@@ -441,11 +441,16 @@ You can DM me the following commands:
         return [zone.fromutc(time_now) for zone in self.config["timezones"]]
 
     async def get_meal_reminder_text(self):
-        intro_fetch = self.storage.get_intros()
         configured_meals = await self.storage.get_meals()
         localised_times = self.local_times
+        return await self.calculate_meal_reminders(localised_times, configured_meals)
+
+    async def calculate_meal_reminders(
+        self, timezones: list[datetime], configured_meals: list[Meal]
+    ):
+        intro_fetch = self.storage.get_intros()
         meals = {}
-        for local_timezone in localised_times:
+        for local_timezone in timezones:
             for meal in configured_meals:
                 start_time = datetime.combine(
                     local_timezone, meal.start, local_timezone.tzinfo
@@ -462,6 +467,15 @@ You can DM me the following commands:
                     start_time = start_time - timedelta(days=1)
 
                 if start_time < adjusted_local_timezone < end_time:
+                    log.debug(
+                        "Adding meal {meal_name} for {tzname}: {start} < {local_time} < {end}".format(
+                            meal_name=meal.name,
+                            tzname=adjusted_local_timezone.tzname(),
+                            start=start_time,
+                            local_time=adjusted_local_timezone,
+                            end=end_time,
+                        )
+                    )
                     meal_text_ref = random.choice(meal.texts)
                     meal_text = await self.storage.get_text(meal_text_ref)
                     zones_for_meal = meals.get(meal.name, ([], meal_text))
@@ -478,6 +492,7 @@ You can DM me the following commands:
         return f"{intro_text}\n{reminder_text}"
 
     async def send_meal_reminder(self, reply_to: Optional[Message] = None):
+        log.info("Sending meal reminder")
         if reply_to:
             log.info(f"Mealtimes from: {reply_to.author}")
             async with reply_to.channel.typing():
