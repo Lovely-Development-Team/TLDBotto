@@ -197,14 +197,4 @@ def parse(config):
     for idx, zone in enumerate(defaults["timezones"]):
         defaults["timezones"][idx] = pytz.timezone(zone)
 
-    for key, detail in defaults["meals"]["times"].items():
-        start_time = defaults["meals"]["times"][key]["start"]
-        end_time = defaults["meals"]["times"][key]["end"]
-        defaults["meals"]["times"][key]["start"] = datetime.strptime(
-            start_time, "%H:%M:%SZ"
-        ).time()
-        defaults["meals"]["times"][key]["end"] = datetime.strptime(
-            end_time, "%H:%M:%SZ"
-        ).time()
-
     return defaults
