@@ -117,6 +117,10 @@ def parse(config):
                 "reactions": ["🇧", "🇹", "🇸"],
                 "reaction_type": "ORDERED",
             },
+            "snail": {
+                "trigger": "^i am\s+(?:also)?\s*(?:🐌|snail)",
+                "reactions": ["🐌"]
+            },
             "complaint": {
                 "trigger": "(?:(?:BOTTO|TILDY).?\s+COME\.?\s+ON\s*|COME\.?\s+ON\s+(?:BOTTO|TILDY).?\s*)",
                 "reactions": ["🤷"],

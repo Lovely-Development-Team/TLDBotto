@@ -61,7 +61,7 @@ def compile_regexes(bot_user_id: str, config: dict) -> SuggestionRegexes:
     for key, triggers in config["pattern_reactions"].items():
         config["pattern_reactions"][key]["trigger"] = re.compile(
             replace_bot_id(config["pattern_reactions"][key]["trigger"], self_id),
-            re.IGNORECASE,
+            re.IGNORECASE | re.UNICODE,
         )
 
     regexes = SuggestionRegexes(
