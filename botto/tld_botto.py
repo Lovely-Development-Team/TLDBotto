@@ -574,8 +574,14 @@ You can DM me the following commands:
             message.reference.message_id
         )
         if fetched_message.author.id == message.author.id:
+            log.info(
+                f"{message.author.id} attempted to removed reactions from their own message!"
+            )
             await self.reactions.nice_try(message)
             return
+        log.info(
+            f"{message.author.id} triggered reaction removal on {fetched_message.id} by {fetched_message.author.id}"
+        )
         my_reactions = [r for r in fetched_message.reactions if r.me is True]
         clearing_reactions = [
             fetched_message.remove_reaction(r.emoji, self.user) for r in my_reactions
