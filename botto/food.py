@@ -82,6 +82,7 @@ default_config = {
         "responses": ["😋", "echo"],
     },
     "chocolate": {"triggers": "🍫", "responses": ["😋", "🍫", "💜"]},
+    "rose": {"triggers": "🌹", "responses": ["🍫"]},
     "alcohol": {
         "triggers": ["🍶", "🍾", "🍷", "🍸", "🍹", "🍺", "🍻", "🥂", "🥃"],
         "responses": ["echo", "🥴"],
