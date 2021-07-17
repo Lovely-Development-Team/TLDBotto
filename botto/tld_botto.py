@@ -478,14 +478,14 @@ You can DM me the following commands:
                     )
                     meal_text_ref = random.choice(meal.texts)
                     meal_text = await self.storage.get_text(meal_text_ref)
-                    zones_for_meal = meals.get(meal.name, ([], meal_text))
+                    zones_for_meal = meals.get(meal.name, ([], meal.emoji, meal_text))
                     zones_for_meal[0].append(local_timezone.tzname())
                     meals.update({meal.name: zones_for_meal})
 
         intro_ref = random.choice((await intro_fetch).texts)
         intro_text = await self.storage.get_text(intro_ref)
         reminder_list = [
-            " & ".join(meal_details[0]) + f", {meal_details[1]}"
+            " & ".join(meal_details[0]) + f"*({meal_details[1]})" + f", {meal_details[2]}"
             for meal_details in meals.values()
         ]
         reminder_text = "\n".join(reminder_list)

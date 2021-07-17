@@ -24,6 +24,7 @@ class Meal:
     start: time
     end: time
     texts: list[str]
+    emoji: str
 
     @classmethod
     def from_airtable(cls, data: dict) -> "Meal":
@@ -37,6 +38,7 @@ class Meal:
             else None,
             end=datetime.strptime(end_time, "%H:%M").time() if end_time else None,
             texts=fields.get("Texts"),
+            emoji=fields.get("Emoji")
         )
 
 
