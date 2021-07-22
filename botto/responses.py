@@ -8,10 +8,10 @@ log.setLevel(logging.DEBUG)
 
 
 def _get_yell_person(person: Union[Member, str]) -> str:
-    if mention_string := person.mention:
-        return mention_string
-    else:
+    if isinstance(person, str):
         return person.upper()
+    else:
+        return person.mention
 
 
 def yell_at_someone(person: Optional[Union[Member, str]], text: Optional[str]) -> str:
