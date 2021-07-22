@@ -8,6 +8,7 @@ from reminder_manager import ReminderManager
 from storage import AirtableMealStorage, ReminderStorage
 from tld_botto import TLDBotto
 from config import parse
+from slash_commands import setup_slash
 
 # Configure logging
 logging.config.fileConfig(fname="log.conf", disable_existing_loggers=False)
@@ -33,16 +34,17 @@ log.info(f"Triggers: {config['triggers']}")
 scheduler = AsyncIOScheduler()
 
 storage = AirtableMealStorage(
-    config["authentication"]["airtable_base"],
-    config["authentication"]["airtable_key"]
+    config["authentication"]["airtable_base"], config["authentication"]["airtable_key"]
 )
 
 reminder_storage = ReminderStorage(
-    config["authentication"]["airtable_base"],
-    config["authentication"]["airtable_key"]
+    config["authentication"]["airtable_base"], config["authentication"]["airtable_key"]
 )
 
 reminder_manager = ReminderManager(config, scheduler, reminder_storage)
 
 client = TLDBotto(config, Reactions(config), scheduler, storage, reminder_manager)
+slash = setup_slash(client)
+
+
 client.run(config["authentication"]["discord"])
