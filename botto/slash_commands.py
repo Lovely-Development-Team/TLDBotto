@@ -29,7 +29,7 @@ def setup_slash(client: discord.Client):
             create_option(
                 name="person",
                 description="The person to yell at.",
-                option_type=SlashCommandOptionType.STRING,
+                option_type=SlashCommandOptionType.USER,
                 required=True,
             ),
             create_option(
