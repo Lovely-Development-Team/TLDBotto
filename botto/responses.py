@@ -1,3 +1,4 @@
+import datetime
 import logging
 from typing import Optional, Union
 
@@ -23,3 +24,9 @@ def yell_at_someone(person: Optional[Union[Member, str]], text: Optional[str]) -
     person = _get_yell_person(person) if person else "LOVELY PERSON"
     message = text or "YOU SHOULD BE SLEEPING"
     return f"{person}, {message.lstrip().upper()}"
+
+
+def get_local_times(local_times: list[datetime.datetime]) -> str:
+    return "\n".join(
+        [local_time.strftime("%Z (%z): %a %H:%M:%S") for local_time in local_times]
+    )

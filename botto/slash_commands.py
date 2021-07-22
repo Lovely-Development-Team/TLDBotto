@@ -1,6 +1,8 @@
 import logging
-from typing import Union
+from datetime import datetime
+from typing import Union, Optional
 
+import dateutil.parser
 import discord
 from discord_slash import SlashCommand, SlashContext, SlashCommandOptionType
 from discord_slash.utils.manage_commands import create_option
@@ -30,7 +32,7 @@ message_option = create_option(
 )
 
 
-def setup_slash(client: discord.Client):
+def setup_slash(client: discord.Client, config: dict):
     slash = SlashCommand(client, sync_commands=True)
 
     @slash.slash(
@@ -75,5 +77,36 @@ def setup_slash(client: discord.Client):
     )
     async def yell_at(ctx: SlashContext, person: discord.Member, **kwargs):
         await _yell(ctx, person, **kwargs)
+
+    def _local_times(time_now: datetime = datetime.utcnow()) -> list[datetime]:
+        return [time_now.astimezone(zone) for zone in config["timezones"]]
+
+    @slash.slash(
+        name="times",
+        description="Get the current times for TLDers",
+        options=[
+            create_option(
+                name="current_time",
+                description="The time to use as 'now'.",
+                option_type=SlashCommandOptionType.STRING,
+                required=False,
+            )
+        ],
+        # guild_ids=[833842753799848016],
+    )
+    async def send_local_times(ctx: SlashContext, **kwargs):
+        parsed_time = datetime.utcnow()
+        current_time = kwargs.get("current_time")
+        if current_time:
+            try:
+                parsed_time = dateutil.parser.parse(current_time)
+            except ValueError as error:
+                await ctx.send(f"Failed to parse provided time: {error}")
+
+        log.info(f"\\times from: {ctx.author.id} relative to {parsed_time}")
+        local_times_string = responses.get_local_times(
+            local_times=_local_times(parsed_time)
+        )
+        await ctx.send(current_time + " converted:\n" + local_times_string)
 
     return slash
