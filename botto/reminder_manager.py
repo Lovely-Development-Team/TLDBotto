@@ -17,11 +17,12 @@ log = logging.getLogger(__name__)
 
 class ReminderManager:
     def __init__(
-        self, config: dict, scheduler: AsyncIOScheduler, storage: ReminderStorage
+        self, config: dict, scheduler: AsyncIOScheduler, storage: ReminderStorage, reactions: reactions.Reactions
     ):
         self.config = config
         self.scheduler = scheduler
         self.storage = storage
+        self.reactions = reactions
         self.missed_job_ids = []
         self.get_channel_func = None
 
@@ -150,7 +151,7 @@ class ReminderManager:
                 near_now = get_now_datetime() + timedelta(minutes=1)
                 if parsed_date < near_now:
                     await asyncio.gather(
-                        reactions.reject(self.config["reactions"], reply_to),
+                        self.reactions.reject(reply_to),
                         reply_to.reply(
                             (
                                 "Reminder data parsed as {parsed_date} but it is now {now}.\n"
@@ -165,7 +166,7 @@ class ReminderManager:
             except (TypeError, dateutil.parser.ParserError):
                 log.error("Failed to process reminder time", exc_info=True)
                 await asyncio.gather(
-                    reactions.reject(self.config["reactions"], reply_to),
+                    self.reactions.reject(reply_to),
                     reply_to.reply(f"I'm sorry, I was unable to process this time 😢."),
                 )
                 return
