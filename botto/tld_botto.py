@@ -14,6 +14,7 @@ import discord
 from discord import Message, Guild
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
+import responses
 from models import Meal
 from reactions import Reactions
 from typing import TYPE_CHECKING
@@ -557,10 +558,9 @@ You can DM me the following commands:
         """
         log.info(f"Yelling from: {message.author}")
         channel: discord.TextChannel = message.channel
-        person = kwargs.get("person") or "lovely person"
-        message = kwargs.get("text") or "YOU SHOULD BE SLEEPING"
         async with channel.typing():
-            await channel.send(f"{person.upper()}, {message.lstrip().upper()}")
+            response_text = responses.yell_at_someone(kwargs.get("person"), kwargs.get("text"))
+            await channel.send(response_text)
 
     async def remove_reactions(self, message: Message):
         if not message.reference:
