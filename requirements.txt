@@ -3,3 +3,4 @@ airtable-python-wrapper<0.16
 emoji==1.2.0
 python-dateutil
 apscheduler
+discord-py-slash-command
