@@ -486,7 +486,9 @@ You can DM me the following commands:
         intro_ref = random.choice((await intro_fetch).texts)
         intro_text = await self.storage.get_text(intro_ref)
         reminder_list = [
-            " & ".join(meal_details[0]) + f" ({meal_details[1]})" + f", {meal_details[2]}"
+            " & ".join(meal_details[0])
+            + f" ({meal_details[1]})"
+            + f", {meal_details[2]}"
             for meal_details in meals.values()
         ]
         reminder_text = "\n".join(reminder_list)
@@ -559,7 +561,9 @@ You can DM me the following commands:
         log.info(f"Yelling from: {message.author}")
         channel: discord.TextChannel = message.channel
         async with channel.typing():
-            response_text = responses.yell_at_someone(kwargs.get("person"), kwargs.get("text"))
+            response_text = responses.yell_at_someone(
+                kwargs.get("person"), kwargs.get("text")
+            )
             await channel.send(response_text)
 
     async def remove_reactions(self, message: Message):
