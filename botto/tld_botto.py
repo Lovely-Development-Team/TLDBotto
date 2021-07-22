@@ -506,14 +506,9 @@ You can DM me the following commands:
                     await channel.send(await self.get_meal_reminder_text())
 
     async def send_local_times(self, reply_to: Message):
-        log.info(f"Mealtimes from: {reply_to.author}")
+        log.info(f"Times from: {reply_to.author}")
         async with reply_to.channel.typing():
-            local_times_string = "\n".join(
-                [
-                    local_time.strftime("%Z (%z): %a %H:%M:%S")
-                    for local_time in self.local_times
-                ]
-            )
+            local_times_string = responses.get_local_times(local_times=self.local_times)
             await reply_to.reply(local_times_string)
 
     async def send_schedule(self, reply_to: Message):
