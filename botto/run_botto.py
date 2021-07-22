@@ -41,9 +41,10 @@ reminder_storage = ReminderStorage(
     config["authentication"]["airtable_base"], config["authentication"]["airtable_key"]
 )
 
-reminder_manager = ReminderManager(config, scheduler, reminder_storage)
+reactions = Reactions(config)
+reminder_manager = ReminderManager(config, scheduler, reminder_storage, reactions)
 
-client = TLDBotto(config, Reactions(config), scheduler, storage, reminder_manager)
+client = TLDBotto(config, reactions, scheduler, storage, reminder_manager)
 slash = setup_slash(client)
 
 
