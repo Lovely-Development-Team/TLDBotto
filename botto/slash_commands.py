@@ -8,6 +8,7 @@ from discord_slash import SlashCommand, SlashContext, SlashCommandOptionType
 from discord_slash.utils.manage_commands import create_option
 
 import responses
+from reminder_manager import ReminderManager, TimeTravelError, ReminderParsingError
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
@@ -32,7 +33,9 @@ message_option = create_option(
 )
 
 
-def setup_slash(client: discord.Client, config: dict):
+def setup_slash(
+    client: discord.Client, config: dict, reminder_manager: ReminderManager
+):
     slash = SlashCommand(client, sync_commands=True)
 
     @slash.slash(
@@ -108,5 +111,53 @@ def setup_slash(client: discord.Client, config: dict):
             local_times=_local_times(parsed_time)
         )
         await ctx.send(current_time + " converted:\n" + local_times_string)
+
+    @slash.slash(
+        name="reminder",
+        description="Set a reminder",
+        options=[
+            create_option(
+                name="at",
+                description="The date/time of the reminder.",
+                option_type=SlashCommandOptionType.STRING,
+                required=True,
+            ),
+            create_option(
+                name="message",
+                description="The message associated with the reminder.",
+                option_type=SlashCommandOptionType.STRING,
+                required=True,
+            ),
+            create_option(
+                name="advance_warning",
+                description="Should Tildy send a 15 minute advance warning?",
+                option_type=SlashCommandOptionType.BOOLEAN,
+                required=False,
+            ),
+            create_option(
+                name="channel",
+                description="What channel should Tildy send a message to? (Defaults to the current one)",
+                option_type=SlashCommandOptionType.CHANNEL,
+                required=False,
+            ),
+        ],
+        guild_ids=[833842753799848016],
+    )
+    async def reminder(ctx: SlashContext, at: str, message: str, **kwargs):
+        try:
+            advance_warning = kwargs.get("advance_warning") is True
+            channel: discord.TextChannel = kwargs.get("channel") or ctx.channel
+            created_reminder = await reminder_manager.add_reminder_slash(
+                ctx.author, at, message, channel, advance_reminder=advance_warning
+            )
+            await ctx.send(await reminder_manager.build_reminder_message(created_reminder))
+        except TimeTravelError as error:
+            log.error("Reminder request expected time travel")
+            await ctx.send(error.message, hidden=True)
+        except ReminderParsingError:
+            log.error("Failed to process reminder time", exc_info=True)
+            await ctx.send(
+                f"I'm sorry, I was unable to process this time 😢.", hidden=True
+            )
 
     return slash
