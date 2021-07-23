@@ -45,7 +45,7 @@ reactions = Reactions(config)
 reminder_manager = ReminderManager(config, scheduler, reminder_storage, reactions)
 
 client = TLDBotto(config, reactions, scheduler, storage, reminder_manager)
-slash = setup_slash(client, config)
+slash = setup_slash(client, config, reminder_manager)
 
 
 client.run(config["authentication"]["discord"])

@@ -9,7 +9,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler import events
 
 import reactions
-from models import MessageAndChannel
+from models import MessageAndChannel, Reminder
 from storage import ReminderStorage
 
 log = logging.getLogger(__name__)
@@ -17,7 +17,11 @@ log = logging.getLogger(__name__)
 
 class ReminderManager:
     def __init__(
-        self, config: dict, scheduler: AsyncIOScheduler, storage: ReminderStorage, reactions: reactions.Reactions
+        self,
+        config: dict,
+        scheduler: AsyncIOScheduler,
+        storage: ReminderStorage,
+        reactions: reactions.Reactions,
     ):
         self.config = config
         self.scheduler = scheduler
@@ -60,11 +64,8 @@ class ReminderManager:
                     kwargs={
                         "reminder_id": reminder.id + "_advance",
                         "notes": f"{reminder.notes.strip()} in 15 minutes!",
-                        "message_and_channel": MessageAndChannel(
-                            reminder.channel_id, reminder.msg_id
-                        )
-                        if reminder.channel_id and reminder.msg_id
-                        else None,
+                        "message_id": reminder.msg_id,
+                        "channel_id": reminder.channel_id,
                     },
                 )
             self.scheduler.add_job(
@@ -78,11 +79,8 @@ class ReminderManager:
                 kwargs={
                     "reminder_id": reminder.id,
                     "notes": f"{reminder.notes.strip()} now ({reminder.date})!",
-                    "message_and_channel": MessageAndChannel(
-                        reminder.channel_id, reminder.msg_id
-                    )
-                    if reminder.channel_id and reminder.msg_id
-                    else None,
+                    "message_id": reminder.msg_id,
+                    "channel_id": reminder.channel_id,
                 },
             )
             reminders_processed += 1
@@ -114,78 +112,162 @@ class ReminderManager:
         )
 
     async def send_reminder(
-        self,
-        reminder_id: str,
-        notes: str,
-        message_and_channel: Optional[MessageAndChannel],
+        self, reminder_id: str, notes: str, message_id: str, channel_id: str
     ):
         log.info(f"Sending reminder '{reminder_id}': {notes}")
 
-        if message_and_channel := message_and_channel:
-            if channel := await self.get_channel_func(message_and_channel.channel_id):
+        reminder_text = f"Reminder: {notes.strip()}"
+        if channel_id := channel_id:
+            if channel := await self.get_channel_func(channel_id):
                 async with channel.typing():
-                    if message := await channel.fetch_message(
-                        message_and_channel.msg_id
-                    ):
-                        await message.reply(f"Reminder: {notes.strip()}", tts=True)
+                    message = None
+                    if message_id := message_id:
+                        message = await channel.fetch_message(message_id)
+                    if message:
+                        await message.reply(reminder_text, tts=True)
+                    else:
+                        await channel.send(reminder_text, tts=True)
+            else:
+                log.warning(f"Unable to send reminder: Channel {channel_id} not found.")
         else:
             channel = await self.get_channel_func(self.config["reminder_channel"])
             async with channel.typing():
-                await channel.send(f"Reminder: {notes.strip()}", tts=True)
+                await channel.send(reminder_text, tts=True)
 
         if not reminder_id.endswith("_advance"):
             await self.storage.remove_reminder(reminder_id)
         await self.cleanup_missed_reminders()
 
-    async def add_reminder(self, reply_to: discord.Message, timestamp: str, text: str):
+    @staticmethod
+    def parse_reminder_time(timestamp: str) -> datetime:
         def get_now_datetime():
             if parsed_date.tzinfo and parsed_date.tzinfo.utcoffset(parsed_date):
                 return datetime.now(timezone.utc)
             else:
                 return datetime.utcnow()
+
+        try:
+            parsed_date = dateutil.parser.parse(timestamp)
+            near_now = get_now_datetime() + timedelta(minutes=1)
+            if parsed_date < near_now:
+                raise TimeTravelError(parsed_date, near_now)
+            return parsed_date
+        except (TypeError, dateutil.parser.ParserError) as error:
+            raise ReminderParsingError() from error
+
+    async def build_reminder_message(self, reminder: Reminder):
+        channel_text = ""
+        if channel_id := reminder.channel_id:
+            if channel := await self.get_channel_func(channel_id):
+                channel_text = f" in {channel.mention}"
+
+        advance_reminder_string = (
+            " with 15 minute reminder" if reminder.remind_15_minutes_before else ""
+        )
+        return (
+            f"Added reminder '{reminder.notes}' at "
+            f"{reminder.date.strftime('%a %H:%M:%S %Z')}{advance_reminder_string}{channel_text}. "
+            f"Reference `{reminder.id}`."
+        )
+
+    async def create_reminder(
+        self,
+        reminder_time: datetime,
+        text: str,
+        msg_id,
+        channel_id,
+        force_advance_reminder: bool = False,
+    ):
+        advance_reminder = force_advance_reminder or "🕰" in text
+        log.debug(f"Creating reminder. Advance warning: {advance_reminder}")
+        reminder_notes = text.replace("🕰\ufe0f", "").strip()
+        created_reminder = await self.storage.add_reminder(
+            reminder_time,
+            notes=reminder_notes,
+            msg_id=str(msg_id) if msg_id else None,
+            channel_id=str(channel_id) if channel_id else None,
+            advance_reminder=advance_reminder,
+        )
+        log.info(f"Created reminder: {created_reminder}")
+        return created_reminder
+
+    async def add_reminder_message(
+        self, reply_to: discord.Message, timestamp: str, text: str
+    ):
         log.info(f"Reminder request from: {reply_to.author}")
         async with reply_to.channel.typing():
             try:
-                parsed_date = dateutil.parser.parse(timestamp)
-                parsed_date_string = parsed_date.strftime("%a %H:%M:%S %Z")
-                near_now = get_now_datetime() + timedelta(minutes=1)
-                if parsed_date < near_now:
-                    await asyncio.gather(
-                        self.reactions.reject(reply_to),
-                        reply_to.reply(
-                            (
-                                "Reminder data parsed as {parsed_date} but it is now {now}.\n"
-                                "I'm sorry, time travel is difficult 😢."
-                            ).format(
-                                parsed_date=parsed_date_string,
-                                now=near_now.strftime("%a %H:%M:%S"),
-                            )
-                        ),
-                    )
-                    return
-            except (TypeError, dateutil.parser.ParserError):
+                parsed_date = self.parse_reminder_time(timestamp)
+            except TimeTravelError as error:
+                log.error("Reminder request expected time travel")
+                await asyncio.gather(
+                    self.reactions.reject(reply_to), reply_to.reply(error.message)
+                )
+            except ReminderParsingError:
                 log.error("Failed to process reminder time", exc_info=True)
                 await asyncio.gather(
                     self.reactions.reject(reply_to),
                     reply_to.reply(f"I'm sorry, I was unable to process this time 😢."),
                 )
                 return
-            advance_reminder = "🕰" in text
-            log.info(f"Creating reminder. Advance warning: {advance_reminder}")
-            reminder_notes = text.replace("🕰\ufe0f", "").strip()
-            created_reminder = await self.storage.add_reminder(
-                parsed_date,
-                notes=reminder_notes,
-                msg_id=str(reply_to.id),
-                channel_id=str(reply_to.channel.id),
-                advance_reminder=advance_reminder,
+            created_reminder = await self.create_reminder(
+                reminder_time=parsed_date,
+                text=text,
+                msg_id=reply_to.id,
+                channel_id=reply_to.channel.id,
             )
-            advance_reminder_string = (
-                " with 15 minute reminder" if advance_reminder else ""
-            )
-            confirmation_message = (
-                f"Added reminder '{reminder_notes}' at "
-                f"{parsed_date_string}{advance_reminder_string}. Reference `{created_reminder.id}` "
-            )
-            await reply_to.reply(confirmation_message)
+            await reply_to.reply(await self.build_reminder_message(created_reminder))
         await asyncio.gather(self.refresh_reminders(), self.cleanup_missed_reminders())
+
+    async def add_reminder_slash(
+        self,
+        requester: discord.Member,
+        timestamp: str,
+        text: str,
+        channel: discord.TextChannel,
+        advance_reminder=False,
+    ):
+        log.info(f"Reminder request from: {requester}")
+        parsed_date = self.parse_reminder_time(timestamp)
+        created_reminder = await self.create_reminder(
+            reminder_time=parsed_date,
+            text=f"{requester.mention}"+text,
+            msg_id=None,
+            channel_id=channel.id,
+            force_advance_reminder=advance_reminder,
+        )
+        await asyncio.gather(self.refresh_reminders(), self.cleanup_missed_reminders())
+        return created_reminder
+
+
+class ReminderError(Exception):
+    pass
+
+
+class TimeTravelError(ReminderError):
+    def __init__(self, parsed_date: datetime, command_time: datetime):
+        super().__init__()
+        self.parsed_date = parsed_date
+        self.command_time = command_time
+
+    @property
+    def parsed_date_string(self):
+        return self.parsed_date.strftime("%a %H:%M:%S %Z")
+
+    @property
+    def command_time_string(self):
+        return self.command_time.strftime("%a %H:%M:%S")
+
+    @property
+    def message(self):
+        return (
+            "Reminder data parsed as {parsed_date} but it is now {now}.\n"
+            "I'm sorry, time travel is difficult 😢."
+        ).format(
+            parsed_date=self.parsed_date_string,
+            now=self.command_time_string,
+        )
+
+
+class ReminderParsingError(ReminderError):
+    pass

@@ -295,7 +295,7 @@ class TLDBotto(discord.Client):
             "timezones": self.send_local_times,
             "job_schedule": self.send_schedule,
             "yell": self.yell_at_someone,
-            "add_reminder": self.reminders.add_reminder,
+            "add_reminder": self.reminders.add_reminder_message,
             "reminder_explain": self.reminders.send_reminder_syntax,
             "remove_reactions": self.remove_reactions,
         }
