@@ -95,7 +95,7 @@ def compile_regexes(bot_user_id: str, config: dict) -> SuggestionRegexes:
         hug=re.compile(rf"Hugs? {self_id}|Gives {self_id} a?\s?hugs?", re.IGNORECASE),
         food=FoodLookups(self_id, config["food"]),
         party=re.compile(
-            rf"(?<!third)(?<!3rd)(?<!wrong)(?:^|\s)(?P<partyword>part(?:a*y|ies))", re.IGNORECASE
+            rf"(?<!third)(?<!3rd)(?<!wrong)(?:^|\s)(?P<partyword>part(?:a*y|ies))(?:!|$)\s?", re.IGNORECASE
         ),
         patterns=PatternReactions(config["pattern_reactions"]),
         triggers=trigger_dict,
