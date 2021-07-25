@@ -141,7 +141,7 @@ def setup_slash(
                 required=False,
             ),
         ],
-        guild_ids=[833842753799848016],
+        # guild_ids=[833842753799848016],
     )
     async def reminder(ctx: SlashContext, at: str, message: str, **kwargs):
         try:
@@ -159,5 +159,51 @@ def setup_slash(
             await ctx.send(
                 f"I'm sorry, I was unable to process this time 😢.", hidden=True
             )
+
+    @slash.slash(
+        name="unixtime",
+        description="Covert a timestamp to Unix Time and display it to you (only)",
+        options=[
+            create_option(
+                name="timestamp",
+                description="The date/time of the reminder.",
+                option_type=SlashCommandOptionType.STRING,
+                required=True,
+            )
+        ],
+        # guild_ids=[833842753799848016],
+    )
+    async def unix_time(ctx: SlashContext, timestamp: str):
+        try:
+            parsed_date = dateutil.parser.parse(timestamp)
+        except (ValueError, OverflowError):
+            log.error(f"Failed to parse date: {timestamp}", exc_info=True)
+            await ctx.send("Sorry, I was unable to parse that time", hidden=True)
+            return
+        unix_timestamp = round(parsed_date.timestamp())
+        await ctx.send(f"{timestamp} (parsed as `{parsed_date}`) is `{unix_timestamp}` in Unix Time", hidden=True)
+
+    @slash.slash(
+        name="time",
+        description="Display a time using `<t:>",
+        options=[
+            create_option(
+                name="timestamp",
+                description="Sends a response displaying this timestamp in everyone's local time.",
+                option_type=SlashCommandOptionType.STRING,
+                required=True,
+            )
+        ],
+        # guild_ids=[833842753799848016],
+    )
+    async def time(ctx: SlashContext, timestamp: str):
+        try:
+            parsed_date = dateutil.parser.parse(timestamp)
+        except (ValueError, OverflowError):
+            log.error(f"Failed to parse date: {timestamp}", exc_info=True)
+            await ctx.send("Sorry, I was unable to parse that time", hidden=True)
+            return
+        unix_timestamp = round(parsed_date.timestamp())
+        await ctx.send(f"{timestamp} (parsed as `{parsed_date}`) is <t:{unix_timestamp}> (<t:{unix_timestamp}:R>)")
 
     return slash
