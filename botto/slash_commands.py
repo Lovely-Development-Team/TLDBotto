@@ -110,7 +110,8 @@ def setup_slash(
         local_times_string = responses.get_local_times(
             local_times=_local_times(parsed_time)
         )
-        await ctx.send(current_time + " converted:\n" + local_times_string)
+        converted_string = f"{current_time} converted:\n" if current_time else ""
+        await ctx.send(converted_string + local_times_string)
 
     @slash.slash(
         name="reminder",
