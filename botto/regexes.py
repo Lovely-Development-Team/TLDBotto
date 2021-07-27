@@ -29,6 +29,7 @@ class SuggestionRegexes:
     patterns: PatternReactions
     triggers: dict[str, list[Pattern]]
     at_triggers: dict[str, list[Pattern]]
+    convert_time: Pattern
 
 
 laugh_emojis = "[😆😂🤣]"
@@ -95,10 +96,15 @@ def compile_regexes(bot_user_id: str, config: dict) -> SuggestionRegexes:
         hug=re.compile(rf"Hugs? {self_id}|Gives {self_id} a?\s?hugs?", re.IGNORECASE),
         food=FoodLookups(self_id, config["food"]),
         party=re.compile(
-            rf"(?<!third)(?<!3rd)(?<!wrong)(?:^|\s)(?P<partyword>part(?:a*y|ies))(?:!|$)\s?", re.IGNORECASE
+            rf"(?<!third)(?<!3rd)(?<!wrong)(?:^|\s)(?P<partyword>part(?:a*y|ies))(?:!|$)\s?",
+            re.IGNORECASE,
         ),
         patterns=PatternReactions(config["pattern_reactions"]),
         triggers=trigger_dict,
         at_triggers=at_trigger_dict,
+        convert_time=re.compile(
+            r"(?P<time>(?P<hours>[0-2]?[0-9])(?P<minutes>:\d\d)?(?P<am_pm>AM|PM)?(?:\s?\+\d\d?(?::\d\d)?(?::\d\d)?)?)",
+            re.IGNORECASE,
+        ),
     )
     return regexes

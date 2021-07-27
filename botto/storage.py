@@ -7,7 +7,7 @@ from typing import Callable, Awaitable, Optional, Any, Literal
 import aiohttp
 from aiohttp import ClientSession
 
-from models import Meal, AirTableError, Intro, Reminder
+from models import Meal, AirTableError, Intro, Reminder, TLDer
 
 log = logging.getLogger(__name__)
 
@@ -70,7 +70,7 @@ class MealStorage:
     async def _iterate(
         self,
         base_url: str,
-        filter_by_formula: str,
+        filter_by_formula: Optional[str],
         sort: Optional[list[str]] = None,
         session: Optional[ClientSession] = None,
     ) -> AsyncGenerator[dict]:
@@ -277,7 +277,7 @@ class ReminderStorage(MealStorage):
             "Notes": notes,
             "15 Minutes Before": advance_reminder,
             "Message ID": msg_id,
-            "Channel ID": channel_id
+            "Channel ID": channel_id,
         }
         response = await self._insert(self.reminders_url, reminder_data)
         return Reminder.from_airtable(response)
@@ -286,3 +286,77 @@ class ReminderStorage(MealStorage):
         log.debug(f"Deleting reminders: {reminder_ids}")
         await self._delete(self.reminders_url, list(reminder_ids))
         log.debug(f"Deleted reminders: {reminder_ids}")
+
+
+class TimezoneStorage(MealStorage):
+    def __init__(
+        self,
+        airtable_base: str,
+        airtable_key: str,
+    ):
+        self.airtable_key = airtable_key
+        self.reminders_url = "https://api.airtable.com/v0/{base}/Reminders".format(
+            base=airtable_base
+        )
+        self.tlders_timezones_url = "https://api.airtable.com/v0/{base}/TLDers".format(
+            base=airtable_base
+        )
+        self.timezones_url = "https://api.airtable.com/v0/{base}/Timezones".format(
+            base=airtable_base
+        )
+        self.tlders_lock = asyncio.Lock()
+        self.tlders_cache: dict[str, TLDer] = {}
+        self.timezones_lock = asyncio.Lock()
+        self.timezones_cache: dict[str, str] = {}
+        self.auth_header = {"Authorization": f"Bearer {self.airtable_key}"}
+
+    async def list_tlders(self) -> list[TLDer]:
+        tlder_iterator = self._iterate(
+            self.tlders_timezones_url, filter_by_formula=None
+        )
+        tlders = [TLDer.from_airtable(x) async for x in tlder_iterator]
+        async with self.tlders_lock:
+            for tlder in tlders:
+                self.tlders_cache[tlder.discord_id] = tlder
+        return tlders
+
+    async def retrieve_tlder(self, discord_id: str) -> TLDer:
+        tlder_iterator = self._iterate(
+            self.tlders_timezones_url,
+            filter_by_formula=f"{{Discord ID}}='{discord_id}'",
+        )
+        tlder = [TLDer.from_airtable(x) async for x in tlder_iterator][0]
+        async with self.tlders_lock:
+            self.tlders_cache[discord_id] = tlder
+        return tlder
+
+    async def get_tlder(self, discord_id: str) -> TLDer:
+        await self.tlders_lock.acquire()
+        if tlder := self.tlders_cache.get(discord_id):
+            self.tlders_lock.release()
+            return tlder
+        else:
+            self.tlders_lock.release()
+            return await self.retrieve_tlder(discord_id)
+
+    async def _retrieve_timezone(self, key: str) -> str:
+        result = await self._get(f"{self.timezones_url}/{key}")
+        name = result["fields"]["Name"]
+        async with self.timezones_lock:
+            self.timezones_cache[key] = name
+        return name
+
+    async def get_timezone(self, key: str) -> str:
+        await self.timezones_lock.acquire()
+        if timezone_string := self.timezones_cache.get(key):
+            self.timezones_lock.release()
+            return timezone_string
+        else:
+            self.timezones_lock.release()
+            return await self._retrieve_timezone(key)
+
+    async def update_tlder_timezone_cache(self):
+        tlders = await self.list_tlders()
+        for tlder in tlders:
+            if timezone_id := tlder.timezone_id:
+                await self._retrieve_timezone(timezone_id)
