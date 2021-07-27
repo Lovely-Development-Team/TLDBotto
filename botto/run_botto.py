@@ -5,7 +5,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from reactions import Reactions
 from reminder_manager import ReminderManager
-from storage import AirtableMealStorage, ReminderStorage
+from storage import AirtableMealStorage, ReminderStorage, TimezoneStorage
 from tld_botto import TLDBotto
 from config import parse
 from slash_commands import setup_slash
@@ -41,10 +41,14 @@ reminder_storage = ReminderStorage(
     config["authentication"]["airtable_base"], config["authentication"]["airtable_key"]
 )
 
+timezone_storage = TimezoneStorage(
+    config["authentication"]["airtable_base"], config["authentication"]["airtable_key"]
+)
+
 reactions = Reactions(config)
 reminder_manager = ReminderManager(config, scheduler, reminder_storage, reactions)
 
-client = TLDBotto(config, reactions, scheduler, storage, reminder_manager)
+client = TLDBotto(config, reactions, scheduler, storage, timezone_storage, reminder_manager)
 slash = setup_slash(client, config, reminder_manager)
 
 

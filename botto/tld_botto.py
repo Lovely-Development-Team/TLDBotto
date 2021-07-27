@@ -11,17 +11,19 @@ from typing import Optional, Callable
 import subprocess
 
 import discord
+import pytz
 from discord import Message, Guild
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 import responses
+from date_helpers import is_naive
 from models import Meal
 from reactions import Reactions
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from reminder_manager import ReminderManager
-from storage import MealStorage
+from storage import MealStorage, TimezoneStorage
 from regexes import SuggestionRegexes, compile_regexes
 from message_checks import is_dm
 
@@ -65,12 +67,14 @@ class TLDBotto(discord.Client):
         reactions: Reactions,
         scheduler: AsyncIOScheduler,
         storage: MealStorage,
+        timezones: TimezoneStorage,
         reminders: ReminderManager,
     ):
         self.config = config
         self.reactions = reactions
         self.scheduler = scheduler
         self.storage = storage
+        self.timezones = timezones
         self.reminders = reminders
         log.info(
             "Replies are enabled"
@@ -107,6 +111,14 @@ class TLDBotto(discord.Client):
             name="Refresh text cache",
             trigger="cron",
             hour="*/3",
+            coalesce=True,
+        )
+
+        scheduler.add_job(
+            self.timezones.update_tlder_timezone_cache,
+            name="Refresh TLDer timezone cache",
+            trigger="cron",
+            hour="*/6",
             coalesce=True,
         )
 
@@ -347,14 +359,67 @@ class TLDBotto(discord.Client):
             has_matched = True
         return has_matched
 
+    async def match_times(self, message: Message):
+        def is_time(maybe_time: re.Match):
+            if maybe_time.group("hours"):
+                if maybe_time.group("minutes"):
+                    return True
+                elif am_pm := maybe_time.group("am_pm"):
+                    if am_pm.upper() in ("AM", "PM"):
+                        return True
+            return False
+        time_matches = [match.group(0) for match in self.regexes.convert_time.finditer(message.content) if is_time(match)]
+
+        num_matches = len(time_matches)
+        if num_matches > 0:
+            log.info(f"Message contained {num_matches} times")
+            try:
+                response_string = await self.process_time_matches(
+                    message.author, time_matches
+                )
+                print(response_string)
+                await message.reply(
+                    response_string,
+                    allowed_mentions=discord.AllowedMentions(replied_user=False),
+                )
+            except ValueError:
+                log.error(f"Failed to process times: {time_matches}", exc_info=True)
+
+    async def process_time_matches(
+        self, author: discord.User, matches: list[str]
+    ) -> str:
+        import dateutil.parser
+        parsed_times = ((time_string, dateutil.parser.parse(time_string)) for time_string in matches)
+        tlder = await self.timezones.get_tlder(author.id)
+        timezone = await self.timezones.get_timezone(tlder.timezone_id)
+        parsed_local_times = []
+        for time in parsed_times:
+            now = datetime.now() if is_naive(time[1]) else datetime.utcnow()
+            converted_time = time[1]
+            if (now - converted_time) > timedelta(hours=self.config["passed_time_is_next_day_threshold_hours"]):
+                new_day = now + timedelta(days=1)
+                converted_time = converted_time.replace(day=new_day.day)
+            if is_naive(converted_time):
+                parsed_local_times.append((time[0], converted_time.astimezone(pytz.timezone(timezone))))
+            else:
+                parsed_local_times.append((time[0], converted_time))
+        conversion_string_intro = [
+            f"{time[0]} is <t:{round(time[1].timestamp())}> (<t:{round(time[1].timestamp())}:R>)"
+            for time in parsed_local_times
+        ]
+        return "\n".join(conversion_string_intro)
+
     async def process_suggestion(self, message: Message):
         if trigger_result := self.check_triggers(message):
             await self.handle_trigger(message, trigger_result)
+
+        await self.match_times(message)
 
         await self.react(message)
         return
 
     async def process_dm(self, message: Message):
+        await self.match_times(message)
 
         if message.author == self.user:
             return

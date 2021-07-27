@@ -33,12 +33,10 @@ class Meal:
         end_time = fields.get("End Time")
         return cls(
             name=fields.get("Name"),
-            start=datetime.strptime(start_time, "%H:%M").time()
-            if start_time
-            else None,
+            start=datetime.strptime(start_time, "%H:%M").time() if start_time else None,
             end=datetime.strptime(end_time, "%H:%M").time() if end_time else None,
             texts=fields.get("Texts"),
-            emoji=fields.get("Emoji")
+            emoji=fields.get("Emoji"),
         )
 
 
@@ -66,7 +64,7 @@ class Reminder:
             notes=note,
             remind_15_minutes_before=advance_reminder,
             msg_id=msg_id,
-            channel_id=channel_id
+            channel_id=channel_id,
         )
 
     def to_airtable(self, fields=None) -> dict:
@@ -85,9 +83,27 @@ class Reminder:
 MessageAndChannel = namedtuple("MessageAndChannel", ["channel_id", "msg_id"])
 
 
+@dataclass
+class TLDer:
+    id: str
+    discord_id: str
+    name: str
+    timezone_id: str
+
+    @classmethod
+    def from_airtable(cls, data: dict) -> "TLDer":
+        fields = data["fields"]
+        return cls(
+            id=data["id"],
+            discord_id=fields.get("Discord ID"),
+            name=fields.get("Name"),
+            timezone_id=fields["Timezone"][0] if fields.get("Timezone") else None,
+        )
+
+
 class AirTableError(Exception):
     def __init__(
-            self, url: URL, response_dict: Union[dict, str], *args: object
+        self, url: URL, response_dict: Union[dict, str], *args: object
     ) -> None:
         error_dict: dict = response_dict["error"]
         self.url = url

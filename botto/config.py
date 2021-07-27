@@ -119,7 +119,7 @@ def parse(config):
             },
             "snail": {
                 "trigger": "^i am\s+(?:also|the)?\s*(?:🐌|snail)(?:-?(?:ish|like|y|i?est))?(?: .*)?",
-                "reactions": ["🐌"]
+                "reactions": ["🐌"],
             },
             "complaint": {
                 "trigger": "(?:(?:BOTTO|TILDY).?\s+COME\.?\s+ON\s*|COME\.?\s+ON\s+(?:BOTTO|TILDY).?\s*)",
@@ -154,8 +154,9 @@ def parse(config):
         "meals": {
             "auto_reminder_hours": ["8", "13", "18", "20", "1"],
             "guilds": [],
-            "intro_text": ["Reminder!"]
+            "intro_text": ["Reminder!"],
         },
+        "time_is_next_day_threshold_hours": 6,
         "reminder_channel": "833842753799848019",
         "should_reply": True,
         "approval_reaction": "mottoapproval",
@@ -194,6 +195,9 @@ def parse(config):
 
     if meals := decode_base64_env("TLDBOTTO_MEAL_CONFIG"):
         defaults["meals"] = meals
+
+    if threshold := decode_base64_env("TLDBOTTO_NEXT_DAY_THRESHOLD"):
+        defaults["time_is_next_day_threshold_hours"] = int(threshold)
 
     if id := os.getenv("TLDBOTTO_ID"):
         defaults["id"] = id
