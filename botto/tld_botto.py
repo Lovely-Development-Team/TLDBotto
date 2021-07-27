@@ -368,7 +368,12 @@ class TLDBotto(discord.Client):
                     if am_pm.upper() in ("AM", "PM"):
                         return True
             return False
-        time_matches = [match.group(0) for match in self.regexes.convert_time.finditer(message.content) if is_time(match)]
+
+        time_matches = [
+            match.group(0)
+            for match in self.regexes.convert_time.finditer(message.content)
+            if is_time(match)
+        ]
 
         num_matches = len(time_matches)
         if num_matches > 0:
@@ -389,18 +394,25 @@ class TLDBotto(discord.Client):
         self, author: discord.User, matches: list[str]
     ) -> str:
         import dateutil.parser
-        parsed_times = ((time_string, dateutil.parser.parse(time_string)) for time_string in matches)
+
+        parsed_times = (
+            (time_string, dateutil.parser.parse(time_string)) for time_string in matches
+        )
         tlder = await self.timezones.get_tlder(author.id)
         timezone = await self.timezones.get_timezone(tlder.timezone_id)
         parsed_local_times = []
         for time in parsed_times:
             now = datetime.now() if is_naive(time[1]) else datetime.utcnow()
             converted_time = time[1]
-            if (now - converted_time) > timedelta(hours=self.config["passed_time_is_next_day_threshold_hours"]):
+            if (now - converted_time) > timedelta(
+                hours=self.config["passed_time_is_next_day_threshold_hours"]
+            ):
                 new_day = now + timedelta(days=1)
                 converted_time = converted_time.replace(day=new_day.day)
             if is_naive(converted_time):
-                parsed_local_times.append((time[0], converted_time.astimezone(pytz.timezone(timezone))))
+                parsed_local_times.append(
+                    (time[0], converted_time.astimezone(pytz.timezone(timezone)))
+                )
             else:
                 parsed_local_times.append((time[0], converted_time))
         conversion_string_intro = [
