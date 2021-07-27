@@ -626,6 +626,16 @@ You can DM me the following commands:
             )
             await channel.send(response_text)
 
+    async def remove_own_reactions(self, message: Message):
+        my_reactions = [r for r in message.reactions if r.me is True]
+        clearing_reactions = [
+            message.remove_reaction(r.emoji, self.user) for r in my_reactions
+        ]
+        await asyncio.wait(clearing_reactions)
+
+    async def remove_own_message(self, message: Message):
+        await message.delete()
+
     async def remove_reactions(self, message: Message):
         if not message.reference:
             await self.reactions.unknown_dm(message)
@@ -634,22 +644,32 @@ You can DM me the following commands:
         reference_channel = await self.get_or_fetch_channel(
             message.reference.channel_id
         )
-        fetched_message = await reference_channel.fetch_message(
+        referenced_message = await reference_channel.fetch_message(
             message.reference.message_id
         )
-        if fetched_message.author.id == message.author.id:
+        if referenced_message.author.id == message.author.id:
             log.info(
                 f"{message.author.id} attempted to removed reactions from their own message!"
             )
             await self.reactions.nice_try(message)
             return
-        log.info(
-            f"{message.author.id} triggered reaction removal on {fetched_message.id} by {fetched_message.author.id}"
-        )
-        my_reactions = [r for r in fetched_message.reactions if r.me is True]
-        clearing_reactions = [
-            fetched_message.remove_reaction(r.emoji, self.user) for r in my_reactions
-        ]
+
+        # This is a valid request, so indicate it was recognised
         await message.add_reaction("👍")
-        await asyncio.wait(clearing_reactions)
+        if referenced_message.author.id == self.user.id:
+            # Message was us, so we'll remove
+            log.info(
+                "{requester_id} triggered deletion of our message (id: {message_id}): {message_content}".format(
+                    requester_id=message.author.id,
+                    message_id=referenced_message.id,
+                    message_content=referenced_message.content,
+                )
+            )
+            await self.remove_own_message(referenced_message)
+        else:
+            # Someone else's message, so we'll remove reactions
+            log.info(
+                f"{message.author.id} triggered reaction removal on {referenced_message.id} by {referenced_message.author.id}"
+            )
+            await self.remove_own_reactions(referenced_message)
         await message.delete(delay=5)
