@@ -151,7 +151,9 @@ def setup_slash(
             created_reminder = await reminder_manager.add_reminder_slash(
                 ctx.author, at, message, channel, advance_reminder=advance_warning
             )
-            await ctx.send(await reminder_manager.build_reminder_message(created_reminder))
+            await ctx.send(
+                await reminder_manager.build_reminder_message(created_reminder)
+            )
         except TimeTravelError as error:
             log.error("Reminder request expected time travel")
             await ctx.send(error.message, hidden=True)
@@ -182,7 +184,10 @@ def setup_slash(
             await ctx.send("Sorry, I was unable to parse that time", hidden=True)
             return
         unix_timestamp = round(parsed_date.timestamp())
-        await ctx.send(f"{timestamp} (parsed as `{parsed_date}`) is `{unix_timestamp}` in Unix Time", hidden=True)
+        await ctx.send(
+            f"{timestamp} (parsed as `{parsed_date}`) is `{unix_timestamp}` in Unix Time",
+            hidden=True,
+        )
 
     @slash.slash(
         name="time",
@@ -205,6 +210,8 @@ def setup_slash(
             await ctx.send("Sorry, I was unable to parse that time", hidden=True)
             return
         unix_timestamp = round(parsed_date.timestamp())
-        await ctx.send(f"{timestamp} (parsed as `{parsed_date}`) is <t:{unix_timestamp}> (<t:{unix_timestamp}:R>)")
+        await ctx.send(
+            f"{timestamp} (parsed as `{parsed_date}`) is <t:{unix_timestamp}> (<t:{unix_timestamp}:R>)"
+        )
 
     return slash
