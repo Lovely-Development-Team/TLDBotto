@@ -405,7 +405,7 @@ class TLDBotto(discord.Client):
             now = datetime.now() if is_naive(time[1]) else datetime.utcnow()
             converted_time = time[1]
             if (now - converted_time) > timedelta(
-                hours=self.config["passed_time_is_next_day_threshold_hours"]
+                hours=self.config["time_is_next_day_threshold_hours"]
             ):
                 new_day = now + timedelta(days=1)
                 converted_time = converted_time.replace(day=new_day.day)
