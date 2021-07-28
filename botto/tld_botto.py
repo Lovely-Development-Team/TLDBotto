@@ -382,7 +382,7 @@ class TLDBotto(discord.Client):
                 response_string = await self.process_time_matches(
                     message.author, time_matches
                 )
-                print(response_string)
+                log.info(f"Responding with: {response_string}")
                 await message.reply(
                     response_string,
                     allowed_mentions=discord.AllowedMentions(replied_user=False),
@@ -404,16 +404,20 @@ class TLDBotto(discord.Client):
         for time in parsed_times:
             now = datetime.now() if is_naive(time[1]) else datetime.utcnow()
             converted_time = time[1]
+            log.debug(f"Time now: {converted_time}")
+            log.debug(f"Converted time: {converted_time}")
             if (now - converted_time) > timedelta(
                 hours=self.config["time_is_next_day_threshold_hours"]
             ):
                 new_day = now + timedelta(days=1)
                 converted_time = converted_time.replace(day=new_day.day)
             if is_naive(converted_time):
+                log.debug(f"{converted_time} is naive")
                 parsed_local_times.append(
                     (time[0], converted_time.astimezone(pytz.timezone(timezone)))
                 )
             else:
+                log.debug(f"{converted_time} is not naive")
                 parsed_local_times.append((time[0], converted_time))
         conversion_string_intro = [
             f"{time[0]} is <t:{round(time[1].timestamp())}> (<t:{round(time[1].timestamp())}:R>)"
