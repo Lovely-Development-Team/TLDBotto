@@ -5,6 +5,7 @@ import logging
 import os
 import random
 import re
+from math import floor
 from datetime import datetime, timedelta
 from typing import Optional, Callable
 
@@ -15,6 +16,7 @@ import pytz
 from discord import Message, Guild
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
+import arrow
 import responses
 from date_helpers import is_naive
 from models import Meal
@@ -370,7 +372,7 @@ class TLDBotto(discord.Client):
             return False
 
         time_matches = [
-            match.group(0)
+            match
             for match in self.regexes.convert_time.finditer(message.content)
             if is_time(match)
         ]
@@ -391,36 +393,34 @@ class TLDBotto(discord.Client):
                 log.error(f"Failed to process times: {time_matches}", exc_info=True)
 
     async def process_time_matches(
-        self, author: discord.User, matches: list[str]
+        self, author: discord.User, matches: list[re.Match]
     ) -> str:
-        import dateutil.parser
 
-        parsed_times = (
-            (time_string, dateutil.parser.parse(time_string)) for time_string in matches
-        )
         tlder = await self.timezones.get_tlder(author.id)
         timezone = await self.timezones.get_timezone(tlder.timezone_id)
+
         parsed_local_times = []
-        for time in parsed_times:
-            now = datetime.now() if is_naive(time[1]) else datetime.utcnow()
-            converted_time = time[1]
-            log.debug(f"Time now: {converted_time}")
-            log.debug(f"Converted time: {converted_time}")
-            if (now - converted_time) > timedelta(
-                hours=self.config["time_is_next_day_threshold_hours"]
-            ):
-                new_day = now + timedelta(days=1)
-                converted_time = converted_time.replace(day=new_day.day)
-            if is_naive(converted_time):
-                log.debug(f"{converted_time} is naive")
-                parsed_local_times.append(
-                    (time[0], converted_time.astimezone(pytz.timezone(timezone)))
-                )
-            else:
-                log.debug(f"{converted_time} is not naive")
-                parsed_local_times.append((time[0], converted_time))
+        for match in matches:
+
+            hours = int(match.group("hours"))
+            minutes = match.group("minutes")
+            ampm = match.group("am_pm")
+            minutes = int(minutes[1:]) if minutes else 0
+            hours = hours + 12 if ampm == "pm" else hours
+
+            now = arrow.now()
+            try:
+                parsed_time = now.replace(hour=hours, minute=minutes, second=0, tzinfo=timezone)
+            except ValueError:
+                continue
+
+            if now - parsed_time > timedelta(hours=self.config["time_is_next_day_threshold_hours"]):
+                parsed_time = parsed_time + timedelta(days=1)
+
+            parsed_local_times.append((match.group(0), parsed_time))
+
         conversion_string_intro = [
-            f"{time[0]} is <t:{round(time[1].timestamp())}> (<t:{round(time[1].timestamp())}:R>)"
+            f"{time[0]} in {tlder.name}'s timezone is <t:{floor(time[1].timestamp())}> (<t:{floor(time[1].timestamp())}:R>) for you."
             for time in parsed_local_times
         ]
         return "\n".join(conversion_string_intro)
