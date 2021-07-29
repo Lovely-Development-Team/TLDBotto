@@ -4,3 +4,4 @@ emoji==1.2.0
 python-dateutil
 apscheduler
 discord-py-slash-command
+arrow
