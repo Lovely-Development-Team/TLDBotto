@@ -12,22 +12,20 @@ from typing import Optional, Callable
 import subprocess
 
 import discord
-import pytz
 from discord import Message, Guild
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 import arrow
-import responses
-from date_helpers import is_naive
-from models import Meal
-from reactions import Reactions
+from botto import responses
+from .models import Meal
+from .reactions import Reactions
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from reminder_manager import ReminderManager
-from storage import MealStorage, TimezoneStorage
-from regexes import SuggestionRegexes, compile_regexes
-from message_checks import is_dm
+from .storage import MealStorage, TimezoneStorage
+from .regexes import SuggestionRegexes, compile_regexes
+from .message_checks import is_dm
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
@@ -80,18 +78,19 @@ class TLDBotto(discord.Client):
         self.reminders = reminders
         log.info(
             "Replies are enabled"
-            if self.config["should_reply"]
+            if self.config.get("should_reply")
             else "Replies are disabled"
         )
 
-        reminder_hours = ",".join(config["meals"]["auto_reminder_hours"])
-        scheduler.add_job(
-            self.send_meal_reminder,
-            name="Meal Reminder",
-            trigger="cron",
-            hour=reminder_hours,
-            coalesce=True,
-        )
+        if meal_reminder_hours := config.get("meals", {}).get("auto_reminder_hours"):
+            reminder_hours = ",".join(meal_reminder_hours)
+            scheduler.add_job(
+                self.send_meal_reminder,
+                name="Meal Reminder",
+                trigger="cron",
+                hour=reminder_hours,
+                coalesce=True,
+            )
         scheduler.add_job(
             self.random_presence,
             name="Randomise presence",

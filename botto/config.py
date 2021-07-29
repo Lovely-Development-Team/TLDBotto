@@ -8,7 +8,7 @@ from datetime import datetime
 
 import pytz as pytz
 
-import food
+from . import food
 
 log = logging.getLogger("TLDBotto").getChild("config")
 log.setLevel(logging.DEBUG)

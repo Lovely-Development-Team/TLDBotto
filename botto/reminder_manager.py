@@ -8,9 +8,9 @@ import discord
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler import events
 
-import reactions
-from models import MessageAndChannel, Reminder
-from storage import ReminderStorage
+from botto import reactions
+from .models import Reminder
+from .storage import ReminderStorage
 
 log = logging.getLogger(__name__)
 

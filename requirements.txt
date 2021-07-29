@@ -5,3 +5,4 @@ python-dateutil
 apscheduler
 discord-py-slash-command
 arrow
+pytest

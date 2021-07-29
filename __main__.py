@@ -3,19 +3,13 @@ import json
 import logging.config
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from reactions import Reactions
-from reminder_manager import ReminderManager
-from storage import AirtableMealStorage, ReminderStorage, TimezoneStorage
-from tld_botto import TLDBotto
-from config import parse
-from slash_commands import setup_slash
+from botto.reactions import Reactions
+from botto.reminder_manager import ReminderManager
+from botto.storage import AirtableMealStorage, ReminderStorage, TimezoneStorage
+from botto.tld_botto import TLDBotto
+from botto.config import parse
+from botto.slash_commands import setup_slash
 
-# Configure logging
-logging.config.fileConfig(fname="log.conf", disable_existing_loggers=False)
-logging.getLogger("discord").setLevel(logging.CRITICAL)
-logging.getLogger("discord.gateway").setLevel(logging.INFO)
-logging.getLogger("asyncio").setLevel(logging.CRITICAL)
-logging.getLogger("urllib").setLevel(logging.CRITICAL)
 log = logging.getLogger("TLDBotto")
 
 try:
@@ -50,6 +44,5 @@ reminder_manager = ReminderManager(config, scheduler, reminder_storage, reaction
 
 client = TLDBotto(config, reactions, scheduler, storage, timezone_storage, reminder_manager)
 slash = setup_slash(client, config, reminder_manager)
-
 
 client.run(config["authentication"]["discord"])

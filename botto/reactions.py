@@ -8,11 +8,11 @@ from discord import Message
 
 from typing import TYPE_CHECKING, Callable
 
-from regexes import SuggestionRegexes
+from .regexes import SuggestionRegexes
 
 if TYPE_CHECKING:
     from tld_botto import TLDBotto
-from food import SpecialAction
+from .food import SpecialAction
 
 log = logging.getLogger("MottoBotto").getChild("reactions")
 log.setLevel(logging.DEBUG)
