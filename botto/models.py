@@ -101,6 +101,20 @@ class TLDer:
         )
 
 
+@dataclass
+class Timezone:
+    id: str
+    name: str
+
+    @classmethod
+    def from_airtable(cls, data: dict) -> "Timezone":
+        fields = data["fields"]
+        return cls(
+            id=data["id"],
+            name=fields.get("Name"),
+        )
+
+
 class AirTableError(Exception):
     def __init__(
         self, url: URL, response_dict: Union[dict, str], *args: object

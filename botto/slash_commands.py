@@ -2,12 +2,20 @@ import logging
 from datetime import datetime
 from typing import Union
 
-import dateutil.parser
+import arrow
+import pytz
+from dateutil import parser as dateparser, tz
 import discord
 from discord_slash import SlashCommand, SlashContext, SlashCommandOptionType
 from discord_slash.utils.manage_commands import create_option
 
-from botto.reminder_manager import ReminderManager, TimeTravelError, ReminderParsingError
+from botto import responses
+from botto.reminder_manager import (
+    ReminderManager,
+    TimeTravelError,
+    ReminderParsingError,
+)
+from botto.storage import TimezoneStorage
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
@@ -33,7 +41,10 @@ message_option = create_option(
 
 
 def setup_slash(
-    client: discord.Client, config: dict, reminder_manager: ReminderManager
+    client: discord.Client,
+    config: dict,
+    reminder_manager: ReminderManager,
+    timezones: TimezoneStorage,
 ):
     slash = SlashCommand(client, sync_commands=True)
 
@@ -101,7 +112,7 @@ def setup_slash(
         current_time = kwargs.get("current_time")
         if current_time:
             try:
-                parsed_time = dateutil.parser.parse(current_time)
+                parsed_time = dateparser.parse(current_time)
             except ValueError as error:
                 await ctx.send(f"Failed to parse provided time: {error}")
 
@@ -177,7 +188,7 @@ def setup_slash(
     )
     async def unix_time(ctx: SlashContext, timestamp: str):
         try:
-            parsed_date = dateutil.parser.parse(timestamp)
+            parsed_date = dateparser.parse(timestamp)
         except (ValueError, OverflowError):
             log.error(f"Failed to parse date: {timestamp}", exc_info=True)
             await ctx.send("Sorry, I was unable to parse that time", hidden=True)
@@ -203,7 +214,7 @@ def setup_slash(
     )
     async def time(ctx: SlashContext, timestamp: str):
         try:
-            parsed_date = dateutil.parser.parse(timestamp)
+            parsed_date = dateparser.parse(timestamp)
         except (ValueError, OverflowError):
             log.error(f"Failed to parse date: {timestamp}", exc_info=True)
             await ctx.send("Sorry, I was unable to parse that time", hidden=True)
@@ -211,6 +222,23 @@ def setup_slash(
         unix_timestamp = round(parsed_date.timestamp())
         await ctx.send(
             f"{timestamp} (parsed as `{parsed_date}`) is <t:{unix_timestamp}> (<t:{unix_timestamp}:R>)"
+        )
+
+    @slash.slash(
+        name="mytimezone",
+        description="Get your timezone",
+        options=[],
+        guild_ids=[833842753799848016],
+    )
+    async def get_timezone(ctx: SlashContext):
+        tlder = await timezones.get_tlder(ctx.author_id)
+        timezone = await timezones.get_timezone(tlder.timezone_id)
+        await ctx.send(
+            "Your currently configured timezone is: {timezone_name} (UTC{offset})".format(
+                timezone_name=timezone.name,
+                offset=arrow.now(timezone.name).format("Z"),
+            ),
+            hidden=True,
         )
 
     return slash
