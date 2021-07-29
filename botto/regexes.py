@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from re import Pattern
 from typing import Optional
 
-from food import FoodLookups
+from botto.food import FoodLookups
 
 
 class PatternReactions:

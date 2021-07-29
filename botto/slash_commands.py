@@ -1,14 +1,13 @@
 import logging
 from datetime import datetime
-from typing import Union, Optional
+from typing import Union
 
 import dateutil.parser
 import discord
 from discord_slash import SlashCommand, SlashContext, SlashCommandOptionType
 from discord_slash.utils.manage_commands import create_option
 
-import responses
-from reminder_manager import ReminderManager, TimeTravelError, ReminderParsingError
+from botto.reminder_manager import ReminderManager, TimeTravelError, ReminderParsingError
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)

@@ -28,6 +28,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.9
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run tests
+        run: pytest -vv
+
       - name: Load docker image from cache
         id: cache-docker
         uses: actions/cache@v1
@@ -39,14 +52,8 @@ jobs:
         run: docker load -i /tmp/docker-save/snapshot.tar || true
         if: steps.cache-docker.outputs.cache-hit == 'true'
 
-      - name: Run tests
-        run: |
-          if [ -f docker-compose.test.yml ]; then
-            docker-compose --file docker-compose.test.yml build
-            docker-compose --file docker-compose.test.yml run sut
-          else
-            docker build . -t $IMAGE_NAME --cache-from=tld-botto-cache
-          fi
+      - name: Build docker image
+        run: docker build . -t $IMAGE_NAME --cache-from=tld-botto-cache
 
       - name: Save cache of Docker image
         run: >

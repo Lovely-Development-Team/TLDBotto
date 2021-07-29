@@ -1,13 +1,13 @@
 import asyncio
 import logging
-from collections import AsyncGenerator
+from collections.abc import AsyncGenerator
 from datetime import datetime
 from typing import Callable, Awaitable, Optional, Any, Literal
 
 import aiohttp
 from aiohttp import ClientSession
 
-from models import Meal, AirTableError, Intro, Reminder, TLDer
+from .models import Meal, AirTableError, Intro, Reminder, TLDer
 
 log = logging.getLogger(__name__)
 
