@@ -706,7 +706,7 @@ You can DM me the following commands:
         await message.add_reaction("👍")
         if referenced_message.author.id == self.user.id:
             # Message was us, so we'll remove
-            await remove_own_message(message.author.name, referenced_message)
+            await remove_own_message(message.author.name, referenced_message, delay=1)
         else:
             # Someone else's message, so we'll remove reactions
             log.info(
