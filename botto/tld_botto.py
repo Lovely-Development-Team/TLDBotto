@@ -409,7 +409,7 @@ class TLDBotto(discord.Client):
 
             now = arrow.now()
             try:
-                parsed_time = now.replace(hour=hours, minute=minutes, second=0, tzinfo=timezone)
+                parsed_time = now.replace(hour=hours, minute=minutes, second=0, tzinfo=timezone.name)
             except ValueError:
                 continue
 
