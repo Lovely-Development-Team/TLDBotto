@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Union
+from typing import Union, Optional
 
 import discord
 from discord import Message
@@ -15,7 +15,7 @@ async def remove_user_reactions(message: Message, user: Union[discord.abc.User, 
     await asyncio.wait(clearing_reactions)
 
 
-async def remove_own_message(requester_name: str, message: Message):
+async def remove_own_message(requester_name: str, message: Message, delay: Optional[int]):
     log.info(
         "{requester_name} triggered deletion of our message (id: {message_id} in {channel_name}): {content}".format(
             requester_name=requester_name,
@@ -24,4 +24,7 @@ async def remove_own_message(requester_name: str, message: Message):
             content=message.content,
         )
     )
-    await message.delete()
+    if delay:
+        await message.delete(delay=delay)
+    else:
+        await message.delete()
