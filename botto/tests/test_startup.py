@@ -28,6 +28,6 @@ def test_startup():
     reminder_manager = ReminderManager({}, scheduler, reminder_storage, reactions)
 
     client = TLDBotto({}, reactions, scheduler, storage, timezone_storage, reminder_manager)
-    slash = setup_slash(client, {}, reminder_manager)
+    slash = setup_slash(client, {}, reminder_manager, timezone_storage)
     with pytest.raises(discord.LoginFailure):
         client.run("fake_discord_key")
