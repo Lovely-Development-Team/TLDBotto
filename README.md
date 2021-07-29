@@ -1,5 +1,9 @@
-# MottoBotto
-MottoBotto is a configurable Discord bot with a penchant for mottos and words to live by. It sends approved nominated mottos to an Airtable base for further use.
+# TLDBotto
+TLDBotto ("Tildy") is a configurable Discord bot with a penchant for hijinks.
+
+## Running Tildy
+
+`python .`
 
 ## Default Usage TLDR
 
@@ -89,15 +93,16 @@ MottoBotto requires a `config.json` configuration file, with the following secti
 | `rules`                     | `matching`      | `^.{5,240}$`<br />`^(\S+\s+)\S+` | No       | A list of regular expressions to match against the nominated motto text that must all match for the motto to be accepted. The message is first stripped of leading and trailing whitespace before matching. * |
 |                             | `excluding`     | `<@.*>`<br />`^[\d\W\s]*$`       | No       | A list of regular expressions to match against the nominated motto text, where any successful match will result in an invalid motto response. The message is first stripped of leading and trailing whitespace before matching. * |
 | `triggers`                  | `new_motto`     | `!motto$`                        | No       | A list of regular expressions to match against every incoming message in the relevant channels (see `channels` above) to recognise a new nomination. They are all prepended with `^` before matching, to ensure they match the start of the message. The message is first stripped of leading and trailing whitespace before matching. * |
-| `approval_reaction`         | N/A             | `mottoapproval`                  | No       | The name of the custom emoji used to approve the addition of one of your mottos. |
-| `human_moderation_required` | N/A             | `false`                          | No       | Whether to set the "Approved" flag in Airtable by default or not. If `false`, all mottos added are automatically approved for moderation status. |
+| `at_triggers`               | N/A             |  See below.                      | No       | Similar to `triggers` but requiring that the bot is mentioned at the start of the message. |
+| `pattern_reactions`         | N/A             |  See below.                      | No       | Configurable reactions based on regex matches. |
+| `reminder_channel`          | N/A             |  See below.                      | No       | Channel ID to which meal reminders should be sent. |
 | `leaderboard_link`          | N/A             | `None`                           | No       | A link to the motto leaderboard. If not configured, the `!link` DM will not be recognised. |
 | `trigger_on_mention`            | N/A             | `true`                           | No       | Whether a message that starts with an `@` mention of MottoBotto triggers a nomination. If this is `false`, then at least one `new_motto` trigger must be configured. |
 | `delete_unapproved_after_hours` | N/A             | `24`                             | No       | The number of hours before an unapproved motto suggestion is removed from Airtable. |
 | `confirm_delete_reaction` | N/A | 🧨 | No | The emoji the user is required to respond with to confirm deletion of all their data. |
 | `support_channel` | N/A | `None` | No | The name of a channel in which users of the bot can ask for help. If defined, this is reported in the output of `!help`. |
 | `id` | N/A | `None` | No | A unique ID for this bot, used for development when multiple bots may be running. This is reported by `!version`. |
-| `watching_status` | N/A | `"for inspiration"` | No | A status string to display after the bot's name. It is prepended with "Watching…" |
+| `watching_statūs` | N/A | `["for food", "for snails", "for apologies", "for love"]` | No | An array of statūs that the boss chooses from at random, changing every 12 hours. It is prepended with "Watching…" |
 
 \*Note: Regular expressions used for motto nomination rule matching are matched with case sensitivity, and must include the `^` and `$` if you wish to match against the entire message string. Those used for trigger phrases are matched without regard for case.
 
