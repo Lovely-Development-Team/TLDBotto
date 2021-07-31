@@ -86,7 +86,7 @@ class Reactions:
 
     async def party(self, message: Message, trigger_word: str):
         log.info(f"Party from: {message.author}")
-        if trigger_word.isupper():
+        if trigger_word.isupper() or "!!" in trigger_word:
             log.info("Party harder!")
             tasks = [
                 message.add_reaction(reaction)
