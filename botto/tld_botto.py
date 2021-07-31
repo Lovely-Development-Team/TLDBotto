@@ -43,7 +43,7 @@ NUMBERS = [
     "eight",
     "nine",
 ]
-VOTE_EMOJI = [
+VOTE_EMOJI = (
     "0️⃣",
     "1️⃣",
     "2️⃣",
@@ -57,7 +57,7 @@ VOTE_EMOJI = [
     "✅",
     "👍",
     "👎",
-]
+)
 
 DELETE_EMOJI = (
     "🥕",
