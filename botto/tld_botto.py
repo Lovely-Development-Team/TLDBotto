@@ -59,16 +59,21 @@ VOTE_EMOJI = [
     "👎",
 ]
 
+DELETE_EMOJI = (
+    "🥕",
+    "❌"
+)
+
 
 class TLDBotto(discord.Client):
     def __init__(
-        self,
-        config: dict,
-        reactions: Reactions,
-        scheduler: AsyncIOScheduler,
-        storage: MealStorage,
-        timezones: TimezoneStorage,
-        reminders: ReminderManager,
+            self,
+            config: dict,
+            reactions: Reactions,
+            scheduler: AsyncIOScheduler,
+            storage: MealStorage,
+            timezones: TimezoneStorage,
+            reminders: ReminderManager,
     ):
         self.config = config
         self.reactions = reactions
@@ -174,7 +179,7 @@ class TLDBotto(discord.Client):
             yield await self.get_or_fetch_channel(guild["channel"])
 
     async def add_reaction(
-        self, message: Message, reaction_type: str, default: str = None
+            self, message: Message, reaction_type: str, default: str = None
     ):
         if reaction := self.config["reactions"].get(reaction_type, default):
             await message.add_reaction(reaction)
@@ -206,17 +211,38 @@ class TLDBotto(discord.Client):
             if len(reacted_users) != 9:
                 await message.remove_reaction("🏁", self.user)
 
-    async def on_raw_reaction_add(self, payload):
-        if payload.emoji.name not in VOTE_EMOJI:
+    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
+        is_vote = payload.emoji.name in VOTE_EMOJI
+        is_delete = payload.emoji.name in DELETE_EMOJI
+        if not is_vote and not is_delete:
             return
 
         log.info(f"Reaction received: {payload}")
 
-        channel = await self.fetch_channel(payload.channel_id)
+        channel = await self.get_or_fetch_channel(payload.channel_id)
         message = await channel.fetch_message(payload.message_id)
         log.info(f"Channel: {channel}")
         log.info(f"Message: {message}")
         log.info(f"Reactions: {message.reactions}")
+
+        # Check for TextChannel so this doesn't trigger in DMs
+        if is_delete and isinstance(channel, discord.TextChannel) and message.author.id == self.user.id:
+            log.info(f"'{payload.emoji.name}' is a delete reaction")
+            emoji = payload.emoji
+            # Wait 3 seconds to make sure this wasn't accidental
+            await asyncio.sleep(3)
+            # Re-fetch the message (to make sure we have the latest reactions) and check emoji is still there
+            message = await channel.fetch_message(payload.message_id)
+            if not any((reaction.emoji == emoji.name for reaction in message.reactions)):
+                log.warning("Reaction no longer present. Not removing our message.")
+                return
+            log.debug("Reaction still present; removing our message.")
+            await self.remove_own_message(payload.member, message)
+            return
+
+        # At this point, we only need to handle voting reactions
+        if not is_vote:
+            return
 
         if self.is_voting_channel(channel):
             reacted_users = set()
@@ -246,8 +272,8 @@ class TLDBotto(discord.Client):
                     await message.add_reaction(emoji)
 
         if (
-            self.config["channels"]["include"]
-            and channel_name not in self.config["channels"]["include"]
+                self.config["channels"]["include"]
+                and channel_name not in self.config["channels"]["include"]
         ):
             return
         else:
@@ -315,7 +341,7 @@ class TLDBotto(discord.Client):
 
     @staticmethod
     async def handle_trigger(
-        message: Message, trigger_details: tuple[Callable, re.Match]
+            message: Message, trigger_details: tuple[Callable, re.Match]
     ):
         if trigger_func := trigger_details[0]:
             if groups := trigger_details[1].groupdict():
@@ -329,7 +355,7 @@ class TLDBotto(discord.Client):
         return [
             (
                 lambda content: self.regexes.apologising.search(content)
-                and not self.regexes.sorry.search(content),
+                                and not self.regexes.sorry.search(content),
                 self.reactions.rule_1,
             ),
             (lambda content: self.regexes.sorry.search(content), self.reactions.love),
@@ -392,7 +418,7 @@ class TLDBotto(discord.Client):
                 log.error(f"Failed to process times: {time_matches}", exc_info=True)
 
     async def process_time_matches(
-        self, author: discord.User, matches: list[re.Match]
+            self, author: discord.User, matches: list[re.Match]
     ) -> str:
 
         tlder = await self.timezones.get_tlder(author.id)
@@ -498,8 +524,8 @@ You can DM me the following commands:
             try:
                 git_version = (
                     subprocess.check_output(["git", "describe", "--tags"])
-                    .decode("utf-8")
-                    .strip()
+                        .decode("utf-8")
+                        .strip()
                 )
             except subprocess.CalledProcessError as error:
                 log.warning(
@@ -527,7 +553,7 @@ You can DM me the following commands:
         return await self.calculate_meal_reminders(localised_times, configured_meals)
 
     async def calculate_meal_reminders(
-        self, timezones: list[datetime], configured_meals: list[Meal]
+            self, timezones: list[datetime], configured_meals: list[Meal]
     ):
         intro_fetch = self.storage.get_intros()
         meals = {}
@@ -648,7 +674,14 @@ You can DM me the following commands:
         ]
         await asyncio.wait(clearing_reactions)
 
-    async def remove_own_message(self, message: Message):
+    async def remove_own_message(self, requester: discord.Member, message: Message):
+        log.info(
+            "{requester_id} triggered deletion of our message (id: {message_id}): {message_content}".format(
+                requester_id=requester.id,
+                message_id=message.id,
+                message_content=message.content,
+            )
+        )
         await message.delete()
 
     async def remove_reactions(self, message: Message):
@@ -673,14 +706,7 @@ You can DM me the following commands:
         await message.add_reaction("👍")
         if referenced_message.author.id == self.user.id:
             # Message was us, so we'll remove
-            log.info(
-                "{requester_id} triggered deletion of our message (id: {message_id}): {message_content}".format(
-                    requester_id=message.author.id,
-                    message_id=referenced_message.id,
-                    message_content=referenced_message.content,
-                )
-            )
-            await self.remove_own_message(referenced_message)
+            await self.remove_own_message(message.author, referenced_message)
         else:
             # Someone else's message, so we'll remove reactions
             log.info(
