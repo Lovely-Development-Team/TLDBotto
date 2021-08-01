@@ -140,7 +140,7 @@ jobs:
         run: echo "RELEASE_VERSION=`git describe --tags`" >> $GITHUB_ENV
         continue-on-error: true
 
-      - name: Start MottoBotto
+      - name: Start Tildy
         uses: appleboy/ssh-action@v0.1.4
         env:
           HOST: ${{ secrets.DEPLOY_HOST }}
