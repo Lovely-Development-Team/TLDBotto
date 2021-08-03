@@ -226,8 +226,7 @@ class TLDBotto(discord.Client):
         log.info(f"Message: {message}")
         log.info(f"Reactions: {message.reactions}")
 
-        # Check for TextChannel so this doesn't trigger in DMs
-        if is_delete and isinstance(channel, discord.TextChannel) and message.author.id == self.user.id:
+        if is_delete and message.author.id == self.user.id:
             log.info(f"'{payload.emoji.name}' is a delete reaction")
             emoji = payload.emoji
             # Wait 3 seconds to make sure this wasn't accidental
@@ -238,7 +237,9 @@ class TLDBotto(discord.Client):
                 log.warning("Reaction no longer present. Not removing our message.")
                 return
             log.debug("Reaction still present; removing our message.")
-            await self.remove_own_message(payload.member, message)
+            requester: discord.User = payload.member if payload.member else self.get_user(payload.user_id)
+            requester_name = requester.name if requester else f"User with ID {payload.user_id}"
+            await self.remove_own_message(requester_name, message)
             return
 
         # At this point, we only need to handle voting reactions
@@ -675,10 +676,10 @@ You can DM me the following commands:
         ]
         await asyncio.wait(clearing_reactions)
 
-    async def remove_own_message(self, requester: discord.Member, message: Message):
+    async def remove_own_message(self, requester_name: str, message: Message):
         log.info(
-            "{requester_id} triggered deletion of our message (id: {message_id}): {message_content}".format(
-                requester_id=requester.id,
+            "{requester_name} triggered deletion of our message (id: {message_id}): {message_content}".format(
+                requester_name=requester_name,
                 message_id=message.id,
                 message_content=message.content,
             )
@@ -707,7 +708,7 @@ You can DM me the following commands:
         await message.add_reaction("👍")
         if referenced_message.author.id == self.user.id:
             # Message was us, so we'll remove
-            await self.remove_own_message(message.author, referenced_message)
+            await self.remove_own_message(message.author.name, referenced_message)
         else:
             # Someone else's message, so we'll remove reactions
             log.info(
