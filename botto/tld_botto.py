@@ -17,6 +17,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 import arrow
 from botto import responses
+from .dm_helpers import get_dm_channel
 from .models import Meal
 from .reactions import Reactions
 from typing import TYPE_CHECKING
@@ -474,7 +475,7 @@ class TLDBotto(discord.Client):
             return
 
         message_content = message.content.lower().strip()
-
+        dm_channel = await get_dm_channel(message.author)
         if message_content in ("!help", "help", "help!", "halp", "halp!", "!halp"):
             trigger = (
                 f"@{self.user.display_name}"
@@ -515,7 +516,7 @@ You can DM me the following commands:
                     )
                 help_message = f"{help_message}\n{message_add}."
 
-            await message.author.dm_channel.send(help_message)
+            await dm_channel.send(help_message)
             return
 
         if message_content == "!version":
@@ -536,7 +537,7 @@ You can DM me the following commands:
             response = f"Version: {git_version}"
             if bot_id := self.config["id"]:
                 response = f"{response} ({bot_id})"
-            await message.author.dm_channel.send(response)
+            await dm_channel.send(response)
             return
 
         if not await self.react(message):
