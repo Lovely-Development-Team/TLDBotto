@@ -680,10 +680,11 @@ You can DM me the following commands:
 
     async def remove_own_message(self, requester_name: str, message: Message):
         log.info(
-            "{requester_name} triggered deletion of our message (id: {message_id}): {message_content}".format(
+            "{requester_name} triggered deletion of our message (id: {message_id} in {channel_name}): {content}".format(
                 requester_name=requester_name,
                 message_id=message.id,
-                message_content=message.content,
+                channel_name=message.channel.name,
+                content=message.content,
             )
         )
         await message.delete()
