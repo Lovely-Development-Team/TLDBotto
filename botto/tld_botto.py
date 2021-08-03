@@ -186,7 +186,7 @@ class TLDBotto(discord.Client):
             await message.add_reaction(reaction)
 
     def is_voting_channel(self, channel: discord.abc.Messageable) -> bool:
-        if isinstance(channel, discord.TextChannel):
+        if isinstance(channel, discord.TextChannel) or isinstance(channel, discord.Thread):
             return channel.name in self.config["channels"]["voting"]
         else:
             return False
