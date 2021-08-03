@@ -505,7 +505,7 @@ Reply to a great motto in the supported channels with {trigger} to tell me about
 You can DM me the following commands:
 `!schedule`: Show the current schedule of reminders
 `!bottoyellat<name>. <message>`: Get Tildy to yell at someone.
-{self.reminders.reminder_syntax}: Get Tidly to remind you. Include '🕰' in `message` to also receive a reminder 15 minutes prior.
+{self.reminders.reminder_syntax}: Get Tildy to remind you. Include '🕰' in `message` to also receive a reminder 15 minutes prior.
 `!emoji <emoji>`: Set your emoji on the leaderboard. A response of {self.config["reactions"]["invalid_emoji"]} means the emoji you requested is not valid.
 `!emoji`: Clear your emoji from the leaderboard.
 `!nick on`: Use your server-specific nickname on the leaderboard instead of your Discord username. Nickname changes will auto-update the next time you approve a motto.
