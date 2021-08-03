@@ -291,9 +291,6 @@ class TLDBotto(discord.Client):
 
         await self.process_suggestion(message)
 
-    def clean_trigger_message(self, trigger, message) -> str:
-        return trigger.sub("", message).strip().strip("'\"”“")
-
     def clean_message(self, actual_motto: str, guild: Guild) -> str:
 
         for channel_id in CHANNEL_REGEX.findall(actual_motto):
