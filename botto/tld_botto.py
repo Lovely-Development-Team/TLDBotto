@@ -7,7 +7,7 @@ import random
 import re
 from math import floor
 from datetime import datetime, timedelta
-from typing import Optional, Callable
+from typing import Optional, Callable, Union
 
 import subprocess
 
@@ -16,6 +16,8 @@ from discord import Message, Guild
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 import arrow
+from discord.abc import GuildChannel, PrivateChannel
+
 from botto import responses
 from .dm_helpers import get_dm_channel
 from .models import Meal
@@ -136,7 +138,7 @@ class TLDBotto(discord.Client):
 
     async def on_connect(self):
         if not self.regexes and self.user:
-            self.regexes = compile_regexes(self.user.id, self.config)
+            self.regexes = compile_regexes(str(self.user.id), self.config)
 
     async def random_presence(self):
         chosen_status = random.choice(self.config["watching_statūs"])
@@ -152,7 +154,7 @@ class TLDBotto(discord.Client):
         log.info("We have logged in as {0.user}".format(self))
 
         if not self.regexes:
-            self.regexes = compile_regexes(self.user.id, self.config)
+            self.regexes = compile_regexes(str(self.user.id), self.config)
 
         await self.random_presence()
 
@@ -169,7 +171,7 @@ class TLDBotto(discord.Client):
     async def on_disconnect(self):
         log.warning("Bot disconnected")
 
-    async def get_or_fetch_channel(self, channel_id: int) -> discord.TextChannel:
+    async def get_or_fetch_channel(self, channel_id: int) -> Union[GuildChannel, PrivateChannel, discord.Thread]:
         if channel := self.get_channel(channel_id):
             return channel
         else:
@@ -423,7 +425,7 @@ class TLDBotto(discord.Client):
             self, author: discord.User, matches: list[re.Match]
     ) -> str:
 
-        tlder = await self.timezones.get_tlder(author.id)
+        tlder = await self.timezones.get_tlder(str(author.id))
         timezone = await self.timezones.get_timezone(tlder.timezone_id)
 
         parsed_local_times = []
@@ -662,7 +664,7 @@ You can DM me the following commands:
             person (str): The person to yell at
         """
         log.info(f"Yelling from: {message.author}")
-        channel: discord.TextChannel = message.channel
+        channel: discord.abc.Messageable = message.channel
         async with channel.typing():
             response_text = responses.yell_at_someone(
                 kwargs.get("person"), kwargs.get("text")
