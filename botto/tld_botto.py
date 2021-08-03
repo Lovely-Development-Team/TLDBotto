@@ -20,6 +20,7 @@ from discord.abc import GuildChannel, PrivateChannel
 
 from botto import responses
 from .dm_helpers import get_dm_channel
+from .message_helpers import remove_own_message, remove_user_reactions
 from .models import Meal
 from .reactions import Reactions
 from typing import TYPE_CHECKING
@@ -241,7 +242,7 @@ class TLDBotto(discord.Client):
             log.debug("Reaction still present; removing our message.")
             requester: discord.User = payload.member if payload.member else self.get_user(payload.user_id)
             requester_name = requester.name if requester else f"User with ID {payload.user_id}"
-            await self.remove_own_message(requester_name, message)
+            await remove_own_message(requester_name, message)
             return
 
         # At this point, we only need to handle voting reactions
@@ -671,24 +672,6 @@ You can DM me the following commands:
             )
             await channel.send(response_text)
 
-    async def remove_own_reactions(self, message: Message):
-        my_reactions = [r for r in message.reactions if r.me is True]
-        clearing_reactions = [
-            message.remove_reaction(r.emoji, self.user) for r in my_reactions
-        ]
-        await asyncio.wait(clearing_reactions)
-
-    async def remove_own_message(self, requester_name: str, message: Message):
-        log.info(
-            "{requester_name} triggered deletion of our message (id: {message_id} in {channel_name}): {content}".format(
-                requester_name=requester_name,
-                message_id=message.id,
-                channel_name=message.channel.name,
-                content=message.content,
-            )
-        )
-        await message.delete()
-
     async def remove_reactions(self, message: Message):
         if not message.reference:
             await self.reactions.unknown_dm(message)
@@ -711,11 +694,11 @@ You can DM me the following commands:
         await message.add_reaction("👍")
         if referenced_message.author.id == self.user.id:
             # Message was us, so we'll remove
-            await self.remove_own_message(message.author.name, referenced_message)
+            await remove_own_message(message.author.name, referenced_message)
         else:
             # Someone else's message, so we'll remove reactions
             log.info(
                 f"{message.author.id} triggered reaction removal on {referenced_message.id} by {referenced_message.author.id}"
             )
-            await self.remove_own_reactions(referenced_message)
+            await remove_user_reactions(referenced_message, self.user)
         await message.delete(delay=5)
