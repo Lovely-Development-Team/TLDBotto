@@ -63,21 +63,18 @@ VOTE_EMOJI = (
     "👎",
 )
 
-DELETE_EMOJI = (
-    "🥕",
-    "❌"
-)
+DELETE_EMOJI = ("🥕", "❌")
 
 
 class TLDBotto(discord.Client):
     def __init__(
-            self,
-            config: dict,
-            reactions: Reactions,
-            scheduler: AsyncIOScheduler,
-            storage: MealStorage,
-            timezones: TimezoneStorage,
-            reminders: ReminderManager,
+        self,
+        config: dict,
+        reactions: Reactions,
+        scheduler: AsyncIOScheduler,
+        storage: MealStorage,
+        timezones: TimezoneStorage,
+        reminders: ReminderManager,
     ):
         self.config = config
         self.reactions = reactions
@@ -172,7 +169,9 @@ class TLDBotto(discord.Client):
     async def on_disconnect(self):
         log.warning("Bot disconnected")
 
-    async def get_or_fetch_channel(self, channel_id: int) -> Union[GuildChannel, PrivateChannel, discord.Thread]:
+    async def get_or_fetch_channel(
+        self, channel_id: int
+    ) -> Union[GuildChannel, PrivateChannel, discord.Thread]:
         if channel := self.get_channel(channel_id):
             return channel
         else:
@@ -183,13 +182,15 @@ class TLDBotto(discord.Client):
             yield await self.get_or_fetch_channel(guild["channel"])
 
     async def add_reaction(
-            self, message: Message, reaction_type: str, default: str = None
+        self, message: Message, reaction_type: str, default: str = None
     ):
         if reaction := self.config["reactions"].get(reaction_type, default):
             await message.add_reaction(reaction)
 
     def is_voting_channel(self, channel: discord.abc.Messageable) -> bool:
-        if isinstance(channel, discord.TextChannel) or isinstance(channel, discord.Thread):
+        if isinstance(channel, discord.TextChannel) or isinstance(
+            channel, discord.Thread
+        ):
             return channel.name in self.config["channels"]["voting"]
         else:
             return False
@@ -236,12 +237,18 @@ class TLDBotto(discord.Client):
             await asyncio.sleep(3)
             # Re-fetch the message (to make sure we have the latest reactions) and check emoji is still there
             message = await channel.fetch_message(payload.message_id)
-            if not any((reaction.emoji == emoji.name for reaction in message.reactions)):
+            if not any(
+                (reaction.emoji == emoji.name for reaction in message.reactions)
+            ):
                 log.warning("Reaction no longer present. Not removing our message.")
                 return
             log.debug("Reaction still present; removing our message.")
-            requester: discord.User = payload.member if payload.member else self.get_user(payload.user_id)
-            requester_name = requester.name if requester else f"User with ID {payload.user_id}"
+            requester: discord.User = (
+                payload.member if payload.member else self.get_user(payload.user_id)
+            )
+            requester_name = (
+                requester.name if requester else f"User with ID {payload.user_id}"
+            )
             await remove_own_message(requester_name, message)
             return
 
@@ -277,8 +284,8 @@ class TLDBotto(discord.Client):
                     await message.add_reaction(emoji)
 
         if (
-                self.config["channels"]["include"]
-                and channel_name not in self.config["channels"]["include"]
+            self.config["channels"]["include"]
+            and channel_name not in self.config["channels"]["include"]
         ):
             return
         else:
@@ -343,7 +350,7 @@ class TLDBotto(discord.Client):
 
     @staticmethod
     async def handle_trigger(
-            message: Message, trigger_details: tuple[Callable, re.Match]
+        message: Message, trigger_details: tuple[Callable, re.Match]
     ):
         if trigger_func := trigger_details[0]:
             if groups := trigger_details[1].groupdict():
@@ -357,7 +364,7 @@ class TLDBotto(discord.Client):
         return [
             (
                 lambda content: self.regexes.apologising.search(content)
-                                and not self.regexes.sorry.search(content),
+                and not self.regexes.sorry.search(content),
                 self.reactions.rule_1,
             ),
             (lambda content: self.regexes.sorry.search(content), self.reactions.love),
@@ -420,7 +427,7 @@ class TLDBotto(discord.Client):
                 log.error(f"Failed to process times: {time_matches}", exc_info=True)
 
     async def process_time_matches(
-            self, author: discord.User, matches: list[re.Match]
+        self, author: discord.User, matches: list[re.Match]
     ) -> str:
 
         tlder = await self.timezones.get_tlder(str(author.id))
@@ -437,11 +444,15 @@ class TLDBotto(discord.Client):
 
             now = arrow.now()
             try:
-                parsed_time = now.replace(hour=hours, minute=minutes, second=0, tzinfo=timezone.name)
+                parsed_time = now.replace(
+                    hour=hours, minute=minutes, second=0, tzinfo=timezone.name
+                )
             except ValueError:
                 continue
 
-            if now - parsed_time > timedelta(hours=self.config["time_is_next_day_threshold_hours"]):
+            if now - parsed_time > timedelta(
+                hours=self.config["time_is_next_day_threshold_hours"]
+            ):
                 parsed_time = parsed_time + timedelta(days=1)
 
             parsed_local_times.append((match.group(0), parsed_time))
@@ -526,8 +537,8 @@ You can DM me the following commands:
             try:
                 git_version = (
                     subprocess.check_output(["git", "describe", "--tags"])
-                        .decode("utf-8")
-                        .strip()
+                    .decode("utf-8")
+                    .strip()
                 )
             except subprocess.CalledProcessError as error:
                 log.warning(
@@ -555,7 +566,7 @@ You can DM me the following commands:
         return await self.calculate_meal_reminders(localised_times, configured_meals)
 
     async def calculate_meal_reminders(
-            self, timezones: list[datetime], configured_meals: list[Meal]
+        self, timezones: list[datetime], configured_meals: list[Meal]
     ):
         intro_fetch = self.storage.get_intros()
         meals = {}
