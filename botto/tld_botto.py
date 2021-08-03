@@ -458,7 +458,11 @@ class TLDBotto(discord.Client):
             parsed_local_times.append((match.group(0), parsed_time))
 
         conversion_string_intro = [
-            f"{time[0]} in {tlder.name}'s timezone is <t:{floor(time[1].timestamp())}> (<t:{floor(time[1].timestamp())}:R>) for you."
+            "{time} in {tlder_name}'s timezone is <t:{unix_time}> (<t:{unix_time}:R>) for you.".format(
+                time=time[0],
+                tlder_name=tlder.name,
+                unix_time=floor(time[1].timestamp()),
+            )
             for time in parsed_local_times
         ]
         return "\n".join(conversion_string_intro)
@@ -706,7 +710,11 @@ You can DM me the following commands:
         else:
             # Someone else's message, so we'll remove reactions
             log.info(
-                f"{message.author.id} triggered reaction removal on {referenced_message.id} by {referenced_message.author.id}"
+                "{requester_id} triggered reaction removal on {referenced_message_id} by {message_author_id}".format(
+                    requester_id=message.author.id,
+                    referenced_message_id=referenced_message.id,
+                    message_author_id=referenced_message.author.id,
+                )
             )
             await remove_user_reactions(referenced_message, self.user)
         await message.delete(delay=5)
