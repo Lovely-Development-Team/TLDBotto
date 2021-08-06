@@ -272,6 +272,9 @@ class TLDBotto(discord.Client):
                 )
 
     async def on_message(self, message: Message):
+        if message.author.id == self.user.id:
+            log.info("Ignoring message from self")
+            return
 
         if is_dm(message):
             await self.process_dm(message)
@@ -292,10 +295,6 @@ class TLDBotto(discord.Client):
         else:
             if channel_name in self.config["channels"]["exclude"]:
                 return
-
-        if message.author.id == self.user.id:
-            log.info("Ignoring message from self")
-            return
 
         await self.process_suggestion(message)
 
