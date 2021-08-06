@@ -27,6 +27,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from reminder_manager import ReminderManager
+from .storage.meal_storage import MealStorage
 from .storage import MealStorage, TimezoneStorage
 from .regexes import SuggestionRegexes, compile_regexes
 from .message_checks import is_dm

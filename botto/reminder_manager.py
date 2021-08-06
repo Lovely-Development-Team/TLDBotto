@@ -1,16 +1,16 @@
 import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Callable, Optional
+from typing import Callable
 
 import dateutil.parser
 import discord
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler import events
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from botto import reactions
 from .models import Reminder
-from .storage import ReminderStorage
+from .storage.reminder_storage import ReminderStorage
 
 log = logging.getLogger(__name__)
 
