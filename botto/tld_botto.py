@@ -20,10 +20,17 @@ from discord.abc import GuildChannel, PrivateChannel
 
 from botto import responses
 from .dm_helpers import get_dm_channel
-from .message_helpers import remove_own_message, remove_user_reactions
-from .models import Meal
+from .message_helpers import (
+    remove_own_message,
+    remove_user_reactions,
+    MessageMissingReferenceError,
+    resolve_message_reference,
+)
+from .models import Meal, AirTableError
 from .reactions import Reactions
 from typing import TYPE_CHECKING
+
+from .storage.enablement_storage import EnablementStorage
 
 if TYPE_CHECKING:
     from reminder_manager import ReminderManager
@@ -76,6 +83,7 @@ class TLDBotto(discord.Client):
         storage: MealStorage,
         timezones: TimezoneStorage,
         reminders: ReminderManager,
+        enablement: EnablementStorage,
     ):
         self.config = config
         self.reactions = reactions
@@ -83,6 +91,7 @@ class TLDBotto(discord.Client):
         self.storage = storage
         self.timezones = timezones
         self.reminders = reminders
+        self.enablement = enablement
         log.info(
             "Replies are enabled"
             if self.config.get("should_reply")
@@ -346,6 +355,7 @@ class TLDBotto(discord.Client):
             "add_reminder": self.reminders.add_reminder_message,
             "reminder_explain": self.reminders.send_reminder_syntax,
             "remove_reactions": self.remove_reactions,
+            "enabled": self.record_enablement,
         }
 
     @staticmethod
@@ -685,16 +695,17 @@ You can DM me the following commands:
             await channel.send(response_text)
 
     async def remove_reactions(self, message: Message):
-        if not message.reference:
+        try:
+            referenced_message = await resolve_message_reference(
+                self, message, force_fresh=True
+            )
+        except MessageMissingReferenceError:
+            log.info(
+                f"{message.author} triggered reaction removal but message was not a reply"
+            )
             await self.reactions.unknown_dm(message)
             return
 
-        reference_channel = await self.get_or_fetch_channel(
-            message.reference.channel_id
-        )
-        referenced_message = await reference_channel.fetch_message(
-            message.reference.message_id
-        )
         if referenced_message.author.id == message.author.id:
             log.info(
                 f"{message.author.id} attempted to removed reactions from their own message!"
@@ -718,3 +729,37 @@ You can DM me the following commands:
             )
             await remove_user_reactions(referenced_message, self.user)
         await message.delete(delay=5)
+
+    async def record_enablement(self, message: Message, **kwargs):
+        """
+        Args:
+            message: The message
+
+        Keyword args:
+            text (str): The item enabled
+        """
+        try:
+            referenced_message = await resolve_message_reference(self, message)
+        except MessageMissingReferenceError:
+            log.info(f"Invalid enablement by {message.author}")
+            await self.reactions.unknown_dm(message)
+            return
+
+        enabled, enabler = await asyncio.gather(
+            self.timezones.get_tlder(str(referenced_message.author.id)),
+            self.timezones.get_tlder(str(message.author.id)),
+        )
+
+        text = kwargs.get("text")
+        name = text if len(text) else referenced_message.content
+        log.info(
+            f"Recording enablement of {enabled.name} by {enabler.name} for {name} (message {referenced_message.id})"
+        )
+        await self.enablement.add(
+            name=name,
+            enabled=enabled.id,
+            enabled_by=enabler.id,
+            message_link=referenced_message.jump_url,
+        )
+
+        await self.reactions.enabled(message)
