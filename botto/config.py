@@ -98,6 +98,8 @@ def parse(config):
             ],
             "delete_confirmed": "✅",
             "nice_try": "😝",
+            "enabled": "💸",
+            "dizzy": "😵‍💫",
         },
         "pattern_reactions": {
             "pokes": {
@@ -146,6 +148,7 @@ def parse(config):
                 "\(?Not now,?\s+(?:Tildy|{bot_id})[.!]?\)?$",
                 "\(?Wrong party,?\s+(?:Tildy|{bot_id})[.!]?\)?$",
             ],
+            "enabled": ["(?:#|!)enabled\s*(?P<text>.*)?"],
         },
         "at_triggers": {
             "add_reminder": ["!remind(?:er)? (?P<timestamp>[^.]*).(?P<text>.*)"],
