@@ -115,9 +115,27 @@ class Timezone:
         )
 
 
+@dataclass
+class Enablement:
+    name: str
+    enabled_item: str
+    enabled_by: str
+    date: datetime
+
+    @classmethod
+    def from_airtable(cls, data: dict) -> "Enablement":
+        fields = data["fields"]
+        return cls(
+            name=fields.get("Name"),
+            enabled_item=fields.get("Enabled"),
+            enabled_by=fields.get("Enabled By"),
+            date=fields.get("Date"),
+        )
+
+
 class AirTableError(Exception):
     def __init__(
-        self, url: URL, response_dict: Union[dict, str], *args: object
+            self, url: URL, response_dict: Union[dict, str], *args: object
     ) -> None:
         error_dict: dict = response_dict["error"]
         self.url = url
