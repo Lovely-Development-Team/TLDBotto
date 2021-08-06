@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from typing import Optional
 
 from botto.models import TLDer, Timezone
 from botto.storage.storage import Storage
@@ -34,15 +35,21 @@ class TimezoneStorage(Storage):
                 self.tlders_cache[tlder.discord_id] = tlder
         return tlders
 
-    async def retrieve_tlder(self, discord_id: str) -> TLDer:
-        tlder_iterator = self._iterate(
+    async def retrieve_tlder(self, discord_id: str) -> Optional[TLDer]:
+        log.debug(f"Fetching TLDer with ID {discord_id}")
+        result_iterator = self._iterate(
             self.tlders_url,
             filter_by_formula=f"{{Discord ID}}='{discord_id}'",
         )
-        tlder = [TLDer.from_airtable(x) async for x in tlder_iterator][0]
-        async with self.tlders_lock:
-            self.tlders_cache[discord_id] = tlder
-        return tlder
+        tlder_iterator = (TLDer.from_airtable(x) async for x in result_iterator)
+        try:
+            tlder = await tlder_iterator.__anext__()
+            async with self.tlders_lock:
+                self.tlders_cache[discord_id] = tlder
+            return tlder
+        except StopIteration:
+            log.info(f"No TLDer found with ID {discord_id}")
+            return None
 
     async def get_tlder(self, discord_id: str) -> TLDer:
         await self.tlders_lock.acquire()
