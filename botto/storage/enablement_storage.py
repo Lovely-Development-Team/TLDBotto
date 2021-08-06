@@ -1,7 +1,5 @@
 from datetime import datetime
 
-import arrow
-
 from botto.models import Enablement
 from botto.storage.storage import Storage
 
@@ -13,12 +11,13 @@ class EnablementStorage(Storage):
             base=airtable_base
         )
 
-    def add(self, name: str):
+    async def add(self, name: str, enabled: str, enabled_by: str, message_link: str):
         enablement_data = {
             "Name": name,
-            "Enabled": "",
-            "Enabled By": "",
-            "Date": datetime.utcnow(),
+            "Enabled": [enabled],
+            "Enabled By": [enabled_by],
+            "Date": datetime.utcnow().isoformat(),
+            "Message Link": message_link
         }
         response = await self._insert(self.enablement_url, enablement_data)
         return Enablement.from_airtable(response)

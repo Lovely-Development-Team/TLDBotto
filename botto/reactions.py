@@ -147,3 +147,9 @@ class Reactions:
         except KeyError:
             log.warning(f"Failed to find configured pattern '{name}'")
             return
+
+    async def enabled(self, message: Message):
+        await message.add_reaction(self.config["reactions"]["enabled"])
+
+    async def dizzy(self, message: Message):
+        await message.add_reaction(self.config["reactions"]["dizzy"])

@@ -121,6 +121,7 @@ class Enablement:
     enabled_item: str
     enabled_by: str
     date: datetime
+    message_link: str
 
     @classmethod
     def from_airtable(cls, data: dict) -> "Enablement":
@@ -130,6 +131,7 @@ class Enablement:
             enabled_item=fields.get("Enabled"),
             enabled_by=fields.get("Enabled By"),
             date=fields.get("Date"),
+            message_link=fields.get("Message Link")
         )
 
 
