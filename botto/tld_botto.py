@@ -745,6 +745,13 @@ You can DM me the following commands:
             await self.reactions.unknown_dm(message)
             return
 
+        if referenced_message.author.id == message.author.id:
+            log.info(
+                f"{message.author.id} attempted to take credit for their own enablement!"
+            )
+            await self.reactions.nice_try(message)
+            return
+
         enabled, enabler = await asyncio.gather(
             self.timezones.get_tlder(str(referenced_message.author.id)),
             self.timezones.get_tlder(str(message.author.id)),
