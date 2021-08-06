@@ -179,6 +179,20 @@ class TLDBotto(discord.Client):
     async def on_disconnect(self):
         log.warning("Bot disconnected")
 
+    async def on_error(self, event_method: str, *args, **kwargs) -> None:
+        log.error(f"Exception in {event_method}", exc_info=True)
+        # noinspection PyBroadException
+        try:
+            if event_method == "on_message":
+                if message := next(arg for arg in args if isinstance(arg, Message)):
+                    await self.reactions.dizzy(message)
+                else:
+                    log.warning(
+                        "Received 'on_message' event error without message parameter"
+                    )
+        except Exception:
+            log.error("Custom error handling failed", exc_info=True)
+
     async def get_or_fetch_channel(
         self, channel_id: int
     ) -> Union[GuildChannel, PrivateChannel, discord.Thread]:
