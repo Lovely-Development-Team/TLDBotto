@@ -39,8 +39,9 @@ async def resolve_message_reference(bot: "TLDBotto", message: Message, force_fre
     if not message.reference:
         raise MessageMissingReferenceError(message)
 
-    if referenced_message := message.reference.resolved and not force_fresh:
-        return referenced_message
+    if not force_fresh:
+        if referenced_message := message.reference.resolved and not force_fresh:
+            return referenced_message
 
     reference_channel = await bot.get_or_fetch_channel(
         message.reference.channel_id
