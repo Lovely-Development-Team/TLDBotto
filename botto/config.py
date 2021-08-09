@@ -135,6 +135,10 @@ def parse(config):
                 "trigger": "horse",
                 "reactions": ["🐎"],
             },
+            "outage": {
+                "trigger": "outage",
+                "reactions": ["😵"]
+            }
         },
         "food": food.default_config,
         "special_reactions": {},
