@@ -463,7 +463,7 @@ class TLDBotto(discord.Client):
             minutes = match.group("minutes")
             ampm = match.group("am_pm")
             minutes = int(minutes[1:]) if minutes else 0
-            hours = hours + 12 if ampm.lower() == "pm" else hours
+            hours = hours + 12 if ampm and ampm.lower() == "pm" else hours
 
             now = arrow.now()
             try:
