@@ -3,13 +3,16 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Callable
 
+import arrow
 import dateutil.parser
 import discord
 from apscheduler import events
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from botto import reactions
+from .date_helpers import is_naive
 from .models import Reminder
+from .storage import TimezoneStorage
 from .storage.reminder_storage import ReminderStorage
 
 log = logging.getLogger(__name__)
@@ -22,11 +25,13 @@ class ReminderManager:
         scheduler: AsyncIOScheduler,
         storage: ReminderStorage,
         reactions: reactions.Reactions,
+        timezones: TimezoneStorage,
     ):
         self.config = config
         self.scheduler = scheduler
         self.storage = storage
         self.reactions = reactions
+        self.timezones = timezones
         self.missed_job_ids = []
         self.get_channel_func = None
 
@@ -138,20 +143,23 @@ class ReminderManager:
             await self.storage.remove_reminder(reminder_id)
         await self.cleanup_missed_reminders()
 
-    @staticmethod
-    def parse_reminder_time(timestamp: str) -> datetime:
-        def get_now_datetime():
-            if parsed_date.tzinfo and parsed_date.tzinfo.utcoffset(parsed_date):
-                return datetime.now(timezone.utc)
-            else:
-                return datetime.utcnow()
-
+    async def parse_reminder_time(self, timestamp: str, requester: discord.Member) -> datetime:
         try:
             parsed_date = dateutil.parser.parse(timestamp)
-            near_now = get_now_datetime() + timedelta(minutes=1)
-            if parsed_date < near_now:
-                raise TimeTravelError(parsed_date, near_now)
-            return parsed_date
+            was_parsed_date_naive = is_naive(parsed_date)
+            parsed_date = arrow.get(parsed_date)
+            if was_parsed_date_naive:
+                if tlder := await self.timezones.get_tlder(str(requester.id)):
+                    tldr_timezone = await self.timezones.get_timezone(tlder.timezone_id)
+                    log.debug(f"Parsed reminder datetime: {parsed_date}")
+                    parsed_date = arrow.get(parsed_date).replace(tzinfo=tldr_timezone.name)
+                    log.debug(f"Timezone-adjusted reminder datetime: {parsed_date}")
+                else:
+                    log.warning(f"Found no TLDer: {requester}")
+            near_now = arrow.utcnow() + timedelta(minutes=1)
+            if parsed_date.to(timezone.utc) < near_now:
+                raise TimeTravelError(parsed_date.datetimed, near_now.datetime)
+            return parsed_date.datetime
         except (TypeError, dateutil.parser.ParserError) as error:
             raise ReminderParsingError() from error
 
@@ -197,7 +205,7 @@ class ReminderManager:
         log.info(f"Reminder request from: {reply_to.author}")
         async with reply_to.channel.typing():
             try:
-                parsed_date = self.parse_reminder_time(timestamp)
+                parsed_date = await self.parse_reminder_time(timestamp, reply_to.author)
             except TimeTravelError as error:
                 log.error("Reminder request expected time travel")
                 await asyncio.gather(
@@ -228,10 +236,10 @@ class ReminderManager:
         advance_reminder=False,
     ):
         log.info(f"Reminder request from: {requester}")
-        parsed_date = self.parse_reminder_time(timestamp)
+        parsed_date = await self.parse_reminder_time(timestamp, requester)
         created_reminder = await self.create_reminder(
             reminder_time=parsed_date,
-            text=f"{requester.mention}"+text,
+            text=f"{requester.mention}" + text,
             msg_id=None,
             channel_id=channel.id,
             force_advance_reminder=advance_reminder,

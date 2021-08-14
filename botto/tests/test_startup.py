@@ -29,7 +29,7 @@ def test_startup():
     )
 
     reactions = Reactions({})
-    reminder_manager = ReminderManager({}, scheduler, reminder_storage, reactions)
+    reminder_manager = ReminderManager({}, scheduler, reminder_storage, reactions, timezone_storage)
 
     client = TLDBotto({}, reactions, scheduler, storage, timezone_storage, reminder_manager, enablement_storage)
     slash = setup_slash(client, {}, reminder_manager, timezone_storage)
