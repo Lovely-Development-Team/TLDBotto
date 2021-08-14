@@ -45,7 +45,7 @@ enablement_storage = EnablementStorage(
 )
 
 reactions = Reactions(config)
-reminder_manager = ReminderManager(config, scheduler, reminder_storage, reactions)
+reminder_manager = ReminderManager(config, scheduler, reminder_storage, reactions, timezone_storage)
 
 client = TLDBotto(config, reactions, scheduler, storage, timezone_storage, reminder_manager, enablement_storage)
 slash = setup_slash(client, config, reminder_manager, timezone_storage)
