@@ -161,9 +161,10 @@ def setup_slash(
             created_reminder = await reminder_manager.add_reminder_slash(
                 ctx.author, at, message, channel, advance_reminder=advance_warning
             )
-            await ctx.send(
-                await reminder_manager.build_reminder_message(created_reminder)
+            reminder_message = await reminder_manager.build_reminder_message(
+                created_reminder
             )
+            await ctx.send(reminder_message)
         except TimeTravelError as error:
             log.error("Reminder request expected time travel")
             await ctx.send(error.message, hidden=True)

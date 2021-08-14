@@ -51,7 +51,7 @@ class TimezoneStorage(Storage):
             log.info(f"No TLDer found with ID {discord_id}")
             return None
 
-    async def get_tlder(self, discord_id: str) -> TLDer:
+    async def get_tlder(self, discord_id: str) -> Optional[TLDer]:
         await self.tlders_lock.acquire()
         if tlder := self.tlders_cache.get(discord_id):
             self.tlders_lock.release()
