@@ -19,6 +19,7 @@ import arrow
 from discord.abc import GuildChannel, PrivateChannel
 
 from botto import responses
+from .date_helpers import convert_24_hours
 from .dm_helpers import get_dm_channel
 from .message_helpers import (
     remove_own_message,
@@ -464,7 +465,7 @@ class TLDBotto(discord.Client):
             minutes = match.group("minutes")
             ampm = match.group("am_pm")
             minutes = int(minutes[1:]) if minutes else 0
-            hours = hours + 12 if ampm and ampm.lower() == "pm" else hours
+            hours = convert_24_hours(hours, ampm and ampm.lower() == "pm")
 
             now = arrow.now()
             try:
@@ -472,6 +473,7 @@ class TLDBotto(discord.Client):
                     hour=hours, minute=minutes, second=0, tzinfo=timezone.name
                 )
             except ValueError:
+                log.error(f"Failed to adjust time. Hours: {hours}, minutes: {minutes}", exc_info=True)
                 continue
 
             if now - parsed_time > timedelta(
