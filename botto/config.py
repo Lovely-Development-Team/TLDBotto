@@ -142,6 +142,10 @@ def parse(config):
             "chocolate": {
                 "trigger": "chocolate",
                 "reactions": ["🍫"]
+            },
+            "cow": {
+                "trigger": "^(?:c+{lb}*o+{lb}*w+{lb}*s*|m+{lb}*o{lb}*o+{lb}?)[\s\t\n\r\v]*$",
+                "reactions": ["🐮", "🐄"]
             }
         },
         "food": food.default_config,
