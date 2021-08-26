@@ -138,6 +138,10 @@ def parse(config):
             "outage": {
                 "trigger": "outage",
                 "reactions": ["😵"]
+            },
+            "chocolate": {
+                "trigger": "chocolate",
+                "reactions": ["🍫"]
             }
         },
         "food": food.default_config,
