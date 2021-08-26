@@ -30,6 +30,9 @@ def decode_base64_env(key: str):
             raise
 
 
+line_break_matcher = "[\t\n\r\v]"
+
+
 def parse(config):
     defaults = {
         "id": None,
@@ -135,18 +138,14 @@ def parse(config):
                 "trigger": "horse",
                 "reactions": ["🐎"],
             },
-            "outage": {
-                "trigger": "outage",
-                "reactions": ["😵"]
-            },
-            "chocolate": {
-                "trigger": "chocolate",
-                "reactions": ["🍫"]
-            },
+            "outage": {"trigger": "outage", "reactions": ["😵"]},
+            "chocolate": {"trigger": "chocolate", "reactions": ["🍫"]},
             "cow": {
-                "trigger": "^(?:c+{lb}*o+{lb}*w+{lb}*s*|m+{lb}*o{lb}*o+{lb}?)[\s\t\n\r\v]*$",
-                "reactions": ["🐮", "🐄"]
-            }
+                "trigger": "^(?:c+{lb}*o+{lb}*w+{lb}*s*|m+{lb}*o{lb}*o+{lb}?)[\s\t\n\r\v]*$".format(
+                    lb=line_break_matcher
+                ),
+                "reactions": ["🐮", "🐄"],
+            },
         },
         "food": food.default_config,
         "special_reactions": {},
