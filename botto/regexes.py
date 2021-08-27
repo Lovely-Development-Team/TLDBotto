@@ -103,7 +103,7 @@ def compile_regexes(bot_user_id: str, config: dict) -> SuggestionRegexes:
         triggers=trigger_dict,
         at_triggers=at_trigger_dict,
         convert_time=re.compile(
-            r"(?P<time>(?P<hours>[0-2]?[0-9])(?P<minutes>:\d\d)?\s?(?P<am_pm>AM|PM)?(?:\s?\+\d\d?(?::\d\d)?(?::\d\d)?)?)",
+            r"(?:^|\s)(?P<time>(?P<hours>[0-2]?[0-9])(?P<minutes>:\d\d)?\s?(?P<am_pm>AM|PM)?(?:\s?\+\d\d?(?::\d\d)?(?::\d\d)?)?)",
             re.IGNORECASE,
         ),
     )
