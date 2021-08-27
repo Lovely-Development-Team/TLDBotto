@@ -150,7 +150,7 @@ def parse(config):
                 ),
                 "reactions": ["🐮", "🐄"],
             },
-            "honk"{
+            "honk":{
                 "trigger": "honk",
                 "reactions": ["🦆","📣","🎺","🎷","📢"],
             },
