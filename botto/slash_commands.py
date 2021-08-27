@@ -229,7 +229,7 @@ def setup_slash(
         name="mytimezone",
         description="Get your timezone",
         options=[],
-        guild_ids=[833842753799848016],
+        # guild_ids=[833842753799848016],
     )
     async def get_timezone(ctx: SlashContext):
         tlder = await timezones.get_tlder(ctx.author_id)
