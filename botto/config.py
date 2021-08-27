@@ -153,7 +153,7 @@ def parse(config):
             "honk"{
                 "trigger": "honk",
                 "reactions": ["🦆","📣","🎺","🎷","📢"]
-            }
+            },
         },
         "food": food.default_config,
         "special_reactions": {},
