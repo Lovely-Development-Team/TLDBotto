@@ -123,7 +123,7 @@ def parse(config):
                 "reaction_type": "ORDERED",
             },
             "snail": {
-                "trigger": "^i(?: am|'?m)\s+(?:also|the)?\s*(?:🐌|snail)(?:-?(?:ish|like|y|i?est))?(?: .*)?",
+                "trigger": "(?:('|’)?(re|m|s)|am|are|is|was) (?:(\S{0,25} ){0,3})(?:(snail|🐌)(ie(\S*)|s|-(\S*))?)",
                 "reactions": ["🐌"],
             },
             "complaint": {
@@ -150,6 +150,10 @@ def parse(config):
                 ),
                 "reactions": ["🐮", "🐄"],
             },
+            "honk"{
+                "trigger": "honk",
+                "reactions": ["🦆","📣","🎺","🎷","📢"]
+            }
         },
         "food": food.default_config,
         "special_reactions": {},
