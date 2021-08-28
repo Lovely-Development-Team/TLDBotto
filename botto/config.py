@@ -168,7 +168,9 @@ def parse(config):
                 "\(?Wrong party,?\s+(?:Tildy|{bot_id})[.!]?\)?$",
             ],
             "enabled": ["(?:#|!)enabled\s*(?P<text>.*)?"],
+            "drama_llama": ["Oh no", "drama", "llama"],
         },
+        "drama_llama_id": 760972696284299294,
         "at_triggers": {
             "add_reminder": ["!remind(?:er)? (?P<timestamp>[^.]*).(?P<text>.*)"],
         },

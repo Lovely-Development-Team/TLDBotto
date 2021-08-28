@@ -154,3 +154,7 @@ class Reactions:
     async def dizzy(self, message: Message):
         log.info(f"Dizzy to: {message.author}")
         await message.add_reaction(self.config["reactions"]["dizzy"])
+
+    async def drama_llama(self, message: Message):
+        log.info(f"Drama llama detected: {message.author}!")
+        await message.add_reaction("🦙")

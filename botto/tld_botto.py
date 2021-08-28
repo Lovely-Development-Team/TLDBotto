@@ -371,6 +371,7 @@ class TLDBotto(discord.Client):
             "reminder_explain": self.reminders.send_reminder_syntax,
             "remove_reactions": self.remove_reactions,
             "enabled": self.record_enablement,
+            "drama_llama": self.drama_llama
         }
 
     @staticmethod
@@ -473,7 +474,10 @@ class TLDBotto(discord.Client):
                     hour=hours, minute=minutes, second=0, tzinfo=timezone.name
                 )
             except ValueError:
-                log.error(f"Failed to adjust time. Hours: {hours}, minutes: {minutes}", exc_info=True)
+                log.error(
+                    f"Failed to adjust time. Hours: {hours}, minutes: {minutes}",
+                    exc_info=True,
+                )
                 continue
 
             if now - parsed_time > timedelta(
@@ -786,3 +790,7 @@ You can DM me the following commands:
         )
 
         await self.reactions.enabled(message)
+
+    async def drama_llama(self, message: Message):
+        if message.author.id == self.config["drama_llama_id"]:
+            await self.reactions.drama_llama(message)
