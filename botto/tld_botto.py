@@ -26,6 +26,8 @@ from .message_helpers import (
     remove_user_reactions,
     MessageMissingReferenceError,
     resolve_message_reference,
+    is_voting_message,
+    guild_member_count,
 )
 from .models import Meal
 from .reactions import Reactions
@@ -67,6 +69,7 @@ VOTE_EMOJI = (
     "8️⃣",
     "9️⃣",
     "✅",
+    "❎",
     "❌",
     "👍",
     "👎",
@@ -142,7 +145,9 @@ class TLDBotto(discord.Client):
 
         self.regexes: Optional[SuggestionRegexes] = None
 
-        intents = discord.Intents(messages=True, guilds=True, reactions=True)
+        intents = discord.Intents(
+            messages=True, guilds=True, reactions=True, members=True
+        )
         super().__init__(intents=intents)
 
     async def on_connect(self):
@@ -231,14 +236,16 @@ class TLDBotto(discord.Client):
         log.info(f"Message: {message}")
         log.info(f"Reactions: {message.reactions}")
 
-        if self.is_voting_channel(channel):
+        if self.is_voting_channel(channel) or (
+            str(message.guild.id) in self.config["any_channel_voting_guilds"] and is_voting_message(message)
+        ):
             reacted_users = set()
             for reaction in message.reactions:
                 if reaction.emoji not in VOTE_EMOJI:
                     continue
                 users = await reaction.users().flatten()
                 reacted_users |= set(u for u in users if u != self.user)
-            if len(reacted_users) != 9:
+            if len(reacted_users) != guild_member_count(message):
                 await message.remove_reaction("🏁", self.user)
 
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
@@ -281,18 +288,21 @@ class TLDBotto(discord.Client):
         if not is_vote:
             return
 
-        if self.is_voting_channel(channel):
+        if self.is_voting_channel(channel) or (
+            str(message.guild.id) in self.config["any_channel_voting_guilds"] and is_voting_message(message)
+        ):
             reacted_users = set()
             for reaction in message.reactions:
                 if reaction.emoji not in VOTE_EMOJI:
                     continue
                 users = await reaction.users().flatten()
                 reacted_users |= set(u for u in users if u != self.user)
-            if len(reacted_users) == 9:
+            expected_reacted_count = guild_member_count(message)
+            if len(reacted_users) == expected_reacted_count:
                 await message.add_reaction("🏁")
             else:
                 log.info(
-                    f"Waiting for another {9 - len(reacted_users)} people to vote."
+                    f"Waiting for another {expected_reacted_count - len(reacted_users)} people to vote."
                 )
 
     async def on_message(self, message: Message):
@@ -306,7 +316,9 @@ class TLDBotto(discord.Client):
 
         channel_name = message.channel.name
 
-        if channel_name == "voting":
+        if self.is_voting_channel(message.channel) or (
+            str(message.guild.id) in self.config["any_channel_voting_guilds"] and is_voting_message(message)
+        ):
             for emoji in VOTE_EMOJI:
                 if emoji in message.content:
                     await message.add_reaction(emoji)
@@ -371,7 +383,7 @@ class TLDBotto(discord.Client):
             "reminder_explain": self.reminders.send_reminder_syntax,
             "remove_reactions": self.remove_reactions,
             "enabled": self.record_enablement,
-            "drama_llama": self.drama_llama
+            "drama_llama": self.drama_llama,
         }
 
     @staticmethod
