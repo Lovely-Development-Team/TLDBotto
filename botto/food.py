@@ -129,16 +129,18 @@ default_config = {
     "bone": {"triggers": "🦴", "responses": ["🐶"]},
     "celebrate": {"triggers": "🎂", "responses": ["😋", "party"]},
     "money": {"triggers": ["💸", "💰", "💵"], "responses": ["🤑"]},
+    "gift": {"triggers": ["🎁", "💌"], "responses": ["echo", "🫂", "love"]}
 }
 
 
 class SpecialAction(Enum):
     echo = enum.auto()
     party = enum.auto()
+    love = enum.auto()
 
 
 def convert_response(response: str):
-    if response == "echo" or response == "party":
+    if response == "echo" or response == "party" or response == "love":
         return SpecialAction[response]
     else:
         return response
