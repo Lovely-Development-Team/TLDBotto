@@ -160,4 +160,3 @@ class Reactions:
     async def drama_llama(self, message: Message):
         log.info(f"Drama llama detected: {message.author}!")
         await message.add_reaction("🦙")
-        await message.add_reaction("🦙")
