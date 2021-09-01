@@ -761,7 +761,7 @@ You can DM me the following commands:
 
         if referenced_message.author.id == message.author.id:
             log.info(
-                f"{message.author.id} attempted to removed reactions from their own message!"
+                f"{message.author} attempted to removed reactions from their own message!"
             )
             await self.reactions.nice_try(message)
             return
