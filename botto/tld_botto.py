@@ -207,6 +207,12 @@ class TLDBotto(discord.Client):
         else:
             return await self.fetch_channel(channel_id)
 
+    async def get_or_fetch_user(self, user_id: int) -> Union[discord.User]:
+        if user := self.get_user(user_id):
+            return user
+        else:
+            return await self.fetch_user(user_id)
+
     async def get_meal_channels(self):
         for guild in self.config["meals"]["guilds"]:
             yield await self.get_or_fetch_channel(guild["channel"])
@@ -237,7 +243,8 @@ class TLDBotto(discord.Client):
         log.info(f"Reactions: {message.reactions}")
 
         if self.is_voting_channel(channel) or (
-            str(message.guild.id) in self.config["any_channel_voting_guilds"] and is_voting_message(message)
+            str(message.guild.id) in self.config["any_channel_voting_guilds"]
+            and is_voting_message(message)
         ):
             reacted_users = set()
             for reaction in message.reactions:
@@ -262,26 +269,38 @@ class TLDBotto(discord.Client):
         log.info(f"Message: {message}")
         log.info(f"Reactions: {message.reactions}")
 
-        if is_delete and message.author.id == self.user.id:
+        if is_delete:
             log.info(f"'{payload.emoji.name}' is a delete reaction")
-            emoji = payload.emoji
+            emoji: discord.PartialEmoji = payload.emoji
             # Wait 3 seconds to make sure this wasn't accidental
             await asyncio.sleep(3)
             # Re-fetch the message (to make sure we have the latest reactions) and check emoji is still there
-            message = await channel.fetch_message(payload.message_id)
+            message: discord.Message = await channel.fetch_message(payload.message_id)
             if not any(
                 (reaction.emoji == emoji.name for reaction in message.reactions)
             ):
                 log.warning("Reaction no longer present. Not removing our message.")
                 return
-            log.debug("Reaction still present; removing our message.")
-            requester: discord.User = (
-                payload.member if payload.member else self.get_user(payload.user_id)
-            )
-            requester_name = (
-                requester.name if requester else f"User with ID {payload.user_id}"
-            )
-            await remove_own_message(requester_name, message)
+            if message.author.id == self.user.id:
+                log.debug("Reaction still present; removing our message.")
+                requester: discord.User = (
+                    payload.member if payload.member else self.get_user(payload.user_id)
+                )
+                requester_name = (
+                    requester.name if requester else f"User with ID {payload.user_id}"
+                )
+                await remove_own_message(requester_name, message)
+            else:
+                user = payload.member or await self.get_or_fetch_user(payload.user_id)
+                if message.author.id == payload.user_id:
+                    log.info(
+                        f"{user} attempted to removed reactions from their own message!"
+                    )
+                    return
+                log.debug("Reaction still present; removing our reactions.")
+                await remove_user_reactions(message, self.user)
+                log.debug("Removing triggering reaction.")
+                await message.remove_reaction(emoji, user)
             return
 
         # At this point, we only need to handle voting reactions
@@ -289,7 +308,8 @@ class TLDBotto(discord.Client):
             return
 
         if self.is_voting_channel(channel) or (
-            str(message.guild.id) in self.config["any_channel_voting_guilds"] and is_voting_message(message)
+            str(message.guild.id) in self.config["any_channel_voting_guilds"]
+            and is_voting_message(message)
         ):
             reacted_users = set()
             for reaction in message.reactions:
@@ -317,7 +337,8 @@ class TLDBotto(discord.Client):
         channel_name = message.channel.name
 
         if self.is_voting_channel(message.channel) or (
-            str(message.guild.id) in self.config["any_channel_voting_guilds"] and is_voting_message(message)
+            str(message.guild.id) in self.config["any_channel_voting_guilds"]
+            and is_voting_message(message)
         ):
             for emoji in VOTE_EMOJI:
                 if emoji in message.content:
