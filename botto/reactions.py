@@ -98,6 +98,10 @@ class Reactions:
                 for _ in range(5)
             ]
         await asyncio.wait(tasks)
+        if "?" in trigger_word:
+            log.info("is there a party?")
+            await message.add_reaction("❓")
+            
 
     async def food(self, regexes: SuggestionRegexes, message: Message, food_item: str):
         try:
