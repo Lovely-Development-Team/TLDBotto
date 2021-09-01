@@ -21,7 +21,7 @@ async def remove_user_reactions(
 
 
 async def remove_own_message(
-    requester_name: str, message: Message, delay: Optional[int]
+    requester_name: str, message: Message, delay: Optional[int] = None
 ):
     log.info(
         "{requester_name} triggered deletion of our message (id: {message_id} in {channel_name}): {content}".format(
