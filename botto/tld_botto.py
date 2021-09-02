@@ -279,7 +279,7 @@ class TLDBotto(discord.Client):
                     await message.add_reaction(reaction)
             elif payload.emoji.name in self.config["reactions"]["decline"]:
                 for reaction in message.reactions:
-                    await message.remove_reaction(reaction, self.user)
+                    await remove_user_reactions(message, self.user)
 
         if is_delete:
             log.info(f"'{payload.emoji.name}' is a delete reaction")
