@@ -15,6 +15,11 @@ log.setLevel(logging.DEBUG)
 async def remove_user_reactions(
     message: Message, user: Union[discord.abc.User, discord.ClientUser]
 ):
+    """
+    Removes all reactions by the user from the message.
+    :param message: The message from which to remove reactions
+    :param user: The user for which reactions should be removed
+    """
     my_reactions = [r for r in message.reactions if r.me is True]
     clearing_reactions = [message.remove_reaction(r.emoji, user) for r in my_reactions]
     await asyncio.wait(clearing_reactions)
