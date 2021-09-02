@@ -152,7 +152,7 @@ def parse(config):
                 "reactions": ["🐮", "🐄"],
             },
             "honk":{
-                "trigger": "honk",
+                "trigger": "(?:^|\s)honk(?:$|\s)",
                 "reactions": ["🦆","📣","🎺","🎷","📢"],
             },
         },
