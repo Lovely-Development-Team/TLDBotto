@@ -56,6 +56,8 @@ def parse(config):
             "valid_emoji": "✅",
             "reject": "❌",
             "wave": "👋",
+            "confirm" : "👍",
+            "decline" : "👎",
             "poke": ["👈", "👆", "👇", "👉", "😢", "🤪", "😝"],
             "love": [
                 "❤️",
