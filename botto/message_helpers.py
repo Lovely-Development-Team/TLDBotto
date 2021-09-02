@@ -20,7 +20,8 @@ async def remove_user_reactions(
     :param message: The message from which to remove reactions
     :param user: The user for which reactions should be removed
     """
-    my_reactions = [r for r in message.reactions if r.me is True]
+    log.info(f"Removing reactions by {user} from {message}")
+    my_reactions = [r for r in message.reactions if any(u.id == user.id async for u in r.users())]
     clearing_reactions = [message.remove_reaction(r.emoji, user) for r in my_reactions]
     await asyncio.wait(clearing_reactions)
 
