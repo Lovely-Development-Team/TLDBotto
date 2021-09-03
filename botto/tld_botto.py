@@ -256,6 +256,9 @@ class TLDBotto(discord.Client):
                 await message.remove_reaction("🏁", self.user)
 
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
+        if payload.user_id == self.user.id:
+            log.info("Reaction from self. Ignoring.")
+            return
         is_vote = payload.emoji.name in VOTE_EMOJI
         is_delete = payload.emoji.name in DELETE_EMOJI
         if not is_vote and not is_delete:
