@@ -272,18 +272,23 @@ class TLDBotto(discord.Client):
         log.info(f"Message: {message}")
         log.info(f"Reactions: {message.reactions}")
 
-        #this block of code caused me a decent amount of hair-pulling but hey, it works -- Skyzee
-        #Reacting to 'party?'
+        # this block of code caused me a decent amount of hair-pulling but hey, it works -- Skyzee
+        # Reacting to 'party?'
         if self.regexes.party.search(message.content):
             log.info("party reaction")
             if payload.emoji.name in self.config["reactions"]["confirm"]:
-                await message.remove_reaction(self.config["reactions"]["unknown"], self.user)
+                await message.remove_reaction(
+                    self.config["reactions"]["unknown"], self.user
+                )
                 for reaction in self.config["reactions"]["party"]:
                     await message.add_reaction(reaction)
             elif payload.emoji.name in self.config["reactions"]["decline"]:
                 await remove_user_reactions(message, self.user)
 
-        if is_delete:
+        if is_delete and not (
+            str(message.guild.id) in self.config["any_channel_voting_guilds"]
+            and is_voting_message(message)
+        ):
             log.info(f"'{payload.emoji.name}' is a delete reaction")
             emoji: discord.PartialEmoji = payload.emoji
             # Wait 3 seconds to make sure this wasn't accidental
