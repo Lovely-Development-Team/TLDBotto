@@ -157,6 +157,10 @@ def parse(config):
                 "trigger": "(?:^|\s)honk(?:$|\s)",
                 "reactions": ["🦆","📣","🎺","🎷","📢"],
             },
+            "fisrt": {
+                "trigger": "^\s*fisrt\s*$",
+                "reactions": ["🤦"],
+            }
         },
         "food": food.default_config,
         "special_reactions": {},
