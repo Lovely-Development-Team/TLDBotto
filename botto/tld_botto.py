@@ -274,7 +274,7 @@ class TLDBotto(discord.Client):
 
         # this block of code caused me a decent amount of hair-pulling but hey, it works -- Skyzee
         # Reacting to 'party?'
-        if self.regexes.party.search(message.content):
+        if self.regexes.party.search(message.content) and "?" in message.content:
             log.info("party reaction")
             if payload.emoji.name in self.config["reactions"]["confirm"]:
                 await message.remove_reaction(
