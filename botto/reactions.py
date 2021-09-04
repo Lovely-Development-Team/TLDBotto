@@ -40,9 +40,7 @@ async def _ordered_reactions(message: Message, reactions: list[str]):
         await message.add_reaction(reaction)
 
 
-reaction_type_to_func: dict[
-    ReactionType, Callable[[Message, list[str]], any]
-] = {
+reaction_type_to_func: dict[ReactionType, Callable[[Message, list[str]], any]] = {
     ReactionType.RANDOM: _random_reaction,
     ReactionType.ALL: _all_reactions,
     ReactionType.ORDERED: _ordered_reactions,
@@ -102,7 +100,6 @@ class Reactions:
             log.info("is there a party?")
             await message.add_reaction("❓")
 
-
     async def food(self, regexes: SuggestionRegexes, message: Message, food_item: str):
         try:
             reactions = regexes.food.lookup[food_item]
@@ -146,7 +143,10 @@ class Reactions:
                 reaction_type = ReactionType[
                     pattern_item.get("reaction_type", "RANDOM")
                 ]
-                await reaction_type.add_reaction(message, reactions)
+                if name == "fisrt" and random.randint(1, 100) < 10:
+                    await message.add_reaction("🖕")
+                else:
+                    await reaction_type.add_reaction(message, reactions)
             except KeyError:
                 log.warning(f"Unknown reaction type '{pattern_item['reaction_type']}'")
                 return
