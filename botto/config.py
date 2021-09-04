@@ -158,7 +158,7 @@ def parse(config):
                 "reactions": ["🦆","📣","🎺","🎷","📢"],
             },
             "fisrt": {
-                "trigger": "^\s*fisrt\s*$",
+                "trigger": "^\s*f[isr]{2,3}t\s*$",
                 "reactions": ["🤦"],
             }
         },
