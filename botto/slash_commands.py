@@ -61,6 +61,11 @@ def setup_slash(
     async def _yell(ctx: SlashContext, person: Union[str, discord.Member], **kwargs):
         message = kwargs.get("message")
         log.info(f"/yell from {ctx.author.id} at {person}: '{message}'")
+        message_length = len(message)
+        if message_length > 280:
+            log.info(f"Message was {message_length} rejecting")
+            await ctx.send("Please limit your yelling to the length of a tweet 🙄")
+            return
         response_text = responses.yell_at_someone(person, message)
         await ctx.send(response_text)
 
@@ -74,10 +79,7 @@ def setup_slash(
         # guild_ids=[833842753799848016],
     )
     async def yell(ctx: SlashContext, person: str, **kwargs):
-        message = kwargs.get("message")
-        log.info(f"/yell from {ctx.author.id} at {person}: '{message}'")
-        response_text = responses.yell_at_someone(person, message)
-        await ctx.send(response_text)
+        await _yell(ctx, person, **kwargs)
 
     @slash.slash(
         name="yellat",
