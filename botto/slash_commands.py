@@ -3,7 +3,6 @@ from datetime import datetime
 from typing import Union
 
 import arrow
-import dateutil.tz
 import pytz
 from dateutil import parser as dateparser
 import discord
@@ -17,7 +16,7 @@ from botto.reminder_manager import (
     TimeTravelError,
     ReminderParsingError,
 )
-from botto.storage import TimezoneStorage, timezone_storage
+from botto.storage import TimezoneStorage
 from botto.storage.timezone_storage import TlderNotFoundError
 
 log = logging.getLogger(__name__)
@@ -59,11 +58,12 @@ def setup_slash(
     async def ping(
         ctx: SlashContext,
     ):
+        log.debug(f"/ping from {ctx.author}")
         await ctx.send(f"Pong! ({ctx.bot.latency * 1000}ms)")
 
     async def _yell(ctx: SlashContext, person: Union[str, discord.Member], **kwargs):
         message = kwargs.get("message")
-        log.info(f"/yell from {ctx.author.id} at {person}: '{message}'")
+        log.debug(f"/yell from {ctx.author.id} at {person}: '{message}'")
         message_length = len(message)
         if message_length > 280:
             log.info(f"Message was {message_length} rejecting")
@@ -121,7 +121,7 @@ def setup_slash(
             except ValueError as error:
                 await ctx.send(f"Failed to parse provided time: {error}")
 
-        log.info(f"\\times from: {ctx.author.id} relative to {parsed_time}")
+        log.debug(f"/times from: {ctx.author} relative to {parsed_time}")
         local_times_string = responses.get_local_times(
             local_times=_local_times(parsed_time)
         )
@@ -163,6 +163,9 @@ def setup_slash(
         try:
             advance_warning = kwargs.get("advance_warning") is True
             channel: discord.TextChannel = kwargs.get("channel") or ctx.channel
+            log.debug(
+                f"/reminder from: {ctx.author} at: {at}, advance warning: {advance_warning}, channel: {channel}"
+            )
             created_reminder = await reminder_manager.add_reminder_slash(
                 ctx.author, at, message, channel, advance_reminder=advance_warning
             )
@@ -194,6 +197,7 @@ def setup_slash(
     )
     async def unix_time(ctx: SlashContext, timestamp: str):
         try:
+            log.debug(f"/unixtime from: {ctx.author} timestamp: {timestamp}")
             parsed_date = dateparser.parse(timestamp)
         except (ValueError, OverflowError):
             log.error(f"Failed to parse date: {timestamp}", exc_info=True)
@@ -220,6 +224,7 @@ def setup_slash(
     )
     async def time(ctx: SlashContext, timestamp: str):
         try:
+            log.debug(f"/time from: {ctx.author} timestamp: {timestamp}")
             parsed_date = dateparser.parse(timestamp)
         except (ValueError, OverflowError):
             log.error(f"Failed to parse date: {timestamp}", exc_info=True)
@@ -246,7 +251,7 @@ def setup_slash(
         # guild_ids=[880491989995499600, 833842753799848016],
     )
     async def get_timezone(ctx: SlashContext):
-        log.info(f"/timezones get current from {ctx.author}")
+        log.debug(f"/timezones get current from {ctx.author}")
         try:
             timezone = await _get_timezone(ctx.author_id)
             await ctx.send(
@@ -267,13 +272,11 @@ def setup_slash(
         subcommand_group_description="Get details of configured timezones",
         name="user",
         description="Get the user's timezone",
-        options=[
-            person_option("The user for whom to get the timezone", True)
-        ]
+        options=[person_option("The user for whom to get the timezone", True)]
         # guild_ids=[880491989995499600, 833842753799848016],
     )
     async def get_user_timezone(ctx: SlashContext, person: discord.Member):
-        log.info(f"/timezones get user from {ctx.author} for {person}")
+        log.debug(f"/timezones get user from {ctx.author} for {person}")
         try:
             timezone = await _get_timezone(person.id)
             await ctx.send(
@@ -285,7 +288,9 @@ def setup_slash(
             )
         except TlderNotFoundError:
             log.info(f"{person} has not configured a timezone")
-            await ctx.send(f"{person.display_name} does not appear to have a timezone configured")
+            await ctx.send(
+                f"{person.display_name} does not appear to have a timezone configured"
+            )
             return
 
     @slash.subcommand(
@@ -303,6 +308,7 @@ def setup_slash(
         # guild_ids=[880491989995499600, 833842753799848016],
     )
     async def set_my_timezone(ctx: SlashContext, timezone_name: str):
+        log.debug(f"/timezones set from {ctx.author} for timezone name {timezone_name}")
         tzinfo: pytz.tzinfo
         try:
             tzinfo = pytz.timezone(timezone_name)
