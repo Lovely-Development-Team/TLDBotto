@@ -11,6 +11,7 @@ from discord_slash import SlashCommand, SlashContext, SlashCommandOptionType
 from discord_slash.utils.manage_commands import create_option
 
 from botto import responses
+from botto.models import AirTableError
 from botto.reminder_manager import (
     ReminderManager,
     TimeTravelError,
@@ -227,11 +228,11 @@ def setup_slash(
             f"{timestamp} (parsed as `{parsed_date}`) is <t:{unix_timestamp}> (<t:{unix_timestamp}:R>)"
         )
 
-    @slash.slash(
-        name="mytimezone",
+    @slash.subcommand(
+        base="timezones",
+        name="current",
         description="Get your timezone",
-        options=[],
-        # guild_ids=[833842753799848016],
+        # guild_ids=[880491989995499600, 833842753799848016],
     )
     async def get_timezone(ctx: SlashContext):
         tlder = await timezones.get_tlder(ctx.author_id)
@@ -244,9 +245,10 @@ def setup_slash(
             hidden=True,
         )
 
-    @slash.slash(
-        name="setmytimezone",
-        description="Set your timezone",
+    @slash.subcommand(
+        base="timezones",
+        name="set",
+        description="Set your timezone. Must be an identifier in the TZ Database.",
         options=[
             create_option(
                 name="timezone_name",
@@ -255,7 +257,7 @@ def setup_slash(
                 required=True,
             )
         ],
-        guild_ids=[880491989995499600, 833842753799848016],
+        # guild_ids=[880491989995499600, 833842753799848016],
     )
     async def set_my_timezone(ctx: SlashContext, timezone_name: str):
         tzinfo: pytz.tzinfo
@@ -274,11 +276,11 @@ def setup_slash(
             log.info("Updating existing TLDer's timezone")
             try:
                 await timezones.update_tlder(tlder, timezone_id=db_timezone.id)
-            except TlderNotFoundError as e:
+            except AirTableError:
                 log.error(
-                    f"TLDer with discord ID {e.discord_id} not found", exc_info=True
+                    f"Failed to update TLDer", exc_info=True
                 )
-                await ctx.send(f"Internal error updating TLDer")
+                await ctx.send("Internal error updating TLDer {dizzy}".format(dizzy=config["reactions"]["dizzy"]))
                 return
         else:
             log.info("Adding new TLDer with timezone")
