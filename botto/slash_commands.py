@@ -48,7 +48,7 @@ def setup_slash(
     reminder_manager: ReminderManager,
     timezones: TimezoneStorage,
 ):
-    slash = SlashCommand(client, sync_commands=True)
+    slash = SlashCommand(client, sync_commands=True, delete_from_unused_guilds=True)
 
     @slash.slash(
         name="ping",
