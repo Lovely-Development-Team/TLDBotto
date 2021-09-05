@@ -518,7 +518,7 @@ class TLDBotto(discord.Client):
             minutes = match.group("minutes")
             ampm = match.group("am_pm")
             minutes = int(minutes[1:]) if minutes else 0
-            hours = convert_24_hours(hours, ampm and ampm.lower() == "pm")
+            hours = convert_24_hours(hours, ampm.lower() == "pm") if ampm else hours
 
             now = arrow.now()
             try:
