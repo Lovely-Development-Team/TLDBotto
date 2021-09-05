@@ -11,7 +11,7 @@ from discord_slash import SlashCommand, SlashContext, SlashCommandOptionType
 from discord_slash.utils.manage_commands import create_option
 
 from botto import responses
-from botto.models import AirTableError
+from botto.models import AirTableError, Timezone
 from botto.reminder_manager import (
     ReminderManager,
     TimeTravelError,
@@ -230,6 +230,13 @@ def setup_slash(
             f"{timestamp} (parsed as `{parsed_date}`) is <t:{unix_timestamp}> (<t:{unix_timestamp}:R>)"
         )
 
+    async def _get_timezone(discord_id: str) -> Timezone:
+        tlder = await timezones.get_tlder(discord_id)
+        if tlder is None:
+            raise TlderNotFoundError(discord_id)
+        timezone = await timezones.get_timezone(tlder.timezone_id)
+        return timezone
+
     @slash.subcommand(
         base="timezones",
         subcommand_group="get",
@@ -239,19 +246,20 @@ def setup_slash(
         # guild_ids=[880491989995499600, 833842753799848016],
     )
     async def get_timezone(ctx: SlashContext):
-        tlder = await timezones.get_tlder(ctx.author_id)
-        if tlder is None:
+        log.info(f"/timezones get current from {ctx.author}")
+        try:
+            timezone = await _get_timezone(ctx.author_id)
+            await ctx.send(
+                "Your currently configured timezone is: {timezone_name} (UTC{offset})".format(
+                    timezone_name=timezone.name,
+                    offset=arrow.now(timezone.name).format("Z"),
+                ),
+                hidden=True,
+            )
+        except TlderNotFoundError:
             log.info(f"{ctx.author} has not configured timezone")
             await ctx.send("Sorry, you don't have a timezone configured 😢", hidden=True)
             return
-        timezone = await timezones.get_timezone(tlder.timezone_id)
-        await ctx.send(
-            "Your currently configured timezone is: {timezone_name} (UTC{offset})".format(
-                timezone_name=timezone.name,
-                offset=arrow.now(timezone.name).format("Z"),
-            ),
-            hidden=True,
-        )
 
     @slash.subcommand(
         base="timezones",
@@ -265,19 +273,20 @@ def setup_slash(
         # guild_ids=[880491989995499600, 833842753799848016],
     )
     async def get_user_timezone(ctx: SlashContext, person: discord.Member):
-        tlder = await timezones.get_tlder(person.id)
-        if tlder is None:
+        log.info(f"/timezones get user from {ctx.author} for {person}")
+        try:
+            timezone = await _get_timezone(person.id)
+            await ctx.send(
+                "{person_name}'s currently configured timezone is: {timezone_name} (UTC{offset})".format(
+                    person_name=person.display_name,
+                    timezone_name=timezone.name,
+                    offset=arrow.now(timezone.name).format("Z"),
+                )
+            )
+        except TlderNotFoundError:
             log.info(f"{person} has not configured a timezone")
             await ctx.send(f"{person.display_name} does not appear to have a timezone configured")
             return
-        timezone = await timezones.get_timezone(tlder.timezone_id)
-        await ctx.send(
-            "{person_name}'s currently configured timezone is: {timezone_name} (UTC{offset})".format(
-                person_name=person.display_name,
-                timezone_name=timezone.name,
-                offset=arrow.now(timezone.name).format("Z"),
-            )
-        )
 
     @slash.subcommand(
         base="timezones",
