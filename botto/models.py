@@ -1,7 +1,7 @@
 from collections import namedtuple
 from dataclasses import dataclass
 from datetime import time, datetime
-from typing import Union
+from typing import Union, Optional
 
 from yarl import URL
 
@@ -82,6 +82,13 @@ class Reminder:
 
 MessageAndChannel = namedtuple("MessageAndChannel", ["channel_id", "msg_id"])
 
+tlder_to_airtable_field = {
+    "id": "id",
+    "discord_id": "Discord ID",
+    "name": "Name",
+    "timezone_id": "Timezone",
+}
+
 
 @dataclass
 class TLDer:
@@ -91,14 +98,34 @@ class TLDer:
     timezone_id: str
 
     @classmethod
+    def to_airtable_field(cls, property_name: str) -> Optional[str]:
+        return tlder_to_airtable_field.get(property_name)
+
+    @classmethod
     def from_airtable(cls, data: dict) -> "TLDer":
         fields = data["fields"]
         return cls(
             id=data["id"],
-            discord_id=fields.get("Discord ID"),
-            name=fields.get("Name"),
-            timezone_id=fields["Timezone"][0] if fields.get("Timezone") else None,
+            discord_id=fields.get(tlder_to_airtable_field["discord_id"]),
+            name=fields.get(tlder_to_airtable_field["name"]),
+            timezone_id=fields[tlder_to_airtable_field["timezone_id"]][0]
+            if fields.get(tlder_to_airtable_field["timezone_id"])
+            else None,
         )
+
+    def to_airtable(self, fields=None) -> dict:
+        fields = fields if fields else ["discord_id", "name", "timezone_id"]
+        data = {}
+        if "discord_id" in fields:
+            data[tlder_to_airtable_field["discord_id"]] = self.discord_id
+        if "name" in fields:
+            data[tlder_to_airtable_field["name"]] = self.name
+        if "timezone_id" in fields:
+            data[tlder_to_airtable_field["timezone_id"]] = [self.timezone_id]
+        return {
+            "id": self.id,
+            "fields": data,
+        }
 
 
 @dataclass
@@ -113,6 +140,18 @@ class Timezone:
             id=data["id"],
             name=fields.get("Name"),
         )
+
+    def to_airtable(self, fields=None) -> dict:
+        fields = fields if fields else ["name"]
+        data = {}
+        if "name" in fields:
+            data["Name"] = self.name
+        airtable_dict = {
+            "fields": data,
+        }
+        if self.id:
+            airtable_dict["id"] = self.id
+        return airtable_dict
 
 
 @dataclass
@@ -131,13 +170,13 @@ class Enablement:
             enabled_item=fields.get("Enabled"),
             enabled_by=fields.get("Enabled By"),
             date=fields.get("Date"),
-            message_link=fields.get("Message Link")
+            message_link=fields.get("Message Link"),
         )
 
 
 class AirTableError(Exception):
     def __init__(
-            self, url: URL, response_dict: Union[dict, str], *args: object
+        self, url: URL, response_dict: Union[dict, str], *args: object
     ) -> None:
         error_dict: dict = response_dict["error"]
         self.url = url

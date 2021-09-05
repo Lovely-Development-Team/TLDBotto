@@ -3,8 +3,9 @@ from datetime import datetime
 from typing import Union
 
 import arrow
+import dateutil.tz
 import pytz
-from dateutil import parser as dateparser, tz
+from dateutil import parser as dateparser
 import discord
 from discord_slash import SlashCommand, SlashContext, SlashCommandOptionType
 from discord_slash.utils.manage_commands import create_option
@@ -15,7 +16,8 @@ from botto.reminder_manager import (
     TimeTravelError,
     ReminderParsingError,
 )
-from botto.storage import TimezoneStorage
+from botto.storage import TimezoneStorage, timezone_storage
+from botto.storage.timezone_storage import TlderNotFoundError
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
@@ -238,6 +240,53 @@ def setup_slash(
             "Your currently configured timezone is: {timezone_name} (UTC{offset})".format(
                 timezone_name=timezone.name,
                 offset=arrow.now(timezone.name).format("Z"),
+            ),
+            hidden=True,
+        )
+
+    @slash.slash(
+        name="setmytimezone",
+        description="Set your timezone",
+        options=[
+            create_option(
+                name="timezone_name",
+                description="Timezone name, as it appears in the TZ Database.",
+                option_type=SlashCommandOptionType.STRING,
+                required=True,
+            )
+        ],
+        guild_ids=[880491989995499600, 833842753799848016],
+    )
+    async def set_my_timezone(ctx: SlashContext, timezone_name: str):
+        tzinfo: pytz.tzinfo
+        try:
+            tzinfo = pytz.timezone(timezone_name)
+        except pytz.UnknownTimeZoneError:
+            await ctx.send(
+                f"Sorry, {timezone_name} is not a known TZ DB key", hidden=True
+            )
+            return
+        db_timezone = await timezones.find_timezone(tzinfo.zone)
+        if db_timezone is None:
+            log.info(f"{tzinfo.zone} not found, adding new timezone")
+            db_timezone = await timezones.add_timezone(tzinfo.zone)
+        if tlder := await timezones.get_tlder(ctx.author_id):
+            log.info("Updating existing TLDer's timezone")
+            try:
+                await timezones.update_tlder(tlder, timezone_id=db_timezone.id)
+            except TlderNotFoundError as e:
+                log.error(
+                    f"TLDer with discord ID {e.discord_id} not found", exc_info=True
+                )
+                await ctx.send(f"Internal error updating TLDer")
+                return
+        else:
+            log.info("Adding new TLDer with timezone")
+            await timezones.add_tlder(ctx.author.name, ctx.author.id, db_timezone.id)
+        await ctx.send(
+            "Your timezone has been set to: {timezone_name} (UTC{offset})".format(
+                timezone_name=db_timezone.name,
+                offset=arrow.now(db_timezone.name).format("Z"),
             ),
             hidden=True,
         )
