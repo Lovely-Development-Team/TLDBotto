@@ -178,7 +178,11 @@ class Enablement:
 
 class AirTableError(Exception):
     def __init__(
-        self, url: URL, response_dict: Union[dict, str], *args: object
+        self,
+        url: URL,
+        response_dict: Union[dict, str],
+        request: Optional[Union[dict, str]] = None,
+        *args: object
     ) -> None:
         error_dict: dict = response_dict["error"]
         self.url = url
@@ -188,6 +192,7 @@ class AirTableError(Exception):
         else:
             self.error_type = error_dict
             self.error_message = ""
+        self.request = request
         super().__init__(*args)
 
     def __repr__(self) -> str:
@@ -199,6 +204,16 @@ class AirTableError(Exception):
         )
 
     def __str__(self) -> str:
-        return "Error from AirTable operation of type '{error_type}', with message:'{error_message}'. Request URL: {url}".format(
-            error_type=self.error_type, error_message=self.error_message, url=self.url
+        str_rep = (
+            "Error from AirTable operation of type '{error_type}', with message:'{error_message}'. "
+            "\nRequest URL: {url}".format(
+                error_type=self.error_type,
+                error_message=self.error_message,
+                url=self.url
+            )
         )
+        if self.request:
+            return str_rep + "\nRequest body: {request}".format(request=self.request)
+        else:
+            return str_rep
+
