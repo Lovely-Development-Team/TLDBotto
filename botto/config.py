@@ -142,7 +142,7 @@ def parse(config):
                 "reactions": ["🐎"],
             },
             "please": {
-                "trigger": "please",
+                "trigger": "^please",
                 "reactions": ["🥺"],
             },
             "goodnight": {
