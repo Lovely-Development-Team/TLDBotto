@@ -141,6 +141,10 @@ def parse(config):
                 "trigger": "horse",
                 "reactions": ["🐎"],
             },
+            "please": {
+                "trigger": "please",
+                "reactions": ["🥺"],
+            },
             "goodnight": {
                 "trigger": "[Gg]ood\s?night\s+(?:{bot_id}|tildy)",
                 "reactions": ["💤", "😴", "🛏️",],
