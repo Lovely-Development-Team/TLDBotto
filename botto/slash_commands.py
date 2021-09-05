@@ -317,11 +317,12 @@ def setup_slash(
                 f"Sorry, {timezone_name} is not a known TZ DB key", hidden=True
             )
             return
+        get_tlder_request = timezones.get_tlder(ctx.author_id)
         db_timezone = await timezones.find_timezone(tzinfo.zone)
         if db_timezone is None:
             log.info(f"{tzinfo.zone} not found, adding new timezone")
             db_timezone = await timezones.add_timezone(tzinfo.zone)
-        if tlder := await timezones.get_tlder(ctx.author_id):
+        if tlder := await get_tlder_request:
             log.info("Updating existing TLDer's timezone")
             try:
                 await timezones.update_tlder(tlder, timezone_id=db_timezone.id)
