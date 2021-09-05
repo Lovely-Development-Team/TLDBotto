@@ -117,7 +117,7 @@ class TLDer:
         fields = fields if fields else ["discord_id", "name", "timezone_id"]
         data = {}
         if "discord_id" in fields:
-            data[tlder_to_airtable_field["discord_id"]] = self.discord_id
+            data[tlder_to_airtable_field["discord_id"]] = str(self.discord_id)
         if "name" in fields:
             data[tlder_to_airtable_field["name"]] = self.name
         if "timezone_id" in fields:

@@ -335,7 +335,7 @@ def setup_slash(
                 return
         else:
             log.info("Adding new TLDer with timezone")
-            await timezones.add_tlder(ctx.author.name, ctx.author.id, db_timezone.id)
+            await timezones.add_tlder(ctx.author.name, str(ctx.author.id), db_timezone.id)
         await ctx.send(
             "Your timezone has been set to: {timezone_name} (UTC{offset})".format(
                 timezone_name=db_timezone.name,
