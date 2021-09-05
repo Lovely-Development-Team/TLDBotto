@@ -236,6 +236,10 @@ def setup_slash(
     )
     async def get_timezone(ctx: SlashContext):
         tlder = await timezones.get_tlder(ctx.author_id)
+        if tlder is None:
+            log.info(f"{ctx.author} has not configured timezone")
+            await ctx.send("Sorry, you don't have a timezone configured 😢", hidden=True)
+            return
         timezone = await timezones.get_timezone(tlder.timezone_id)
         await ctx.send(
             "Your currently configured timezone is: {timezone_name} (UTC{offset})".format(

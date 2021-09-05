@@ -47,7 +47,7 @@ class TimezoneStorage(Storage):
             async with self.tlders_lock:
                 self.tlders_cache[str(discord_id)] = tlder
             return tlder
-        except StopIteration:
+        except (StopIteration, StopAsyncIteration):
             log.info(f"No TLDer found with ID {discord_id}")
             return None
 
