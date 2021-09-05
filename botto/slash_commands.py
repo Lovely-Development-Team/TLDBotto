@@ -24,10 +24,10 @@ log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
 
 
-def person_option(autocomplete: bool):
+def person_option(desc: str, autocomplete: bool):
     return create_option(
         name="person",
-        description="The person to yell at.",
+        description=desc,
         option_type=SlashCommandOptionType.USER
         if autocomplete
         else SlashCommandOptionType.STRING,
@@ -76,7 +76,7 @@ def setup_slash(
         name="yell",
         description="Have Botto yell at someone",
         options=[
-            person_option(False),
+            person_option("The person to yell at.", False),
             message_option,
         ],
         # guild_ids=[833842753799848016],
@@ -88,7 +88,7 @@ def setup_slash(
         name="yellat",
         description="Have Botto yell at someone (with selection)",
         options=[
-            person_option(True),
+            person_option("The person to yell at.", True),
             message_option,
         ],
         # guild_ids=[833842753799848016],
@@ -232,6 +232,8 @@ def setup_slash(
 
     @slash.subcommand(
         base="timezones",
+        subcommand_group="get",
+        subcommand_group_description="Get details of configured timezones",
         name="current",
         description="Get your timezone",
         # guild_ids=[880491989995499600, 833842753799848016],
@@ -249,6 +251,32 @@ def setup_slash(
                 offset=arrow.now(timezone.name).format("Z"),
             ),
             hidden=True,
+        )
+
+    @slash.subcommand(
+        base="timezones",
+        subcommand_group="get",
+        subcommand_group_description="Get details of configured timezones",
+        name="user",
+        description="Get the user's timezone",
+        options=[
+            person_option("The user for whom to get the timezone", True)
+        ]
+        # guild_ids=[880491989995499600, 833842753799848016],
+    )
+    async def get_user_timezone(ctx: SlashContext, person: discord.Member):
+        tlder = await timezones.get_tlder(person.id)
+        if tlder is None:
+            log.info(f"{person} has not configured a timezone")
+            await ctx.send(f"{person.display_name} does not appear to have a timezone configured")
+            return
+        timezone = await timezones.get_timezone(tlder.timezone_id)
+        await ctx.send(
+            "{person_name}'s currently configured timezone is: {timezone_name} (UTC{offset})".format(
+                person_name=person.display_name,
+                timezone_name=timezone.name,
+                offset=arrow.now(timezone.name).format("Z"),
+            )
         )
 
     @slash.subcommand(
