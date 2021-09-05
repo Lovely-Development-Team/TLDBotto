@@ -122,10 +122,12 @@ class TLDer:
             data[tlder_to_airtable_field["name"]] = self.name
         if "timezone_id" in fields:
             data[tlder_to_airtable_field["timezone_id"]] = [self.timezone_id]
-        return {
-            "id": self.id,
+        airtable_dict = {
             "fields": data,
         }
+        if self.id:
+            airtable_dict["id"] = self.id
+        return airtable_dict
 
 
 @dataclass
