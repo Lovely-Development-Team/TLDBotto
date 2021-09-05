@@ -133,7 +133,7 @@ class Storage:
                 headers=self.auth_header,
             ) as r:
                 if r.status != 200:
-                    raise AirTableError(r.url, await r.json())
+                    raise AirTableError(r.url, await r.json(), data)
                 response: dict = await r.json()
                 return response
 
