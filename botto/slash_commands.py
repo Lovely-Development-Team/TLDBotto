@@ -277,10 +277,12 @@ def setup_slash(
             try:
                 await timezones.update_tlder(tlder, timezone_id=db_timezone.id)
             except AirTableError:
-                log.error(
-                    f"Failed to update TLDer", exc_info=True
+                log.error(f"Failed to update TLDer", exc_info=True)
+                await ctx.send(
+                    "Internal error updating TLDer {dizzy}".format(
+                        dizzy=config["reactions"]["dizzy"]
+                    )
                 )
-                await ctx.send("Internal error updating TLDer {dizzy}".format(dizzy=config["reactions"]["dizzy"]))
                 return
         else:
             log.info("Adding new TLDer with timezone")

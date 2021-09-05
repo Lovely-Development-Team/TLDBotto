@@ -112,23 +112,23 @@ class TimezoneStorage(Storage):
         name: Optional[str] = None,
         timezone_id: Optional[str] = None,
     ) -> TLDer:
-        update_record = {
-            "id": tlder.id,
-            "fields": {}
-        }
+        update_record = {"id": tlder.id, "fields": {}}
         if name is not None:
             update_record["fields"][TLDer.to_airtable_field("name")] = name
             tlder.name = name
         if timezone_id is not None:
-            update_record["fields"][TLDer.to_airtable_field("timezone_id")] = [timezone_id]
+            update_record["fields"][TLDer.to_airtable_field("timezone_id")] = [
+                timezone_id
+            ]
             tlder.timezone_id = timezone_id
         records = {"records": [update_record]}
         response = await self._update(self.tlders_url, records)
         async with self.tlders_lock:
             self.tlders_cache[str(tlder.discord_id)] = tlder
-        print(response["records"])
         updated_record = [
-            updated_tlder for updated_tlder in response["records"] if updated_tlder["id"] == tlder.id
+            updated_tlder
+            for updated_tlder in response["records"]
+            if updated_tlder["id"] == tlder.id
         ]
         return TLDer.from_airtable(updated_record[0])
 
