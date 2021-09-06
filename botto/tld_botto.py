@@ -7,7 +7,7 @@ import random
 import re
 from math import floor
 from datetime import datetime, timedelta
-from typing import Optional, Callable, Union
+from typing import Optional, Callable
 
 import subprocess
 
@@ -16,11 +16,11 @@ from discord import Message, Guild
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 import arrow
-from discord.abc import GuildChannel, PrivateChannel
 
 from botto import responses
 from .date_helpers import convert_24_hours
 from .dm_helpers import get_dm_channel
+from .extended_client import ExtendedClient
 from .message_helpers import (
     remove_own_message,
     remove_user_reactions,
@@ -78,7 +78,7 @@ VOTE_EMOJI = (
 DELETE_EMOJI = ("🥕", "❌")
 
 
-class TLDBotto(discord.Client):
+class TLDBotto(ExtendedClient):
     def __init__(
         self,
         config: dict,
@@ -198,20 +198,6 @@ class TLDBotto(discord.Client):
                     )
         except Exception:
             log.error("Custom error handling failed", exc_info=True)
-
-    async def get_or_fetch_channel(
-        self, channel_id: int
-    ) -> Union[GuildChannel, PrivateChannel, discord.Thread]:
-        if channel := self.get_channel(channel_id):
-            return channel
-        else:
-            return await self.fetch_channel(channel_id)
-
-    async def get_or_fetch_user(self, user_id: int) -> Union[discord.User]:
-        if user := self.get_user(user_id):
-            return user
-        else:
-            return await self.fetch_user(user_id)
 
     async def get_meal_channels(self):
         for guild in self.config["meals"]["guilds"]:
