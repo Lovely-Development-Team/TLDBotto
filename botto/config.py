@@ -126,7 +126,7 @@ def parse(config):
                 "reaction_type": "ORDERED",
             },
             "snail": {
-                "trigger": "(?:('|’)?(re|m|s)|am|are|is|was) (?:(\S{1,25} ){0,3})(?:(snail|🐌)(ie(\S*)|s|-(\S*))?)",
+                "trigger": "(?:('|’)(re|m|s)|am|are|is|was) (?:(\S{1,25} ){0,3})(?:(snail|🐌)(ie(\S*)|s|-(\S*))?)",
                 "reactions": ["🐌"],
             },
             "complaint": {
@@ -142,7 +142,7 @@ def parse(config):
                 "reactions": ["🐎"],
             },
             "please": {
-                "trigger": "^please",
+                "trigger": "^pl(?:e+)ase",
                 "reactions": ["🥺"],
             },
             "goodnight": {
