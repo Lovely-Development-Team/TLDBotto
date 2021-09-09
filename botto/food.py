@@ -107,6 +107,10 @@ default_config = {
         "triggers": ["🍋", "🍆", "🍑", "🫑", "🥒", "🥦", "🧄", "🧅", "🍄", "🥚", "🧈"],
         "responses": ["😕"],
     },
+    "hard_to_open": {
+       "triggers": ["🥫"],
+       "responses": ["🔓", "🥺"],
+    },
     "eye_roll_foods": {"triggers": ["🍽️"], "responses": ["🙄"]},
     "dangerous_foods": {
         "triggers": ["💣", "🧨", "🗡️", "🔪", "🦠", "🧫"],
