@@ -22,7 +22,7 @@ async def remove_user_reactions(
     """
     log.info(f"Removing reactions by {user} from {message}")
     my_reactions = [
-        r for r in message.reactions if any(u.id == user.id async for u in r.users())
+        r for r in message.reactions if any(u.id == user.id for u in await r.users().flatten())
     ]
     clearing_reactions = [message.remove_reaction(r.emoji, user) for r in my_reactions]
     await asyncio.wait(clearing_reactions)
