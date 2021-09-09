@@ -69,6 +69,8 @@ jobs:
     # Ensure test job passes before pushing image.
     needs: test
 
+    concurrency: Tildy
+
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event_name == 'workflow_run'
 
@@ -122,6 +124,8 @@ jobs:
   deploy:
     # Ensure test job passes before pushing image.
     needs: push
+
+    concurrency: Tildy
 
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event_name == 'workflow_run'
