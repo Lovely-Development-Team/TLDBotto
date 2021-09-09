@@ -120,6 +120,9 @@ def parse(config):
             "delete_confirmed": "✅",
             "nice_try": "😝",
             "enabled": "💸",
+            "no_amount": ["💰", "❓"],
+            "unrecognised_currency": ["💷", "❓"],
+            "unknown_person": ["🧍", "❓"],
             "dizzy": "😵‍💫",
             "feature_disabled": "📴"
         },

@@ -26,17 +26,20 @@ from .message_helpers import (
     remove_user_reactions,
     MessageMissingReferenceError,
     resolve_message_reference,
+    convert_amount,
+    BadAmountError,
+    BadCurrencyError,
 )
 from .vote_helpers import (
     is_voting_message,
     guild_voting_member,
     VOTE_EMOJI,
-    extract_voted_users, can_ping_vote,
+    extract_voted_users,
+    can_ping_vote,
 )
 from .models import Meal
 from .reactions import Reactions
 from typing import TYPE_CHECKING
-
 
 if TYPE_CHECKING:
     from reminder_manager import ReminderManager
@@ -221,7 +224,9 @@ class TLDBotto(ExtendedClient):
         ):
             reacted_users = await extract_voted_users(message, {str(self.user.id)})
             if len(reacted_users) != len(
-                guild_voting_member(message, self.config["voting"].members_vote_not_required)
+                guild_voting_member(
+                    message, self.config["voting"].members_vote_not_required
+                )
             ):
                 await message.remove_reaction("🏁", self.user)
 
@@ -302,9 +307,10 @@ class TLDBotto(ExtendedClient):
         ):
             reacted_users = await extract_voted_users(message, {str(self.user.id)})
             expected_reacted_count = len(
-                guild_voting_member(message, self.config["voting"].members_vote_not_required)
+                guild_voting_member(
+                    message, self.config["voting"].members_vote_not_required
+                )
             )
-            print(expected_reacted_count)
             if len(reacted_users) == expected_reacted_count:
                 await message.add_reaction("🏁")
             else:
@@ -781,6 +787,10 @@ You can DM me the following commands:
         """
         try:
             referenced_message = await resolve_message_reference(self, message)
+            if referenced_message.content is None:
+                referenced_message = await resolve_message_reference(
+                    self, message, force_fresh=True
+                )
         except MessageMissingReferenceError:
             log.info(f"Invalid enablement by {message.author}")
             await self.reactions.unknown_dm(message)
@@ -798,8 +808,22 @@ You can DM me the following commands:
             self.timezones.get_tlder(str(message.author.id)),
         )
 
-        text = kwargs.get("text")
-        name = text if len(text) else referenced_message.content
+        if not enabler or not enabled:
+            await self.reactions.unknown_person(message)
+            return
+
+        name = referenced_message.content
+        text: str = kwargs.get("text")
+        amount: Optional[int] = None
+        error_reaction_func = None
+        if text:
+            try:
+                amount = convert_amount(text)
+            except BadCurrencyError:
+                error_reaction_func = self.reactions.unrecognised_currency
+            except BadAmountError:
+                error_reaction_func = self.reactions.unknown_amount
+
         log.info(
             f"Recording enablement of {enabled.name} by {enabler.name} for {name} (message {referenced_message.id})"
         )
@@ -808,9 +832,12 @@ You can DM me the following commands:
             enabled=enabled.id,
             enabled_by=enabler.id,
             message_link=referenced_message.jump_url,
+            amount=amount,
         )
 
         await self.reactions.enabled(message)
+        if error_reaction_func := error_reaction_func:
+            await error_reaction_func(message)
 
     async def drama_llama(self, message: Message):
         if message.author.id == self.config["drama_llama_id"]:
@@ -819,7 +846,9 @@ You can DM me the following commands:
     async def remaining_voters(self, message: Message, **kwargs):
         if self.is_feature_disabled("remaining_voters"):
             await self.reactions.feature_disabled(message)
-            log.info(f"{message.author} requested remaining voters for: {message.content} but it was disabled")
+            log.info(
+                f"{message.author} requested remaining voters for: {message.content} but it was disabled"
+            )
             return
         log.info(f"{message.author} requested remaining voters for: {message.content}")
         referenced_message = await resolve_message_reference(
@@ -846,7 +875,8 @@ You can DM me the following commands:
             [
                 u.id
                 for u in await extract_voted_users(
-                    referenced_message, self.config["voting"]["members_vote_not_required"]
+                    referenced_message,
+                    self.config["voting"]["members_vote_not_required"],
                 )
             ]
         )
@@ -854,10 +884,13 @@ You can DM me the following commands:
         pending_member_ids = required_member_ids.difference(voted_member_ids)
         log.debug(f"Pending member IDs: {pending_member_ids}")
         pending_members = [
-            await self.get_or_fetch_member(message.guild, member_id) for member_id in pending_member_ids
+            await self.get_or_fetch_member(message.guild, member_id)
+            for member_id in pending_member_ids
         ]
-        has_ping_command = kwargs.get('ping') is not None
-        if has_ping_command and can_ping_vote(message.author, self.config["voting"].ping_disallowed_roles):
+        has_ping_command = kwargs.get("ping") is not None
+        if has_ping_command and can_ping_vote(
+            message.author, self.config["voting"].ping_disallowed_roles
+        ):
             pending_member_text = "\n".join(
                 [f"• {member.mention}" for member in pending_members]
             )
@@ -865,4 +898,6 @@ You can DM me the following commands:
             pending_member_text = "\n".join(
                 [f"• {member.display_name}" for member in pending_members]
             )
-        await message.reply(f"{len(pending_members)} voters remaining: \n" + pending_member_text)
+        await message.reply(
+            f"{len(pending_members)} voters remaining: \n" + pending_member_text
+        )
