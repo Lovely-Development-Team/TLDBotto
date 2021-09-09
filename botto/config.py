@@ -42,7 +42,8 @@ def parse(config):
             "airtable_base": "",
         },
         "channels": {"include": [], "exclude": [], "voting": ["voting"]},
-        "any_channel_voting_guilds": ["880491989995499600"],
+        "any_channel_voting_guilds": ["880491989995499600", "833842753799848016"],
+        "members_vote_not_required": {},
         "reactions": {
             "success": "📥",
             "repeat": "♻️",
@@ -227,6 +228,9 @@ def parse(config):
 
     if channels := os.getenv("TLDBOTTO_ANY_CHANNEL_VOTING_GUILDS"):
         defaults["any_channel_voting_guilds"] = channels
+
+    if members_vote_not_required := decode_base64_env("TLDBOTTO_MEMBERS_VOTE_NOT_REQUIRED"):
+        defaults["members_vote_not_required"] = set(members_vote_not_required)
 
     if timezones := decode_base64_env("TLDBOTTO_TIMEZONES"):
         defaults["timezones"] = timezones
