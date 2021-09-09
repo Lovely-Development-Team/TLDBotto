@@ -29,7 +29,7 @@ from .message_helpers import (
 )
 from .vote_helpers import (
     is_voting_message,
-    guild_voting_member_count,
+    guild_voting_member,
     VOTE_EMOJI,
     extract_voted_users,
 )
@@ -220,8 +220,8 @@ class TLDBotto(ExtendedClient):
             and is_voting_message(message)
         ):
             reacted_users = await extract_voted_users(message, {str(self.user.id)})
-            if len(reacted_users) != guild_voting_member_count(
-                message, self.config["members_vote_not_required"]
+            if len(reacted_users) != len(
+                guild_voting_member(message, self.config["members_vote_not_required"])
             ):
                 await message.remove_reaction("🏁", self.user)
 
@@ -301,8 +301,8 @@ class TLDBotto(ExtendedClient):
             and is_voting_message(message)
         ):
             reacted_users = await extract_voted_users(message, {str(self.user.id)})
-            expected_reacted_count = guild_voting_member_count(
-                message, self.config["members_vote_not_required"]
+            expected_reacted_count = len(
+                guild_voting_member(message, self.config["members_vote_not_required"])
             )
             print(expected_reacted_count)
             if len(reacted_users) == expected_reacted_count:
@@ -392,6 +392,7 @@ class TLDBotto(ExtendedClient):
             "remove_reactions": self.remove_reactions,
             "enabled": self.record_enablement,
             "drama_llama": self.drama_llama,
+            "remaining_voters": self.remaining_voters,
         }
 
     @staticmethod
@@ -814,3 +815,49 @@ You can DM me the following commands:
     async def drama_llama(self, message: Message):
         if message.author.id == self.config["drama_llama_id"]:
             await self.reactions.drama_llama(message)
+
+    async def remaining_voters(self, message: Message, **kwargs):
+        log.info(f"Fetching remaining voters for: {message.content}")
+        referenced_message = await resolve_message_reference(
+            self, message, force_fresh=True
+        )
+        if not is_voting_message(referenced_message):
+            await message.add_reaction("🗳")
+            await message.add_reaction("❓")
+            return
+
+        if message.author.id != referenced_message.author.id:
+            await self.reactions.invalid(message)
+
+        required_member_ids = set(
+            [
+                u.id
+                for u in guild_voting_member(
+                    message, self.config["members_vote_not_required"]
+                )
+            ]
+        )
+        log.debug(f"Required member IDs: {required_member_ids}")
+        voted_member_ids = set(
+            [
+                u.id
+                for u in await extract_voted_users(
+                    referenced_message, self.config["members_vote_not_required"]
+                )
+            ]
+        )
+        log.debug(f"Voted member IDs: {voted_member_ids}")
+        pending_member_ids = required_member_ids.difference(voted_member_ids)
+        log.debug(f"Pending member IDs: {pending_member_ids}")
+        pending_members = [
+            await self.get_or_fetch_member(message.guild, member_id) for member_id in pending_member_ids
+        ]
+        if kwargs.get('ping') is not None:
+            pending_member_text = "\n".join(
+                [f"• {member.mention}" for member in pending_members]
+            )
+        else:
+            pending_member_text = "\n".join(
+                [f"• {member.display_name}" for member in pending_members]
+            )
+        await message.reply(f"{len(pending_members)} voters remaining: \n" + pending_member_text)

@@ -1,4 +1,4 @@
-from discord import Message, User
+from discord import Message, User, Member
 
 VOTE_EMOJI = (
     "0️⃣",
@@ -36,11 +36,9 @@ async def extract_voted_users(
     return reacted_users
 
 
-def guild_voting_member_count(message: Message, excluded_user_ids: set[str]) -> int:
-    return len(
-        [
+def guild_voting_member(message: Message, excluded_user_ids: set[str]) -> set[Member]:
+    return set([
             member
             for member in message.guild.members
             if not member.bot and str(member.id) not in excluded_user_ids
-        ]
-    )
+        ])

@@ -1,6 +1,7 @@
 from typing import Union
 
 import discord
+from discord import Guild
 from discord.abc import GuildChannel, PrivateChannel
 
 
@@ -18,3 +19,11 @@ class ExtendedClient(discord.Client):
             return user
         else:
             return await self.fetch_user(user_id)
+
+    @staticmethod
+    async def get_or_fetch_member(guild: Guild, member_id: int) -> Union[discord.Member]:
+        if user := guild.get_member(member_id):
+            return user
+        else:
+            return await guild.get_member(member_id)
+
