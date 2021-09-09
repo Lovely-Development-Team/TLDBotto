@@ -21,7 +21,9 @@ async def remove_user_reactions(
     :param user: The user for which reactions should be removed
     """
     log.info(f"Removing reactions by {user} from {message}")
-    my_reactions = [r for r in message.reactions if any(u.id == user.id async for u in r.users())]
+    my_reactions = [
+        r for r in message.reactions if any(u.id == user.id async for u in r.users())
+    ]
     clearing_reactions = [message.remove_reaction(r.emoji, user) for r in my_reactions]
     await asyncio.wait(clearing_reactions)
 
@@ -59,14 +61,6 @@ async def resolve_message_reference(
         message.reference.message_id
     )
     return referenced_message
-
-
-def is_voting_message(message: Message) -> bool:
-    return message.content.lstrip().startswith("🗳️")
-
-
-def guild_member_count(message: Message) -> int:
-    return len([member for member in message.guild.members if not member.bot])
 
 
 class MessageMissingReferenceError(Exception):

@@ -26,8 +26,12 @@ from .message_helpers import (
     remove_user_reactions,
     MessageMissingReferenceError,
     resolve_message_reference,
+)
+from .vote_helpers import (
     is_voting_message,
-    guild_member_count,
+    guild_voting_member_count,
+    VOTE_EMOJI,
+    extract_voted_users,
 )
 from .models import Meal
 from .reactions import Reactions
@@ -57,23 +61,6 @@ NUMBERS = [
     "eight",
     "nine",
 ]
-VOTE_EMOJI = (
-    "0️⃣",
-    "1️⃣",
-    "2️⃣",
-    "3️⃣",
-    "4️⃣",
-    "5️⃣",
-    "6️⃣",
-    "7️⃣",
-    "8️⃣",
-    "9️⃣",
-    "✅",
-    "❎",
-    "❌",
-    "👍",
-    "👎",
-)
 
 DELETE_EMOJI = ("🥕", "❌")
 
@@ -232,13 +219,10 @@ class TLDBotto(ExtendedClient):
             str(message.guild.id) in self.config["any_channel_voting_guilds"]
             and is_voting_message(message)
         ):
-            reacted_users = set()
-            for reaction in message.reactions:
-                if reaction.emoji not in VOTE_EMOJI:
-                    continue
-                users = await reaction.users().flatten()
-                reacted_users |= set(u for u in users if u != self.user)
-            if len(reacted_users) != guild_member_count(message):
+            reacted_users = await extract_voted_users(message, {str(self.user.id)})
+            if len(reacted_users) != guild_voting_member_count(
+                message, self.config["members_vote_not_required"]
+            ):
                 await message.remove_reaction("🏁", self.user)
 
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
@@ -316,13 +300,11 @@ class TLDBotto(ExtendedClient):
             str(message.guild.id) in self.config["any_channel_voting_guilds"]
             and is_voting_message(message)
         ):
-            reacted_users = set()
-            for reaction in message.reactions:
-                if reaction.emoji not in VOTE_EMOJI:
-                    continue
-                users = await reaction.users().flatten()
-                reacted_users |= set(u for u in users if u != self.user)
-            expected_reacted_count = guild_member_count(message)
+            reacted_users = await extract_voted_users(message, {str(self.user.id)})
+            expected_reacted_count = guild_voting_member_count(
+                message, self.config["members_vote_not_required"]
+            )
+            print(expected_reacted_count)
             if len(reacted_users) == expected_reacted_count:
                 await message.add_reaction("🏁")
             else:
