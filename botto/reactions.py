@@ -55,8 +55,11 @@ class Reactions:
     async def reject(self, message: Message):
         await message.add_reaction(self.config["reactions"]["reject"])
 
-    async def nice_try(self, message: Message):
+    async def invalid(self, message: Message):
         await message.add_reaction(self.config["reactions"]["invalid"])
+
+    async def nice_try(self, message: Message):
+        await self.invalid(message)
         await message.add_reaction(self.config["reactions"]["nice_try"])
 
     async def skynet_prevention(self, message: Message):
