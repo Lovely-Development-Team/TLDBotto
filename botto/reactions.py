@@ -160,6 +160,15 @@ class Reactions:
     async def enabled(self, message: Message):
         await message.add_reaction(self.config["reactions"]["enabled"])
 
+    async def unknown_amount(self, message: Message):
+        await _ordered_reactions(message, self.config["reactions"]["no_amount"])
+
+    async def unrecognised_currency(self, message: Message):
+        await _ordered_reactions(message, self.config["reactions"]["unrecognised_currency"])
+
+    async def unknown_person(self, message: Message):
+        await _ordered_reactions(message, self.config["reactions"]["unknown_person"])
+
     async def dizzy(self, message: Message):
         log.info(f"Dizzy to: {message.author}")
         await message.add_reaction(self.config["reactions"]["dizzy"])
