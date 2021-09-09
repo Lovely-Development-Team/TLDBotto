@@ -113,7 +113,7 @@ default_config = {
     },
     "eye_roll_foods": {"triggers": ["🍽️"], "responses": ["🙄"]},
     "dangerous_foods": {
-        "triggers": ["💣", "🧨", "🗡️", "🔪", "🦠", "🧫"],
+        "triggers": ["💣", "🧨", "🗡️", "🔪", "🦠", "🧫", "💉"],
         "responses": ["🙅", "😨"],
     },
     "nausea": {"triggers": "🚬", "responses": ["🙅", "🤢"]},
