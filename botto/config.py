@@ -121,6 +121,7 @@ def parse(config):
             "nice_try": "😝",
             "enabled": "💸",
             "dizzy": "😵‍💫",
+            "feature_disabled": "📴"
         },
         "pattern_reactions": {
             "pokes": {
@@ -226,6 +227,7 @@ def parse(config):
         "confirm_delete_reaction": "🧨",
         "support_channel": None,
         "watching_statūs": ["for food", "for snails", "for apologies", "for love"],
+        "disabled_features": {"remaining_voters"}
     }
 
     if isinstance(config, dict):
@@ -288,6 +290,9 @@ def parse(config):
 
     if threshold := decode_base64_env("TLDBOTTO_NEXT_DAY_THRESHOLD"):
         defaults["time_is_next_day_threshold_hours"] = int(threshold)
+
+    if disabled_features := decode_base64_env("TLDBOTTO_DISABLED_FEATURES"):
+        defaults["disabled_features"] = set(disabled_features)
 
     if id := os.getenv("TLDBOTTO_ID"):
         defaults["id"] = id

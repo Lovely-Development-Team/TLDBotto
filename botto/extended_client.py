@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, Literal
 
 import discord
 from discord import Guild
@@ -27,3 +27,5 @@ class ExtendedClient(discord.Client):
         else:
             return await guild.get_member(member_id)
 
+    def is_feature_disabled(self, feature_name: Literal["remaining_voters"]):
+        return feature_name in self.config["disabled_features"]
