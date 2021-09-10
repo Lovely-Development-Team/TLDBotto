@@ -288,7 +288,7 @@ def parse(config):
     if meals := decode_base64_env("TLDBOTTO_MEAL_CONFIG"):
         defaults["meals"] = meals
 
-    if threshold := decode_base64_env("TLDBOTTO_NEXT_DAY_THRESHOLD"):
+    if threshold := os.getenv("TLDBOTTO_NEXT_DAY_THRESHOLD"):
         defaults["time_is_next_day_threshold_hours"] = int(threshold)
 
     if disabled_features := decode_base64_env("TLDBOTTO_DISABLED_FEATURES"):
