@@ -162,6 +162,8 @@ jobs:
             -e TLDBOTTO_MEMBERS_VOTE_NOT_REQUIRED='${{ secrets.MEMBERS_VOTE_NOT_REQUIRED }}'
             -e TLDBOTTO_TIMEZONES='${{ secrets.TIMEZONES }}'
             -e TLDBOTTO_MEAL_CONFIG='${{ secrets.MEAL_CONFIG }}'
+            -e TLDBOTTO_NEXT_DAY_THRESHOLD='${{ secrets.NEXT_DAY_THRESHOLD }}'
+            -e TLDBOTTO_DISABLED_FEATURES='${{ secrets.DISABLED_FEATURES }}'
             -e TLDBOTTO_ID='Capys-hosted TLDBotto'
             -e TLDBOTTO_VERSION='${{ env.RELEASE_VERSION }}'
             --name tld_botto ghcr.io/lovely-development-team/tld-botto:latest
