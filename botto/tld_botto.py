@@ -517,7 +517,7 @@ class TLDBotto(ExtendedClient):
         conversion_string_intro = [
             "{time} in {tlder_name}'s timezone is <t:{unix_time}:t> (<t:{unix_time}:R>) for you.".format(
                 time=time[0],
-                tlder_name=tlder.name,
+                tlder_name=discord.utils.escape_markdown(tlder.name),
                 unix_time=floor(time[1].timestamp()),
             )
             for time in parsed_local_times
