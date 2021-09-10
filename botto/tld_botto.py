@@ -31,7 +31,7 @@ from .vote_helpers import (
     is_voting_message,
     guild_voting_member,
     VOTE_EMOJI,
-    extract_voted_users,
+    extract_voted_users, can_ping_vote,
 )
 from .models import Meal
 from .reactions import Reactions
@@ -216,12 +216,12 @@ class TLDBotto(ExtendedClient):
         log.info(f"Reactions: {message.reactions}")
 
         if self.is_voting_channel(channel) or (
-            str(message.guild.id) in self.config["any_channel_voting_guilds"]
+            str(message.guild.id) in self.config["voting"].any_channel_voting_guilds
             and is_voting_message(message)
         ):
             reacted_users = await extract_voted_users(message, {str(self.user.id)})
             if len(reacted_users) != len(
-                guild_voting_member(message, self.config["members_vote_not_required"])
+                guild_voting_member(message, self.config["voting"].members_vote_not_required)
             ):
                 await message.remove_reaction("🏁", self.user)
 
@@ -256,7 +256,7 @@ class TLDBotto(ExtendedClient):
                 await remove_user_reactions(message, self.user)
 
         if is_delete and not (
-            str(message.guild.id) in self.config["any_channel_voting_guilds"]
+            str(message.guild.id) in self.config["voting"].any_channel_voting_guilds
             and is_voting_message(message)
         ):
             log.info(f"'{payload.emoji.name}' is a delete reaction")
@@ -297,12 +297,12 @@ class TLDBotto(ExtendedClient):
             return
 
         if self.is_voting_channel(channel) or (
-            str(message.guild.id) in self.config["any_channel_voting_guilds"]
+            str(message.guild.id) in self.config["voting"].any_channel_voting_guilds
             and is_voting_message(message)
         ):
             reacted_users = await extract_voted_users(message, {str(self.user.id)})
             expected_reacted_count = len(
-                guild_voting_member(message, self.config["members_vote_not_required"])
+                guild_voting_member(message, self.config["voting"].members_vote_not_required)
             )
             print(expected_reacted_count)
             if len(reacted_users) == expected_reacted_count:
@@ -324,7 +324,7 @@ class TLDBotto(ExtendedClient):
         channel_name = message.channel.name
 
         if self.is_voting_channel(message.channel) or (
-            str(message.guild.id) in self.config["any_channel_voting_guilds"]
+            str(message.guild.id) in self.config["voting"].any_channel_voting_guilds
             and is_voting_message(message)
         ):
             for emoji in VOTE_EMOJI:
@@ -833,7 +833,7 @@ You can DM me the following commands:
             [
                 u.id
                 for u in guild_voting_member(
-                    message, self.config["members_vote_not_required"]
+                    message, self.config["voting"]["members_vote_not_required"]
                 )
             ]
         )
@@ -842,7 +842,7 @@ You can DM me the following commands:
             [
                 u.id
                 for u in await extract_voted_users(
-                    referenced_message, self.config["members_vote_not_required"]
+                    referenced_message, self.config["voting"]["members_vote_not_required"]
                 )
             ]
         )
@@ -852,7 +852,8 @@ You can DM me the following commands:
         pending_members = [
             await self.get_or_fetch_member(message.guild, member_id) for member_id in pending_member_ids
         ]
-        if kwargs.get('ping') is not None:
+        has_ping_command = kwargs.get('ping') is not None
+        if has_ping_command and can_ping_vote(message.author, self.config["voting"].ping_disallowed_roles):
             pending_member_text = "\n".join(
                 [f"• {member.mention}" for member in pending_members]
             )
