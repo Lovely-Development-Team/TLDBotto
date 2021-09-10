@@ -817,7 +817,11 @@ You can DM me the following commands:
             await self.reactions.drama_llama(message)
 
     async def remaining_voters(self, message: Message, **kwargs):
-        log.info(f"Fetching remaining voters for: {message.content}")
+        if self.is_feature_disabled("remaining_voters"):
+            await self.reactions.feature_disabled(message)
+            log.info(f"{message.author} requested remaining voters for: {message.content} but it was disabled")
+            return
+        log.info(f"{message.author} requested remaining voters for: {message.content}")
         referenced_message = await resolve_message_reference(
             self, message, force_fresh=True
         )

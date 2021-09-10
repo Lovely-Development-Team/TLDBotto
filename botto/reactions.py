@@ -167,3 +167,7 @@ class Reactions:
     async def drama_llama(self, message: Message):
         log.info(f"Drama llama detected: {message.author}!")
         await message.add_reaction("🦙")
+
+    async def feature_disabled(self, message: Message):
+        log.info(f"Attempted to use disabled feature: {message.author}!")
+        await message.add_reaction(self.config["reactions"]["feature_disabled"])
