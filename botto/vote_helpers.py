@@ -1,4 +1,8 @@
+from typing import Union
+
 from discord import Message, User, Member
+
+from botto.config import PingDisallowedRole
 
 VOTE_EMOJI = (
     "0️⃣",
@@ -37,8 +41,25 @@ async def extract_voted_users(
 
 
 def guild_voting_member(message: Message, excluded_user_ids: set[str]) -> set[Member]:
-    return set([
+    return set(
+        [
             member
             for member in message.guild.members
             if not member.bot and str(member.id) not in excluded_user_ids
-        ])
+        ]
+    )
+
+
+def can_ping_vote(
+    author: Union[Member, User], disallowed_roles: set[PingDisallowedRole]
+) -> bool:
+    if author.roles is None:
+        return False
+    for disallowed_role in disallowed_roles:
+        if any(
+            (role.id == disallowed_role.role_id or role.name == disallowed_role.name)
+            for role in author.roles
+        ):
+            return False
+    else:
+        return True

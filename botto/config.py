@@ -2,9 +2,9 @@ import base64
 import binascii
 import json
 import logging
-import re
 import os
-from datetime import datetime
+from collections import namedtuple
+from dataclasses import dataclass
 
 import pytz as pytz
 
@@ -32,6 +32,15 @@ def decode_base64_env(key: str):
 
 line_break_matcher = "[\t\n\r\v]"
 
+PingDisallowedRole = namedtuple("PingDisallowedRole", ["role_id", "name"])
+
+
+@dataclass
+class VotingConfig:
+    any_channel_voting_guilds: list[str]
+    members_vote_not_required: set[str]
+    ping_disallowed_roles: set[PingDisallowedRole]
+
 
 def parse(config):
     defaults = {
@@ -42,8 +51,13 @@ def parse(config):
             "airtable_base": "",
         },
         "channels": {"include": [], "exclude": [], "voting": ["voting"]},
-        "any_channel_voting_guilds": ["880491989995499600", "833842753799848016"],
-        "members_vote_not_required": {},
+        "voting": VotingConfig(
+            any_channel_voting_guilds=["880491989995499600", "833842753799848016"],
+            members_vote_not_required=set(),
+            ping_disallowed_roles={
+                PingDisallowedRole(role_id=None, name="voting_ping_disallowed")
+            },
+        ),
         "reactions": {
             "success": "📥",
             "repeat": "♻️",
@@ -57,8 +71,8 @@ def parse(config):
             "valid_emoji": "✅",
             "reject": "❌",
             "wave": "👋",
-            "confirm" : "👍",
-            "decline" : "👎",
+            "confirm": "👍",
+            "decline": "👎",
             "poke": ["👈", "👆", "👇", "👉", "😢", "🤪", "😝"],
             "love": [
                 "❤️",
@@ -148,7 +162,11 @@ def parse(config):
             },
             "goodnight": {
                 "trigger": "[Gg]ood\s?night\s+(?:{bot_id}|tildy)",
-                "reactions": ["💤", "😴", "🛏️",],
+                "reactions": [
+                    "💤",
+                    "😴",
+                    "🛏️",
+                ],
             },
             "outage": {"trigger": "outage", "reactions": ["😵"]},
             "chocolate": {"trigger": "chocolate", "reactions": ["🍫"]},
@@ -158,14 +176,14 @@ def parse(config):
                 ),
                 "reactions": ["🐮", "🐄"],
             },
-            "honk":{
+            "honk": {
                 "trigger": "(?:^|\s)honk(?:$|\s)",
-                "reactions": ["🦆","📣","🎺","🎷","📢"],
+                "reactions": ["🦆", "📣", "🎺", "🎷", "📢"],
             },
             "fisrt": {
                 "trigger": "^\s*f[isr]{2,3}t\s*$",
                 "reactions": ["🤦"],
-            }
+            },
         },
         "food": food.default_config,
         "special_reactions": {},
@@ -181,7 +199,12 @@ def parse(config):
             ],
             "enabled": ["(?:#|!)enabled\s*(?P<text>.*)?"],
             "drama_llama": ["Oh no", "drama", "llama", "<:ohno\S*:\d+"],
-            "remaining_voters": ["!remaining\s*(?P<ping>!ping)?", "drama", "llama", "<:ohno\S*:\d+"],
+            "remaining_voters": [
+                "!remaining\s*(?P<ping>!ping)?",
+                "drama",
+                "llama",
+                "<:ohno\S*:\d+",
+            ],
         },
         "drama_llama_id": 760972696284299294,
         "at_triggers": {
@@ -228,10 +251,34 @@ def parse(config):
             defaults["channels"][key] = channels.get(key, [])
 
     if channels := os.getenv("TLDBOTTO_ANY_CHANNEL_VOTING_GUILDS"):
-        defaults["any_channel_voting_guilds"] = channels
+        defaults["voting"].any_channel_voting_guilds = channels
 
-    if members_vote_not_required := decode_base64_env("TLDBOTTO_MEMBERS_VOTE_NOT_REQUIRED"):
-        defaults["members_vote_not_required"] = set(members_vote_not_required)
+    if members_vote_not_required_env := decode_base64_env(
+        "TLDBOTTO_MEMBERS_VOTE_NOT_REQUIRED"
+    ):
+        defaults["voting"].members_vote_not_required = set(
+            members_vote_not_required_env
+        )
+
+    if ping_disallowed_roles := decode_base64_env(
+        "TLDBOTTO_VOTING_PING_DISALLOWED_ROLES"
+    ):
+        if isinstance(ping_disallowed_roles, list):
+            disallowed_roles_list = [
+                PingDisallowedRole(
+                    role_id=role.get("role_id"), name=role.get("name")
+                )
+                for role in ping_disallowed_roles
+            ]
+            defaults["voting"].ping_disallowed_roles = set(disallowed_roles_list)
+        else:
+            log.warning("TLDBOTTO_VOTING_PING_DISALLOWED_ROLES env is not a list")
+
+    log.debug(
+        "Roles disallowing voting pings: {roles}".format(
+            roles=defaults["voting"].ping_disallowed_roles
+        )
+    )
 
     if timezones := decode_base64_env("TLDBOTTO_TIMEZONES"):
         defaults["timezones"] = timezones
