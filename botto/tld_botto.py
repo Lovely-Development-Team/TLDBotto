@@ -7,7 +7,7 @@ import random
 import re
 from math import floor
 from datetime import datetime, timedelta
-from typing import Optional, Callable
+from typing import Optional, Callable, TYPE_CHECKING
 
 import subprocess
 
@@ -16,6 +16,8 @@ from discord import Message, Guild
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 import arrow
+if TYPE_CHECKING:
+    from discord.abc import MessageableChannel
 
 from botto import responses
 from .date_helpers import convert_24_hours
@@ -199,12 +201,10 @@ class TLDBotto(ExtendedClient):
         if reaction := self.config["reactions"].get(reaction_type, default):
             await message.add_reaction(reaction)
 
-    def is_voting_channel(self, channel: discord.abc.Messageable) -> bool:
-        if isinstance(channel, discord.TextChannel) or isinstance(
-            channel, discord.Thread
-        ):
-            return channel.name in self.config["channels"]["voting"]
-        else:
+    def is_voting_channel(self, channel: MessageableChannel) -> bool:
+        try:
+            channel.name in self.config["channels"]["voting"]
+        except AttributeError:
             return False
 
     async def on_raw_reaction_remove(self, payload):
