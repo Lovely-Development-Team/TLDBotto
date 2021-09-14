@@ -230,7 +230,7 @@ def parse(config):
         "confirm_delete_reaction": "🧨",
         "support_channel": None,
         "watching_statūs": ["for food", "for snails", "for apologies", "for love"],
-        "disabled_features": {"remaining_voters"}
+        "disabled_features": {}
     }
 
     if isinstance(config, dict):
