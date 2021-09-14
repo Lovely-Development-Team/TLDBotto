@@ -204,7 +204,7 @@ class TLDBotto(ExtendedClient):
 
     def is_voting_channel(self, channel: MessageableChannel) -> bool:
         try:
-            channel.name in self.config["channels"]["voting"]
+            return channel.name in self.config["channels"]["voting"]
         except AttributeError:
             return False
 
