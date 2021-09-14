@@ -166,4 +166,5 @@ jobs:
             -e TLDBOTTO_DISABLED_FEATURES='${{ secrets.DISABLED_FEATURES }}'
             -e TLDBOTTO_ID='Capys-hosted TLDBotto'
             -e TLDBOTTO_VERSION='${{ env.RELEASE_VERSION }}'
-            --name tld_botto ghcr.io/lovely-development-team/tld-botto:latest
+            --name tld_botto ghcr.io/lovely-development-team/tld-botto:latest &&
+            docker system prune -f
