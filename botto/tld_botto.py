@@ -16,6 +16,7 @@ from discord import Message, Guild
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 import arrow
+
 if TYPE_CHECKING:
     from discord.abc import MessageableChannel
 
@@ -468,9 +469,7 @@ class TLDBotto(ExtendedClient):
         if num_matches > 0:
             log.info(f"Message contained {num_matches} times")
             try:
-                response_string = await self.process_time_matches(
-                    message.author, time_matches
-                )
+                response_string = await self.process_time_matches(message, time_matches)
                 log.info(f"Responding with: {response_string}")
                 await message.reply(
                     response_string,
@@ -480,9 +479,9 @@ class TLDBotto(ExtendedClient):
                 log.error(f"Failed to process times: {time_matches}", exc_info=True)
 
     async def process_time_matches(
-        self, author: discord.User, matches: list[re.Match]
+        self, message: Message, matches: list[re.Match]
     ) -> str:
-
+        author = message.author
         tlder = await self.timezones.get_tlder(str(author.id))
         timezone = await self.timezones.get_timezone(tlder.timezone_id)
 
@@ -514,10 +513,17 @@ class TLDBotto(ExtendedClient):
 
             parsed_local_times.append((match.group(0), parsed_time))
 
+        tlder_name = tlder.name
+        if message.guild:
+            fetched_member = await get_or_fetch_member(
+                message.guild, int(tlder.discord_id)
+            )
+            fetched_member_name = fetched_member.display_name
+            tlder_name = re.sub("\(\w+(?:\/\w+)*\)$", "", fetched_member_name).strip()
         conversion_string_intro = [
             "{time} in {tlder_name}'s timezone is <t:{unix_time}:t> (<t:{unix_time}:R>) for you.".format(
                 time=time[0],
-                tlder_name=discord.utils.escape_markdown(tlder.name),
+                tlder_name=discord.utils.escape_markdown(tlder_name),
                 unix_time=floor(time[1].timestamp()),
             )
             for time in parsed_local_times
