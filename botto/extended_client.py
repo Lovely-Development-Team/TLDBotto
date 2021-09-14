@@ -20,12 +20,5 @@ class ExtendedClient(discord.Client):
         else:
             return await self.fetch_user(user_id)
 
-    @staticmethod
-    async def get_or_fetch_member(guild: Guild, member_id: int) -> Union[discord.Member]:
-        if user := guild.get_member(member_id):
-            return user
-        else:
-            return await guild.get_member(member_id)
-
     def is_feature_disabled(self, feature_name: Literal["remaining_voters"]):
         return feature_name in self.config["disabled_features"]
