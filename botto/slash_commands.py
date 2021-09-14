@@ -10,6 +10,7 @@ from discord_slash import SlashCommand, SlashContext, SlashCommandOptionType
 from discord_slash.utils.manage_commands import create_option
 
 from botto import responses
+from botto.message_checks import get_or_fetch_member
 from botto.models import AirTableError, Timezone
 from botto.reminder_manager import (
     ReminderManager,
@@ -336,7 +337,14 @@ def setup_slash(
                 return
         else:
             log.info("Adding new TLDer with timezone")
-            await timezones.add_tlder(ctx.author.name, str(ctx.author.id), db_timezone.id)
+            member = (
+                await get_or_fetch_member(ctx.guild, ctx.author.id)
+                if ctx.guild
+                else ctx.author
+            )
+            await timezones.add_tlder(
+                member.display_name, str(ctx.author.id), db_timezone.id
+            )
         await ctx.send(
             "Your timezone has been set to: {timezone_name} (UTC{offset})".format(
                 timezone_name=db_timezone.name,

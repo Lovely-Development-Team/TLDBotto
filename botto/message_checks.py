@@ -1,4 +1,7 @@
-from discord import Message, ClientUser, DMChannel
+from typing import Union
+
+import discord
+from discord import Message, ClientUser, DMChannel, Guild
 
 
 def is_botto(message: Message, botto_user: ClientUser):
@@ -27,3 +30,10 @@ def is_dm(message: Message) -> bool:
     :return: True if it's a DM, false otherwise.
     """
     return isinstance(message.channel, DMChannel)
+
+
+async def get_or_fetch_member(guild: Guild, member_id: int) -> Union[discord.Member]:
+    if user := guild.get_member(member_id):
+        return user
+    else:
+        return await guild.get_member(member_id)

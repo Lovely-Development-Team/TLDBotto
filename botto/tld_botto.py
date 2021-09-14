@@ -48,7 +48,7 @@ if TYPE_CHECKING:
 from .storage.meal_storage import MealStorage
 from .storage import MealStorage, TimezoneStorage, EnablementStorage
 from .regexes import SuggestionRegexes, compile_regexes
-from .message_checks import is_dm
+from .message_checks import is_dm, get_or_fetch_member
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
@@ -884,7 +884,7 @@ You can DM me the following commands:
         pending_member_ids = required_member_ids.difference(voted_member_ids)
         log.debug(f"Pending member IDs: {pending_member_ids}")
         pending_members = [
-            await self.get_or_fetch_member(message.guild, member_id)
+            await get_or_fetch_member(message.guild, member_id)
             for member_id in pending_member_ids
         ]
         has_ping_command = kwargs.get("ping") is not None
