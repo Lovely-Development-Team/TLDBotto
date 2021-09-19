@@ -208,6 +208,9 @@ class TLDBotto(ExtendedClient):
         except AttributeError:
             return False
 
+    def is_any_channel_voting_guild(self, guild: Guild) -> bool:
+        return str(guild.id) in self.config["voting"].any_channel_voting_guilds
+
     async def on_raw_reaction_remove(self, payload):
 
         if payload.emoji.name not in VOTE_EMOJI:
@@ -220,7 +223,7 @@ class TLDBotto(ExtendedClient):
         log.info(f"Reactions: {message.reactions}")
 
         if self.is_voting_channel(channel) or (
-            str(message.guild.id) in self.config["voting"].any_channel_voting_guilds
+            self.is_any_channel_voting_guild(message.guild)
             and is_voting_message(message)
         ):
             reacted_users = await extract_voted_users(message, {str(self.user.id)})
@@ -262,7 +265,7 @@ class TLDBotto(ExtendedClient):
                 await remove_user_reactions(message, self.user)
 
         if is_delete and not (
-            str(message.guild.id) in self.config["voting"].any_channel_voting_guilds
+            self.is_any_channel_voting_guild(message.guild)
             and is_voting_message(message)
         ):
             log.info(f"'{payload.emoji.name}' is a delete reaction")
@@ -303,7 +306,7 @@ class TLDBotto(ExtendedClient):
             return
 
         if self.is_voting_channel(channel) or (
-            str(message.guild.id) in self.config["voting"].any_channel_voting_guilds
+            self.is_any_channel_voting_guild(message.guild)
             and is_voting_message(message)
         ):
             reacted_users = await extract_voted_users(message, {str(self.user.id)})
@@ -331,7 +334,7 @@ class TLDBotto(ExtendedClient):
         channel_name = message.channel.name
 
         if self.is_voting_channel(message.channel) or (
-            str(message.guild.id) in self.config["voting"].any_channel_voting_guilds
+            self.is_any_channel_voting_guild(message.guild)
             and is_voting_message(message)
         ):
             for emoji in VOTE_EMOJI:
@@ -860,7 +863,17 @@ You can DM me the following commands:
         referenced_message = await resolve_message_reference(
             self, message, force_fresh=True
         )
-        if not is_voting_message(referenced_message):
+        has_voting_reaction = any(
+            reaction
+            for reaction in message.reactions
+            if reaction.me and reaction.emoji.name in VOTE_EMOJI
+        )
+        is_vote_in_voting_channel = self.is_voting_channel(message.channel) and has_voting_reaction
+        is_vote = is_vote_in_voting_channel or (
+            self.is_any_channel_voting_guild(referenced_message.guild)
+            and is_voting_message(referenced_message)
+        )
+        if not has_voting_reaction and is_vote:
             await message.add_reaction("🗳")
             await message.add_reaction("❓")
             return
