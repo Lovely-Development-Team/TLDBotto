@@ -38,7 +38,7 @@ PingDisallowedRole = namedtuple("PingDisallowedRole", ["role_id", "name"])
 @dataclass
 class VotingConfig:
     any_channel_voting_guilds: list[str]
-    members_vote_not_required: set[str]
+    members_vote_not_required: dict[str, set[str]]
     ping_disallowed_roles: set[PingDisallowedRole]
 
 
@@ -52,8 +52,11 @@ def parse(config):
         },
         "channels": {"include": set(), "exclude": set(), "voting": {"voting"}},
         "voting": VotingConfig(
-            any_channel_voting_guilds=["880491989995499600", "833842753799848016"],
-            members_vote_not_required=set(),
+            any_channel_voting_guilds=["833842753799848016", "880491989995499600"],
+            members_vote_not_required={
+                "833842753799848016": set(),
+                "880491989995499600": set()
+            },
             ping_disallowed_roles={
                 PingDisallowedRole(role_id=None, name="voting_ping_disallowed")
             },
@@ -261,9 +264,10 @@ def parse(config):
     if members_vote_not_required_env := decode_base64_env(
         "TLDBOTTO_MEMBERS_VOTE_NOT_REQUIRED"
     ):
-        defaults["voting"].members_vote_not_required = set(
-            members_vote_not_required_env
-        )
+        for guild, members in members_vote_not_required_env.items():
+            defaults["voting"].members_vote_not_required[str(guild)] = set(
+                members
+            )
 
     if ping_disallowed_roles := decode_base64_env(
         "TLDBOTTO_VOTING_PING_DISALLOWED_ROLES"
