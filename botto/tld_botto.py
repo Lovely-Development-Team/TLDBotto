@@ -917,6 +917,10 @@ You can DM me the following commands:
             pending_member_text = "\n".join(
                 [f"• {member.display_name}" for member in pending_members]
             )
-        await message.reply(
-            f"{len(pending_members)} voters remaining: \n" + pending_member_text
-        )
+        pending_member_count = len(pending_members)
+        if pending_member_count > 0:
+            await message.reply(
+                f"{pending_member_count} voters remaining: \n" + pending_member_text
+            )
+        else:
+            await message.reply("No voters remaining!")
