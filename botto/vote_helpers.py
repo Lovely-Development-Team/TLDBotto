@@ -45,7 +45,7 @@ def guild_voting_member(message: Message, excluded_user_ids: set[str]) -> set[Me
     return set(
         [
             member
-            for member in message.guild.members
+            for member in message.channel.members
             if not member.bot and str(member.id) not in excluded_user_ids
         ]
     )
