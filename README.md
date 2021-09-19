@@ -71,34 +71,37 @@ To delete all your data from the leaderboard, which includes your user informati
 
 MottoBotto requires a `config.json` configuration file, with the following sections.
 
-| Section                     | Key             | Default Value                    | Required | Description                                                  |
-| --------------------------- | --------------- | -------------------------------- | -------- | ------------------------------------------------------------ |
-| `authentication`            | `discord`       | Empty string                     | Yes      | MottoBotto's DIscord bot token.                              |
-|                             | `airtable_key`  | Empty string                     | Yes      | The API key for access to Airtable's API.                    |
-|                             | `airtable_base` | Empty string                     | Yes      | The ID of the Airtable base to store the mottos.             |
-| `channels`                  | `exclude`       | Empty list                       | No       | A list of Discord channel names to ignore when reacting to triggers. |
-|                             | `include`       | Empty list                       | No       | A list of Discord channels to specifically respond to triggers within. If specified, all other channels are ignored. |
-| `reactions`                 | `success`       | See below.                       | No       | The emoji to react to a successful nomination with.          |
-|                             | `repeat`        | See below.                       | No       | The emoji to react to a nomination that has already been nominated with. |
-|                             | `skynet`        | See below.                       | No       | The emoji to react to a nomination of a MottoBotto message with. |
-|                             | `fishing`       | See below.                       | No       | The emoji to react to a nomination of the user's own message with. |
-|                             | `invalid`       | See below.                       | No       | The emoji to react to invalid nominations with.              |
-|                             | `invalid_emoji` | See below.                       | No       | The emoji to react to invalid emoji updates with.            |
-|                             | `valid_emoji`   | See below.                       | No       | The emoji to react to successful emoji updates with.         |
+| Section                     | Key                     | Default Value                    | Required | Description                                                  |
+| --------------------------- | ----------------------- | -------------------------------- | -------- | ------------------------------------------------------------ |
+| `authentication`            | `discord`               | Empty string                     | Yes      | MottoBotto's DIscord bot token.                              |
+|                             | `airtable_key`          | Empty string                     | Yes      | The API key for access to Airtable's API.                    |
+|                             | `airtable_base`         | Empty string                     | Yes      | The ID of the Airtable base to store the mottos.             |
+| `channels`                  | `exclude`               | Empty list                       | No       | A list of Discord channel names to ignore when reacting to triggers. |
+|                             | `include`               | Empty list                       | No       | A list of Discord channels to specifically respond to triggers within. If specified, all other channels are ignored. |
+| `voting`                    | `any_channel_guilds`    |`["833842753799848016", "880491989995499600"]` | No       | A list of Discord server IDs where voting is allowed in any channel. |
+|                             | `members_not_required`  | An empty dictionary              | No       | A dict where the keys are Discord guild IDs and the values are a list of IDs that are not required to vote. |
+|                             | `ping_disallowed_roles` | {"name:"voting_ping_disallowed"} | No       | Roles that are disallowed from using the `!remaining !ping` command. |
+| `reactions`                 | `success`               | See below.                       | No       | The emoji to react to a successful nomination with.          |
+|                             | `repeat`                | See below.                       | No       | The emoji to react to a nomination that has already been nominated with. |
+|                             | `skynet`                | See below.                       | No       | The emoji to react to a nomination of a MottoBotto message with. |
+|                             | `fishing`               | See below.                       | No       | The emoji to react to a nomination of the user's own message with. |
+|                             | `invalid`               | See below.                       | No       | The emoji to react to invalid nominations with.              |
+|                             | `invalid_emoji`         | See below.                       | No       | The emoji to react to invalid emoji updates with.            |
+|                             | `valid_emoji`           | See below.                       | No       | The emoji to react to successful emoji updates with.         |
 | | `pending` | See below. | No | The emoji to react to nominations that have not yet been approved by the nominee. |
 | | `deleted` | See below. | No | The emoji to react nomination approvals where the nominated message has since been deleted. |
 | | `reject` | See below. | No | The emoji to react to any rejected nomination with. |
 | | `delete_confirmed` | See below. | No | The emoji to react with once the user's data has all been deleted after a `!delete` command. |
-| `should_reply`              | N/A             | `true`                           | No       | Whether to send message replies in response to nominations or not. If `false`, the only notifications users will receive are emoji reactions on their nomination message. |
-| `rules`                     | `matching`      | `^.{5,240}$`<br />`^(\S+\s+)\S+` | No       | A list of regular expressions to match against the nominated motto text that must all match for the motto to be accepted. The message is first stripped of leading and trailing whitespace before matching. * |
-|                             | `excluding`     | `<@.*>`<br />`^[\d\W\s]*$`       | No       | A list of regular expressions to match against the nominated motto text, where any successful match will result in an invalid motto response. The message is first stripped of leading and trailing whitespace before matching. * |
-| `triggers`                  | `new_motto`     | `!motto$`                        | No       | A list of regular expressions to match against every incoming message in the relevant channels (see `channels` above) to recognise a new nomination. They are all prepended with `^` before matching, to ensure they match the start of the message. The message is first stripped of leading and trailing whitespace before matching. * |
-| `at_triggers`               | N/A             |  See below.                      | No       | Similar to `triggers` but requiring that the bot is mentioned at the start of the message. |
-| `pattern_reactions`         | N/A             |  See below.                      | No       | Configurable reactions based on regex matches. |
-| `reminder_channel`          | N/A             |  See below.                      | No       | Channel ID to which meal reminders should be sent. |
-| `leaderboard_link`          | N/A             | `None`                           | No       | A link to the motto leaderboard. If not configured, the `!link` DM will not be recognised. |
-| `trigger_on_mention`            | N/A             | `true`                           | No       | Whether a message that starts with an `@` mention of MottoBotto triggers a nomination. If this is `false`, then at least one `new_motto` trigger must be configured. |
-| `delete_unapproved_after_hours` | N/A             | `24`                             | No       | The number of hours before an unapproved motto suggestion is removed from Airtable. |
+| `should_reply`              | N/A                     | `true`                           | No       | Whether to send message replies in response to nominations or not. If `false`, the only notifications users will receive are emoji reactions on their nomination message. |
+| `rules`                     | `matching`              | `^.{5,240}$`<br />`^(\S+\s+)\S+` | No       | A list of regular expressions to match against the nominated motto text that must all match for the motto to be accepted. The message is first stripped of leading and trailing whitespace before matching. * |
+|                             | `excluding`             | `<@.*>`<br />`^[\d\W\s]*$`       | No       | A list of regular expressions to match against the nominated motto text, where any successful match will result in an invalid motto response. The message is first stripped of leading and trailing whitespace before matching. * |
+| `triggers`                  | `new_motto`             | `!motto$`                        | No       | A list of regular expressions to match against every incoming message in the relevant channels (see `channels` above) to recognise a new nomination. They are all prepended with `^` before matching, to ensure they match the start of the message. The message is first stripped of leading and trailing whitespace before matching. * |
+| `at_triggers`               | N/A                     |  See below.                      | No       | Similar to `triggers` but requiring that the bot is mentioned at the start of the message. |
+| `pattern_reactions`         | N/A                     |  See below.                      | No       | Configurable reactions based on regex matches. |
+| `reminder_channel`          | N/A                     |  See below.                      | No       | Channel ID to which meal reminders should be sent. |
+| `leaderboard_link`          | N/A                     | `None`                           | No       | A link to the motto leaderboard. If not configured, the `!link` DM will not be recognised. |
+| `trigger_on_mention`            | N/A                 | `true`                           | No       | Whether a message that starts with an `@` mention of MottoBotto triggers a nomination. If this is `false`, then at least one `new_motto` trigger must be configured. |
+| `delete_unapproved_after_hours` | N/A                 | `24`                             | No       | The number of hours before an unapproved motto suggestion is removed from Airtable. |
 | `confirm_delete_reaction` | N/A | 🧨 | No | The emoji the user is required to respond with to confirm deletion of all their data. |
 | `support_channel` | N/A | `None` | No | The name of a channel in which users of the bot can ask for help. If defined, this is reported in the output of `!help`. |
 | `id` | N/A | `None` | No | A unique ID for this bot, used for development when multiple bots may be running. This is reported by `!version`. |
@@ -151,7 +154,7 @@ The following is a full example `config.json`.
 }
 ```
 
-## MottoBotto Defaults
+## TLDBotto Defaults
 ### Trigger Phrases
 
 The trigger phrases detailed below are the defaults.  Any others for each trigger must be added as laid out [above](#configuring-mottobotto).
