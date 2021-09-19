@@ -886,7 +886,7 @@ You can DM me the following commands:
             [
                 u.id
                 for u in guild_voting_member(
-                    message, self.config["voting"]["members_vote_not_required"]
+                    message, self.config["voting"].members_not_required.get(str(message.guild.id), set())
                 )
             ]
         )
@@ -896,7 +896,7 @@ You can DM me the following commands:
                 u.id
                 for u in await extract_voted_users(
                     referenced_message,
-                    self.config["voting"]["members_vote_not_required"],
+                    self.config["voting"].members_not_required.get(str(message.guild.id), set()),
                 )
             ]
         )
