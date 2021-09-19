@@ -880,6 +880,7 @@ You can DM me the following commands:
 
         if message.author.id != referenced_message.author.id:
             await self.reactions.invalid(message)
+            return
 
         required_member_ids = set(
             [
