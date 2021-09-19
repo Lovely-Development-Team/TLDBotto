@@ -229,7 +229,7 @@ class TLDBotto(ExtendedClient):
             reacted_users = await extract_voted_users(message, {str(self.user.id)})
             if len(reacted_users) != len(
                 guild_voting_member(
-                    message, self.config["voting"].members_vote_not_required
+                    message, self.config["voting"].members_vote_not_required.get(str(message.guild.id), set())
                 )
             ):
                 await message.remove_reaction("🏁", self.user)
@@ -312,7 +312,7 @@ class TLDBotto(ExtendedClient):
             reacted_users = await extract_voted_users(message, {str(self.user.id)})
             expected_reacted_count = len(
                 guild_voting_member(
-                    message, self.config["voting"].members_vote_not_required
+                    message, self.config["voting"].members_vote_not_required.get(str(message.guild.id), set())
                 )
             )
             if len(reacted_users) == expected_reacted_count:
