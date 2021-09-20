@@ -209,7 +209,10 @@ class TLDBotto(ExtendedClient):
             return False
 
     def is_any_channel_voting_guild(self, guild: Guild) -> bool:
-        return str(guild.id) in self.config["voting"].any_channel_guilds
+        try:
+            return str(guild.id) in self.config["voting"].any_channel_guilds
+        except AttributeError:
+            return False
 
     async def on_raw_reaction_remove(self, payload):
 
