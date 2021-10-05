@@ -5,6 +5,7 @@ import logging
 import os
 import random
 import re
+from decimal import Decimal
 from math import floor
 from datetime import datetime, timedelta
 from typing import Optional, Callable, TYPE_CHECKING
@@ -868,7 +869,7 @@ You can DM me the following commands:
 
         name = referenced_message.content
         text: str = kwargs.get("text")
-        amount: Optional[int] = None
+        amount: Optional[Decimal] = None
         error_reaction_func = None
         if text:
             try:

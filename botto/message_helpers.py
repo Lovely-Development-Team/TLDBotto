@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from decimal import Decimal
 from typing import Union, Optional, TYPE_CHECKING
 
 import discord
@@ -64,7 +65,7 @@ async def resolve_message_reference(
     return referenced_message
 
 
-def convert_amount(text: str) -> int:
+def convert_amount(text: str) -> Decimal:
     """
     Converts a string containing an amount into an int.
 
@@ -83,7 +84,7 @@ def convert_amount(text: str) -> int:
         raise BadCurrencyError(text)
     number_text = text.strip().replace("£", "")
     try:
-        amount = int(number_text)
+        amount = Decimal(number_text)
         return amount
     except ValueError:
         raise BadAmountError(text)
