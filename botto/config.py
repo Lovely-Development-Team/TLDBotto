@@ -40,6 +40,7 @@ class VotingConfig:
     any_channel_guilds: list[str]
     members_not_required: dict[str, set[str]]
     ping_disallowed_roles: set[PingDisallowedRole]
+    exclusion_emojis: set[str]
 
 
 def parse(config):
@@ -57,6 +58,7 @@ def parse(config):
             ping_disallowed_roles={
                 PingDisallowedRole(role_id=None, name="voting_ping_disallowed")
             },
+            exclusion_emojis={"🙅‍"}
         ),
         "reactions": {
             "success": "📥",

@@ -73,14 +73,14 @@ DELETE_EMOJI = ("🥕", "❌")
 
 class TLDBotto(ExtendedClient):
     def __init__(
-            self,
-            config: dict,
-            reactions: Reactions,
-            scheduler: AsyncIOScheduler,
-            storage: MealStorage,
-            timezones: TimezoneStorage,
-            reminders: ReminderManager,
-            enablement: EnablementStorage,
+        self,
+        config: dict,
+        reactions: Reactions,
+        scheduler: AsyncIOScheduler,
+        storage: MealStorage,
+        timezones: TimezoneStorage,
+        reminders: ReminderManager,
+        enablement: EnablementStorage,
     ):
         self.config = config
         self.reactions = reactions
@@ -197,7 +197,7 @@ class TLDBotto(ExtendedClient):
             yield await self.get_or_fetch_channel(guild["channel"])
 
     async def add_reaction(
-            self, message: Message, reaction_type: str, default: str = None
+        self, message: Message, reaction_type: str, default: str = None
     ):
         if reaction := self.config["reactions"].get(reaction_type, default):
             await message.add_reaction(reaction)
@@ -226,14 +226,17 @@ class TLDBotto(ExtendedClient):
         log.info(f"Reactions: {message.reactions}")
 
         if self.is_voting_channel(channel) or (
-                self.is_any_channel_voting_guild(message.guild)
-                and is_voting_message(message)
+            self.is_any_channel_voting_guild(message.guild)
+            and is_voting_message(message)
         ):
             reacted_users = await extract_voted_users(message, {str(self.user.id)})
             if len(reacted_users) != len(
-                    guild_voting_member(
-                        message, self.config["voting"].members_not_required.get(str(message.guild.id), set())
-                    )
+                guild_voting_member(
+                    message,
+                    self.config["voting"].members_not_required.get(
+                        str(message.guild.id), set()
+                    ),
+                )
             ):
                 await message.remove_reaction("🏁", self.user)
                 if message.pinned:
@@ -245,7 +248,11 @@ class TLDBotto(ExtendedClient):
             return
         is_vote = payload.emoji.name in VOTE_EMOJI
         is_delete = payload.emoji.name in DELETE_EMOJI
-        if not is_vote and not is_delete:
+        is_vote_exclusion = any(
+            payload.emoji.name.startswith(emoji)
+            for emoji in self.config["voting"].exclusion_emojis
+        )
+        if not is_vote and not is_delete and not is_vote_exclusion:
             return
 
         log.info(f"Reaction received: {payload}")
@@ -270,8 +277,8 @@ class TLDBotto(ExtendedClient):
                 await remove_user_reactions(message, self.user)
 
         if is_delete and not (
-                self.is_any_channel_voting_guild(message.guild)
-                and is_voting_message(message)
+            self.is_any_channel_voting_guild(message.guild)
+            and is_voting_message(message)
         ):
             log.info(f"'{payload.emoji.name}' is a delete reaction")
             emoji: discord.PartialEmoji = payload.emoji
@@ -280,7 +287,7 @@ class TLDBotto(ExtendedClient):
             # Re-fetch the message (to make sure we have the latest reactions) and check emoji is still there
             message: discord.Message = await channel.fetch_message(payload.message_id)
             if not any(
-                    (reaction.emoji == emoji.name for reaction in message.reactions)
+                (reaction.emoji == emoji.name for reaction in message.reactions)
             ):
                 log.warning("Reaction no longer present. Not removing our message.")
                 return
@@ -306,18 +313,33 @@ class TLDBotto(ExtendedClient):
                 await message.remove_reaction(emoji, user)
             return
 
-        # At this point, we only need to handle voting reactions
-        if not is_vote:
+        # At this point, we only need to handle voting or voting exclusion reactions
+        if not is_vote and not is_vote_exclusion:
             return
 
         if self.is_voting_channel(channel) or (
-                self.is_any_channel_voting_guild(message.guild)
-                and is_voting_message(message)
+            self.is_any_channel_voting_guild(message.guild)
+            and is_voting_message(message)
         ):
+            if is_vote_exclusion:
+                reaction_removals = [
+                    message.remove_reaction(reaction.emoji, self.user)
+                    for reaction in message.reactions
+                    if reaction.emoji in VOTE_EMOJI and reaction.me
+                ]
+                if len(reaction_removals) > 0:
+                    await asyncio.wait(reaction_removals)
+                    await message.remove_reaction(payload.emoji.name, payload.member)
+                    if message.pinned:
+                        await message.unpin(reason="Message flagged as not a vote")
+                return
             reacted_users = await extract_voted_users(message, {str(self.user.id)})
             expected_reacted_count = len(
                 guild_voting_member(
-                    message, self.config["voting"].members_not_required.get(str(message.guild.id), set())
+                    message,
+                    self.config["voting"].members_not_required.get(
+                        str(message.guild.id), set()
+                    ),
                 )
             )
             if len(reacted_users) == expected_reacted_count:
@@ -341,16 +363,16 @@ class TLDBotto(ExtendedClient):
         channel_name = message.channel.name
 
         if self.is_voting_channel(message.channel) or (
-                self.is_any_channel_voting_guild(message.guild)
-                and is_voting_message(message)
+            self.is_any_channel_voting_guild(message.guild)
+            and is_voting_message(message)
         ):
             for emoji in VOTE_EMOJI:
                 if emoji in message.content:
                     await message.add_reaction(emoji)
 
         if (
-                self.config["channels"]["include"]
-                and channel_name not in self.config["channels"]["include"]
+            self.config["channels"]["include"]
+            and channel_name not in self.config["channels"]["include"]
         ):
             return
         else:
@@ -414,7 +436,7 @@ class TLDBotto(ExtendedClient):
 
     @staticmethod
     async def handle_trigger(
-            message: Message, trigger_details: tuple[Callable, re.Match]
+        message: Message, trigger_details: tuple[Callable, re.Match]
     ):
         if trigger_func := trigger_details[0]:
             if groups := trigger_details[1].groupdict():
@@ -428,7 +450,7 @@ class TLDBotto(ExtendedClient):
         return [
             (
                 lambda content: self.regexes.apologising.search(content)
-                                and not self.regexes.sorry.search(content),
+                and not self.regexes.sorry.search(content),
                 self.reactions.rule_1,
             ),
             (lambda content: self.regexes.sorry.search(content), self.reactions.love),
@@ -479,16 +501,22 @@ class TLDBotto(ExtendedClient):
         if num_matches > 0:
             log.info(f"Message contained {num_matches} times")
             try:
-                response_strings = await self.process_time_matches(message, time_matches)
+                response_strings = await self.process_time_matches(
+                    message, time_matches
+                )
                 response_texts = [""]
                 for response_string in response_strings:
                     message_idx = len(response_texts) - 1
                     current_message = response_texts[message_idx]
                     if len(current_message) + len(response_string) > 2000:
                         response_texts.append(response_string)
-                        await asyncio.sleep(0)  # Yield so long messages don't block other processing
+                        await asyncio.sleep(
+                            0
+                        )  # Yield so long messages don't block other processing
                     else:
-                        response_texts[message_idx] = current_message + "\n" + response_string
+                        response_texts[message_idx] = (
+                            current_message + "\n" + response_string
+                        )
                 for text in response_texts:
                     log.info(f"Responding with: {text}")
                     await message.reply(
@@ -499,7 +527,7 @@ class TLDBotto(ExtendedClient):
                 log.error(f"Failed to process times: {time_matches}", exc_info=True)
 
     async def process_time_matches(
-            self, message: Message, matches: list[re.Match]
+        self, message: Message, matches: list[re.Match]
     ) -> list[str]:
         author = message.author
         tlder = await self.timezones.get_tlder(str(author.id))
@@ -527,7 +555,7 @@ class TLDBotto(ExtendedClient):
                 continue
 
             if now - parsed_time > timedelta(
-                    hours=self.config["time_is_next_day_threshold_hours"]
+                hours=self.config["time_is_next_day_threshold_hours"]
             ):
                 parsed_time = parsed_time + timedelta(days=1)
 
@@ -624,8 +652,8 @@ You can DM me the following commands:
             try:
                 git_version = (
                     subprocess.check_output(["git", "describe", "--tags"])
-                        .decode("utf-8")
-                        .strip()
+                    .decode("utf-8")
+                    .strip()
                 )
             except subprocess.CalledProcessError as error:
                 log.warning(
@@ -653,7 +681,7 @@ You can DM me the following commands:
         return await self.calculate_meal_reminders(localised_times, configured_meals)
 
     async def calculate_meal_reminders(
-            self, timezones: list[datetime], configured_meals: list[Meal]
+        self, timezones: list[datetime], configured_meals: list[Meal]
     ):
         intro_fetch = self.storage.get_intros()
         meals = {}
@@ -885,10 +913,12 @@ You can DM me the following commands:
             for reaction in message.reactions
             if reaction.me and reaction.emoji.name in VOTE_EMOJI
         )
-        is_vote_in_voting_channel = self.is_voting_channel(message.channel) and has_voting_reaction
+        is_vote_in_voting_channel = (
+            self.is_voting_channel(message.channel) and has_voting_reaction
+        )
         is_vote = is_vote_in_voting_channel or (
-                self.is_any_channel_voting_guild(referenced_message.guild)
-                and is_voting_message(referenced_message)
+            self.is_any_channel_voting_guild(referenced_message.guild)
+            and is_voting_message(referenced_message)
         )
         if not has_voting_reaction and is_vote:
             await message.add_reaction("🗳")
@@ -903,8 +933,11 @@ You can DM me the following commands:
             [
                 u.id
                 for u in guild_voting_member(
-                message, self.config["voting"].members_not_required.get(str(message.guild.id), set())
-            )
+                    message,
+                    self.config["voting"].members_not_required.get(
+                        str(message.guild.id), set()
+                    ),
+                )
             ]
         )
         log.debug(f"Required member IDs: {required_member_ids}")
@@ -912,9 +945,11 @@ You can DM me the following commands:
             [
                 u.id
                 for u in await extract_voted_users(
-                referenced_message,
-                self.config["voting"].members_not_required.get(str(message.guild.id), set()),
-            )
+                    referenced_message,
+                    self.config["voting"].members_not_required.get(
+                        str(message.guild.id), set()
+                    ),
+                )
             ]
         )
         log.debug(f"Voted member IDs: {voted_member_ids}")
@@ -926,7 +961,7 @@ You can DM me the following commands:
         ]
         has_ping_command = kwargs.get("ping") is not None
         if has_ping_command and can_ping_vote(
-                message.author, self.config["voting"].ping_disallowed_roles
+            message.author, self.config["voting"].ping_disallowed_roles
         ):
             pending_member_text = "\n".join(
                 [f"• {member.mention}" for member in pending_members]
