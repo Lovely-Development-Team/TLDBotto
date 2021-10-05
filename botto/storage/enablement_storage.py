@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 from typing import Optional
 
 from botto.models import Enablement
@@ -12,7 +13,7 @@ class EnablementStorage(Storage):
             base=airtable_base
         )
 
-    async def add(self, name: str, enabled: str, enabled_by: str, message_link: str, amount: Optional[int]):
+    async def add(self, name: str, enabled: str, enabled_by: str, message_link: str, amount: Optional[Decimal]):
         enablement_data = {
             "Name": name,
             "Enabled": [enabled],
@@ -21,6 +22,6 @@ class EnablementStorage(Storage):
             "Message Link": message_link,
         }
         if amount := amount:
-            enablement_data["Amount"] = amount
+            enablement_data["Amount"] = float(amount)
         response = await self._insert(self.enablement_url, enablement_data)
         return Enablement.from_airtable(response)
