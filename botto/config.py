@@ -190,6 +190,10 @@ def parse(config):
                 "trigger": "^\s*f[isr]{2,3}t\s*$",
                 "reactions": ["🤦"],
             },
+            "good bot": {
+                "trigger": "^\s*good\s*bot\s*$",
+                "reactions": ["😊"],
+            },
         },
         "food": food.default_config,
         "special_reactions": {},
