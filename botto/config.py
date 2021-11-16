@@ -210,10 +210,7 @@ def parse(config):
             "enabled": ["(?:#|!)enabled\s*(?P<text>.*)?"],
             "drama_llama": ["Oh no", "drama", "llama", "<:ohno\S*:\d+"],
             "remaining_voters": [
-                "!remaining\s*(?P<ping>!ping)?",
-                "drama",
-                "llama",
-                "<:ohno\S*:\d+",
+                "!remaining\s*(?P<ping>!ping)?"
             ],
         },
         "drama_llama_id": 760972696284299294,
