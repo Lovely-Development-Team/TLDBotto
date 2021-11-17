@@ -165,6 +165,7 @@ def parse(config):
             "please": {
                 "trigger": "^pl(?:e+)ase",
                 "reactions": ["🥺"],
+                "exclude_guilds": ["833842753799848016"]
             },
             "goodnight": {
                 "trigger": "[Gg]ood\s?night\s+(?:{bot_id}|tildy)",
