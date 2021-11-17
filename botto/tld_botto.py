@@ -476,7 +476,7 @@ class TLDBotto(ExtendedClient):
         elif self.regexes.food.not_food_regex.search(message.content):
             await self.reactions.unrecognised_food(message)
             has_matched = True
-        if pattern_name := self.regexes.patterns.matches(message.content):
+        if pattern_name := self.regexes.patterns.matches(message):
             log.info(f"{pattern_name.capitalize()} from {message.author}")
             await self.reactions.pattern(pattern_name, message)
             has_matched = True

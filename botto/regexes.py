@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from re import Pattern
 from typing import Optional
 
+import discord
+
 from botto.food import FoodLookups
 
 
@@ -11,9 +13,9 @@ class PatternReactions:
         self.reaction_map = pattern_reactions
         super().__init__()
 
-    def matches(self, text: str) -> Optional[str]:
+    def matches(self, message: discord.Message) -> Optional[str]:
         for key, value in self.reaction_map.items():
-            if value["trigger"].search(text):
+            if str(message.guild.id not in value.get("exclude_guilds", [])) and value["trigger"].search(message.content):
                 return key
 
 
