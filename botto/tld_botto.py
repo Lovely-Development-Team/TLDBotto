@@ -240,8 +240,8 @@ class TLDBotto(ExtendedClient):
                 )
             ):
                 await message.remove_reaction("🏁", self.user)
-                if message.pinned:
-                    await message.unpin(reason="Completed vote")
+                if not message.pinned:
+                    await message.pin(reason="Reaction removed; vote now has voters remaining")
 
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
         if payload.user_id == self.user.id:
@@ -345,6 +345,7 @@ class TLDBotto(ExtendedClient):
             )
             if len(reacted_users) == expected_reacted_count:
                 await message.add_reaction("🏁")
+                await message.unpin(reason="Completed vote")
             else:
                 if not message.pinned:
                     await message.pin(reason="Vote with voters remaining")
@@ -370,6 +371,7 @@ class TLDBotto(ExtendedClient):
             for emoji in VOTE_EMOJI:
                 if emoji in message.content:
                     await message.add_reaction(emoji)
+            await message.pin(reason="New Vote")
 
         if (
             self.config["channels"]["include"]
