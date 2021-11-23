@@ -146,7 +146,7 @@ class Reactions:
                 reaction_type = ReactionType[
                     pattern_item.get("reaction_type", "RANDOM")
                 ]
-                if name == "fisrt" and random.randint(1, 100) < 10:
+                if name == "fisrt" and random.randint(1, 100) < 15:
                     await message.add_reaction("🖕")
                 else:
                     await reaction_type.add_reaction(message, reactions)
