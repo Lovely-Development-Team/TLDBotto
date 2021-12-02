@@ -371,7 +371,8 @@ class TLDBotto(ExtendedClient):
             for emoji in VOTE_EMOJI:
                 if emoji in message.content:
                     await message.add_reaction(emoji)
-            await message.pin(reason="New Vote")
+                    if not message.pinned:
+                        await message.pin(reason="New Vote")
 
         if (
             self.config["channels"]["include"]
