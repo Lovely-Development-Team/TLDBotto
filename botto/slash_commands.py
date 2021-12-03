@@ -279,7 +279,7 @@ def setup_slash(
     async def get_user_timezone(ctx: SlashContext, person: discord.Member):
         log.debug(f"/timezones get user from {ctx.author} for {person}")
         try:
-            timezone = await _get_timezone(person.id)
+            timezone = await _get_timezone(str(person.id))
             await ctx.send(
                 "{person_name}'s currently configured timezone is: {timezone_name} (UTC{offset})".format(
                     person_name=person.display_name,
