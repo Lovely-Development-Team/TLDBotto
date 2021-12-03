@@ -243,7 +243,9 @@ class TLDBotto(ExtendedClient):
             ):
                 await message.remove_reaction("🏁", self.user)
                 if not message.pinned:
-                    await message.pin(reason="Reaction removed; vote now has voters remaining")
+                    await message.pin(
+                        reason="Reaction removed; vote now has voters remaining"
+                    )
 
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
         if payload.user_id == self.user.id:
