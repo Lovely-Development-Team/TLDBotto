@@ -146,6 +146,8 @@ jobs:
 
       - name: Start Tildy
         uses: appleboy/ssh-action@v0.1.4
+        with:
+          timeout: 60s
         env:
           HOST: ${{ secrets.DEPLOY_HOST }}
           USERNAME: ${{ secrets.DEPLOY_USERNAME }}
