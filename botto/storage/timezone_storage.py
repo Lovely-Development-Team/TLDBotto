@@ -139,9 +139,3 @@ class TimezoneStorage(Storage):
         async with self.timezones_lock:
             self.timezones_cache[timezone.id] = response_timezone
         return response_timezone
-
-
-class TlderNotFoundError(Exception):
-    def __init__(self, discord_id: str, *args: object) -> None:
-        self.discord_id = discord_id
-        super().__init__(*args)
