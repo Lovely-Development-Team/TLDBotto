@@ -81,7 +81,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-        
+
       - name: Load docker image from cache
         id: cache-docker
         uses: actions/cache@v1
@@ -144,6 +144,18 @@ jobs:
         run: echo "RELEASE_VERSION=`git describe --tags`" >> $GITHUB_ENV
         continue-on-error: true
 
+      - name: Pull new Tildy image
+        uses: appleboy/ssh-action@v0.1.4
+        with:
+          timeout: 60s
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          USERNAME: ${{ secrets.DEPLOY_USERNAME }}
+          PASSPHRASE: ${{ secrets.DEPLOY_SSHKEY_PASSPHRASE }}
+          KEY: ${{ secrets.DEPLOY_SSHKEY }}
+          SCRIPT: >
+            docker pull ghcr.io/lovely-development-team/tld-botto:latest
+
       - name: Start Tildy
         uses: appleboy/ssh-action@v0.1.4
         with:
@@ -154,7 +166,6 @@ jobs:
           PASSPHRASE: ${{ secrets.DEPLOY_SSHKEY_PASSPHRASE }}
           KEY: ${{ secrets.DEPLOY_SSHKEY }}
           SCRIPT: >
-            docker pull ghcr.io/lovely-development-team/tld-botto:latest &&
             docker stop tld_botto || true &&
             docker rm tld_botto || true &&
             docker run -d -t --restart unless-stopped
@@ -168,5 +179,16 @@ jobs:
             -e TLDBOTTO_DISABLED_FEATURES='${{ secrets.DISABLED_FEATURES }}'
             -e TLDBOTTO_ID='Capys-hosted TLDBotto'
             -e TLDBOTTO_VERSION='${{ env.RELEASE_VERSION }}'
-            --name tld_botto ghcr.io/lovely-development-team/tld-botto:latest &&
+            --name tld_botto ghcr.io/lovely-development-team/tld-botto:latest
+
+      - name: Cleanup Docker images
+        uses: appleboy/ssh-action@v0.1.4
+        with:
+          timeout: 60s
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          USERNAME: ${{ secrets.DEPLOY_USERNAME }}
+          PASSPHRASE: ${{ secrets.DEPLOY_SSHKEY_PASSPHRASE }}
+          KEY: ${{ secrets.DEPLOY_SSHKEY }}
+          SCRIPT: >
             docker system prune -f
