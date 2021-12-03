@@ -18,7 +18,7 @@ from botto.reminder_manager import (
     ReminderParsingError,
 )
 from botto.storage import TimezoneStorage
-from botto.storage.timezone_storage import TlderNotFoundError
+from botto.errors import TlderNotFoundError
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
