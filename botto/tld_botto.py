@@ -18,6 +18,8 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 import arrow
 
+from .errors import TlderNotFoundError
+
 if TYPE_CHECKING:
     from discord.abc import MessageableChannel
 
@@ -529,13 +531,18 @@ class TLDBotto(ExtendedClient):
                     )
             except ValueError:
                 log.error(f"Failed to process times: {time_matches}", exc_info=True)
+            except TlderNotFoundError:
+                await self.reactions.unknown_person_timezone(message)
 
     async def process_time_matches(
         self, message: Message, matches: list[re.Match]
     ) -> list[str]:
         author = message.author
         tlder = await self.timezones.get_tlder(str(author.id))
-        timezone = await self.timezones.get_timezone(tlder.timezone_id)
+        try:
+            timezone = await self.timezones.get_timezone(tlder.timezone_id)
+        except AttributeError:
+            raise TlderNotFoundError(str(author.id))
 
         parsed_local_times = []
         for match in matches:

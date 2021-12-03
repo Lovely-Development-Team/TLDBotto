@@ -125,6 +125,7 @@ def parse(config):
             "no_amount": ["💰", "❓"],
             "unrecognised_currency": ["💷", "❓"],
             "unknown_person": ["🧍", "❓"],
+            "unknown_person_timezone": ["🧍", "🗺️", "❓"],
             "dizzy": "😵‍💫",
             "feature_disabled": "📴",
         },

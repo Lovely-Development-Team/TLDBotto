@@ -164,10 +164,18 @@ class Reactions:
         await _ordered_reactions(message, self.config["reactions"]["no_amount"])
 
     async def unrecognised_currency(self, message: Message):
-        await _ordered_reactions(message, self.config["reactions"]["unrecognised_currency"])
+        await _ordered_reactions(
+            message, self.config["reactions"]["unrecognised_currency"]
+        )
 
     async def unknown_person(self, message: Message):
         await _ordered_reactions(message, self.config["reactions"]["unknown_person"])
+
+    async def unknown_person_timezone(self, message: Message):
+        log.info(f"Person's timezone unknown: {message.author}!")
+        await ReactionType.ORDERED.add_reaction(
+            message, self.config["reactions"]["unknown_person_timezone"]
+        )
 
     async def dizzy(self, message: Message):
         log.info(f"Dizzy to: {message.author}")
