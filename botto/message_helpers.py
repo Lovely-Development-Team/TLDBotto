@@ -14,7 +14,7 @@ log.setLevel(logging.DEBUG)
 
 
 async def remove_user_reactions(
-        message: Message, user: Union[discord.abc.User, discord.ClientUser]
+    message: Message, user: Union[discord.abc.User, discord.ClientUser]
 ):
     """
     Removes all reactions by the user from the message.
@@ -23,14 +23,19 @@ async def remove_user_reactions(
     """
     log.info(f"Removing reactions by {user} from {message}")
     my_reactions = [
-        r for r in message.reactions if any(u.id == user.id for u in await r.users().flatten())
+        r
+        for r in message.reactions
+        if any(u.id == user.id for u in await r.users().flatten())
     ]
     clearing_reactions = [message.remove_reaction(r.emoji, user) for r in my_reactions]
-    await asyncio.wait(clearing_reactions)
+    try:
+        await asyncio.wait(clearing_reactions)
+    except ValueError:
+        log.info(f"No reactions to remove by {user} on {message}")
 
 
 async def remove_own_message(
-        requester_name: str, message: Message, delay: Optional[int] = None
+    requester_name: str, message: Message, delay: Optional[int] = None
 ):
     log.info(
         "{requester_name} triggered deletion of our message (id: {message_id} in {channel_name}): {content}".format(
@@ -47,7 +52,7 @@ async def remove_own_message(
 
 
 async def resolve_message_reference(
-        bot: "TLDBotto", message: Message, force_fresh: bool = False
+    bot: "TLDBotto", message: Message, force_fresh: bool = False
 ) -> Message:
     if not message.reference:
         raise MessageMissingReferenceError(message)
@@ -80,7 +85,11 @@ def convert_amount(text: str) -> Decimal:
     if not text:
         raise BadAmountError(text)
     stripped_text = text.strip()
-    if not stripped_text[0].isdigit() and stripped_text[1:].isdigit() and not stripped_text.startswith("£"):
+    if (
+        not stripped_text[0].isdigit()
+        and stripped_text[1:].isdigit()
+        and not stripped_text.startswith("£")
+    ):
         raise BadCurrencyError(text)
     number_text = text.strip().replace("£", "")
     try:
