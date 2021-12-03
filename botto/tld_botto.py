@@ -198,7 +198,8 @@ class TLDBotto(ExtendedClient):
     async def get_meal_channels(self):
         for guild in self.config["meals"]["guilds"]:
             try:
-                yield await self.get_or_fetch_channel(guild["channel"])
+                channel = await self.get_or_fetch_channel(guild["channel"])
+                yield channel
             except discord.NotFound:
                 log.error("Meal channel {channel_id} not found".format(channel_id=guild["channel"]), exc_info=True)
 
