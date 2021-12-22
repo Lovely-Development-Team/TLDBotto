@@ -147,14 +147,14 @@ jobs:
       - name: Pull new Tildy image
         uses: appleboy/ssh-action@v0.1.4
         with:
-          timeout: 60s
+          timeout: 120s
+          debug: true
         env:
           HOST: ${{ secrets.DEPLOY_HOST }}
           USERNAME: ${{ secrets.DEPLOY_USERNAME }}
           PASSPHRASE: ${{ secrets.DEPLOY_SSHKEY_PASSPHRASE }}
           KEY: ${{ secrets.DEPLOY_SSHKEY }}
-          SCRIPT: >
-            docker pull ghcr.io/lovely-development-team/tld-botto:latest
+          SCRIPT: docker pull ghcr.io/lovely-development-team/tld-botto:latest
 
       - name: Start Tildy
         uses: appleboy/ssh-action@v0.1.4
