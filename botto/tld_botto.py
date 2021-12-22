@@ -926,7 +926,7 @@ You can DM me the following commands:
         )
         has_voting_reaction = any(
             reaction
-            for reaction in message.reactions
+            for reaction in referenced_message.reactions
             if reaction.me and reaction.emoji.name in VOTE_EMOJI
         )
         is_vote_in_voting_channel = (
