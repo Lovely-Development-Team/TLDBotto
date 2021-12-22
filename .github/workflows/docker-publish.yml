@@ -140,6 +140,10 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Log info
+        run: pwd && ls && git status && docker info && docker status
+        continue-on-error: true
+
       - name: Set env
         run: echo "RELEASE_VERSION=`git describe --tags`" >> $GITHUB_ENV
         continue-on-error: true
