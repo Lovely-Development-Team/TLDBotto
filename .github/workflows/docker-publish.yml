@@ -141,7 +141,7 @@ jobs:
           fetch-depth: 0
 
       - name: Log info
-        run: pwd && ls && git status && docker info && docker status
+        run: pwd && ls && git status && ping ghcr.io && docker images ghcr.io/lovely-development-team/
         continue-on-error: true
 
       - name: Set env
