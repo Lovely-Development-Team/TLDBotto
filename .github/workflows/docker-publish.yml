@@ -141,7 +141,16 @@ jobs:
           fetch-depth: 0
 
       - name: Log info
-        run: pwd && ls && git status && ping ghcr.io && docker images ghcr.io/lovely-development-team/
+        uses: appleboy/ssh-action@v0.1.4
+        with:
+          timeout: 120s
+          debug: true
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          USERNAME: ${{ secrets.DEPLOY_USERNAME }}
+          PASSPHRASE: ${{ secrets.DEPLOY_SSHKEY_PASSPHRASE }}
+          KEY: ${{ secrets.DEPLOY_SSHKEY }}
+          SCRIPT: pwd && ls && git status && ping ghcr.io && docker images ghcr.io/lovely-development-team/
         continue-on-error: true
 
       - name: Set env
