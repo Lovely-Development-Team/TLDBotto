@@ -139,24 +139,24 @@ def parse(config):
                 "reactions": ["🚗", "🚘", "🏎️", "🛺", "🛵", "🏍️"],
             },
             "off-topic": {
-                "trigger": "off( +|\-)topic",
+                "trigger": r"off( +|\-)topic",
                 "reactions": ["😆", "🤣", "😂", "🤪"],
             },
             "favourite_band": {
-                "trigger": "What('|’)?s +your +fav(ou?rite)? +band +{bot_id} ?\?*",
+                "trigger": r"What('|’)?s +your +fav(ou?rite)? +band +{bot_id} ?\?*",
                 "reactions": ["🇧", "🇹", "🇸"],
                 "reaction_type": "ORDERED",
             },
             "snail": {
-                "trigger": "(?:('|’)(re|m|s)|am|are|is|was) (?:(\S{1,25} ){0,3})(?:(snail|🐌)(ie(\S*)|s|-(\S*))?)",
+                "trigger": r"(?:('|’)(re|m|s)|am|are|is|was) (?:(\S{1,25} ){0,3})(?:(snail|🐌)(ie(\S*)|s|-(\S*))?)",
                 "reactions": ["🐌"],
             },
             "complaint": {
-                "trigger": "(?:(?:BOTTO|TILDY).?\s+COME\.?\s+ON\s*|COME\.?\s+ON\s+(?:BOTTO|TILDY).?\s*)",
+                "trigger": r"(?:(?:BOTTO|TILDY).?\s+COME\.?\s+ON\s*|COME\.?\s+ON\s+(?:BOTTO|TILDY).?\s*)",
                 "reactions": ["🤷"],
             },
             "hello": {
-                "trigger": "h(i|ello|eya?)\s+({bot_id}|tildy)",
+                "trigger": r"h(i|ello|eya?)\s+({bot_id}|tildy)",
                 "reactions": ["👋"],
             },
             "horse": {
@@ -169,7 +169,7 @@ def parse(config):
                 "exclude_guilds": ["833842753799848016"]
             },
             "goodnight": {
-                "trigger": "[Gg]ood\s?night\s+(?:{bot_id}|tildy)",
+                "trigger": r"[Gg]ood\s?night\s+(?:{bot_id}|tildy)",
                 "reactions": [
                     "💤",
                     "😴",
@@ -179,21 +179,21 @@ def parse(config):
             "outage": {"trigger": "outage", "reactions": ["😵"]},
             "chocolate": {"trigger": "chocolate", "reactions": ["🍫"]},
             "cow": {
-                "trigger": "^(?:c+{lb}*o+{lb}*w+{lb}*s*|m+{lb}*o{lb}*o+{lb}?)[\s\t\n\r\v]*$".format(
+                "trigger": r"^(?:c+{lb}*o+{lb}*w+{lb}*s*|m+{lb}*o{lb}*o+{lb}?)[\s\t\n\r\v]*$".format(
                     lb=line_break_matcher
                 ),
                 "reactions": ["🐮", "🐄"],
             },
             "honk": {
-                "trigger": "(?:^|\s)honk(?:$|\s)",
+                "trigger": r"(?:^|\s)honk(?:$|\s)",
                 "reactions": ["🦆", "📣", "🎺", "🎷", "📢"],
             },
             "fisrt": {
-                "trigger": "^\s*f[isr]{2,3}t\s*$",
+                "trigger": r"^\s*f[isr]{2,3}t\s*$",
                 "reactions": ["🤦"],
             },
             "good bot": {
-                "trigger": "^\s*good\s*bot\s*$",
+                "trigger": r"^\s*good\s*bot\s*$",
                 "reactions": ["😊"],
             },
         },
@@ -203,16 +203,16 @@ def parse(config):
             "meal_time": ["!meal(?:time)?s?$"],
             "timezones": ["!times?"],
             "job_schedule": ["!schedule"],
-            "yell": ["!bottoyellat(?P<person>[^.]*)(?:\.(?P<text>.*))?"],
+            "yell": [r"!bottoyellat(?P<person>[^.]*)(?:\.(?P<text>.*))?"],
             "reminder_explain": ["!remind(?:er)? (?P<timestamp>[^.]*).(?P<text>.*)"],
             "remove_reactions": [
-                "\(?Not now,?\s+(?:Tildy|{bot_id})[.!]?\)?$",
-                "\(?Wrong party,?\s+(?:Tildy|{bot_id})[.!]?\)?$",
+                r"\(?Not now,?\s+(?:Tildy|{bot_id})[.!]?\)?$",
+                r"\(?Wrong party,?\s+(?:Tildy|{bot_id})[.!]?\)?$",
             ],
-            "enabled": ["(?:#|!)enabled\s*(?P<text>.*)?"],
-            "drama_llama": ["Oh\s*no", "drama", "llama", "🦙", "<:ohno\S*:\d+"],
+            "enabled": [r"(?:#|!)enabled\s*(?P<text>.*)?"],
+            "drama_llama": [r"Oh\s*no", "drama", "llama", "🦙", r"<:ohno\S*:\d+"],
             "remaining_voters": [
-                "!remaining\s*(?P<ping>!ping)?"
+                r"!remaining\s*(?P<ping>!ping)?"
             ],
         },
         "drama_llama_id": 760972696284299294,
