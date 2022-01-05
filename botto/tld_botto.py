@@ -371,15 +371,21 @@ class TLDBotto(ExtendedClient):
 
         channel_name = message.channel.name
 
+        message_is_vote = is_voting_message(message)
         if self.is_voting_channel(message.channel) or (
-            self.is_any_channel_voting_guild(message.guild)
-            and is_voting_message(message)
+            self.is_any_channel_voting_guild(message.guild) and message_is_vote
         ):
             for emoji in VOTE_EMOJI:
                 if emoji in message.content:
                     await message.add_reaction(emoji)
                     if not message.pinned:
                         await message.pin(reason="New Vote")
+            else:
+                recognised_vote_emoji = " ".join(VOTE_EMOJI)
+                await message.reply(
+                    f"No voting emoji found. Recognised voting emoji: {recognised_vote_emoji}",
+                    mention_author=True,
+                )
 
         if (
             self.config["channels"]["include"]
