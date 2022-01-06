@@ -375,19 +375,24 @@ class TLDBotto(ExtendedClient):
         if self.is_voting_channel(message.channel) or (
             self.is_any_channel_voting_guild(message.guild) and message_is_vote
         ):
-            for emoji in VOTE_EMOJI:
-                if emoji in message.content:
-                    await message.add_reaction(emoji)
-                    if not message.pinned:
-                        await message.pin(reason="New Vote")
-            else:
-                if message_is_vote and not self.is_feature_disabled("vote_emoji_reminder"):
-                    recognised_vote_emoji = " ".join(VOTE_EMOJI)
-                    log.info(f"{message} contains no voting emojis")
-                    await message.reply(
-                        f"No voting emoji found. Recognised voting emoji: {recognised_vote_emoji}",
-                        mention_author=True,
-                    )
+            pending_emojis = [
+                message.add_reaction(emoji)
+                for emoji in VOTE_EMOJI
+                if emoji in message.content in message.content
+            ]
+            if len(pending_emojis) > 0:
+                await asyncio.wait(pending_emojis)
+                if not message.pinned:
+                    await message.pin(reason="New Vote")
+            elif message_is_vote and not self.is_feature_disabled(
+                "vote_emoji_reminder"
+            ):
+                recognised_vote_emoji = " ".join(VOTE_EMOJI)
+                log.info(f"{message} contains no voting emojis")
+                await message.reply(
+                    f"No voting emoji found. Recognised voting emoji: {recognised_vote_emoji}",
+                    mention_author=True,
+                )
 
         if (
             self.config["channels"]["include"]
