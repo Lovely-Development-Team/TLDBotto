@@ -176,6 +176,22 @@ class Enablement:
         )
 
 
+@dataclass
+class ConfigEntry:
+    server_id: str
+    config_key: str
+    value: str
+
+    @classmethod
+    def from_airtable(cls, data: dict) -> "ConfigEntry":
+        fields = data["fields"]
+        return cls(
+            server_id=fields["Server ID"],
+            config_key=fields["Key"],
+            value=fields["Value"],
+        )
+
+
 class AirTableError(Exception):
     def __init__(
         self,
@@ -209,11 +225,10 @@ class AirTableError(Exception):
             "\nRequest URL: {url}".format(
                 error_type=self.error_type,
                 error_message=self.error_message,
-                url=self.url
+                url=self.url,
             )
         )
         if self.request:
             return str_rep + "\nRequest body: {request}".format(request=self.request)
         else:
             return str_rep
-
