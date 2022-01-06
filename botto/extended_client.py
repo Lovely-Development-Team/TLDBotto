@@ -20,5 +20,5 @@ class ExtendedClient(discord.Client):
         else:
             return await self.fetch_user(user_id)
 
-    def is_feature_disabled(self, feature_name: Literal["remaining_voters"]):
+    def is_feature_disabled(self, feature_name: Literal["remaining_voters", "vote_emoji_reminder"]):
         return feature_name in self.config["disabled_features"]

@@ -381,7 +381,7 @@ class TLDBotto(ExtendedClient):
                     if not message.pinned:
                         await message.pin(reason="New Vote")
             else:
-                if message_is_vote:
+                if message_is_vote and not self.is_feature_disabled("vote_emoji_reminder"):
                     recognised_vote_emoji = " ".join(VOTE_EMOJI)
                     log.info(f"{message} contains no voting emojis")
                     await message.reply(
