@@ -13,10 +13,12 @@ class PatternReactions:
         self.reaction_map = pattern_reactions
         super().__init__()
 
-    def matches(self, message: discord.Message) -> Optional[str]:
+    def matches(self, message: discord.Message) -> list[str]:
+        matching_keys = []
         for key, value in self.reaction_map.items():
             if str(message.guild.id) not in value.get("exclude_guilds", []) and value["trigger"].search(message.content):
-                return key
+                matching_keys.append(key)
+        return matching_keys
 
 
 @dataclass
