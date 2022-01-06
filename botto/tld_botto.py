@@ -381,11 +381,13 @@ class TLDBotto(ExtendedClient):
                     if not message.pinned:
                         await message.pin(reason="New Vote")
             else:
-                recognised_vote_emoji = " ".join(VOTE_EMOJI)
-                await message.reply(
-                    f"No voting emoji found. Recognised voting emoji: {recognised_vote_emoji}",
-                    mention_author=True,
-                )
+                if message_is_vote:
+                    recognised_vote_emoji = " ".join(VOTE_EMOJI)
+                    log.info(f"{message} contains no voting emojis")
+                    await message.reply(
+                        f"No voting emoji found. Recognised voting emoji: {recognised_vote_emoji}",
+                        mention_author=True,
+                    )
 
         if (
             self.config["channels"]["include"]
