@@ -129,6 +129,7 @@ def parse(config):
             "dizzy": "😵‍💫",
             "feature_disabled": "📴",
         },
+        "bot_name_regexes": ["tildy"],
         "pattern_reactions": {
             "pokes": {
                 "trigger": "pokes? {bot_id}",
