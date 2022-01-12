@@ -51,7 +51,7 @@ if TYPE_CHECKING:
     from reminder_manager import ReminderManager
 from .storage.meal_storage import MealStorage
 from .storage import MealStorage, TimezoneStorage, EnablementStorage
-from .regexes import SuggestionRegexes, compile_regexes
+from .regexes import SuggestionRegexes
 from .message_checks import is_dm, get_or_fetch_member
 
 log = logging.getLogger(__name__)
@@ -148,7 +148,7 @@ class TLDBotto(ExtendedClient):
 
     async def on_connect(self):
         if not self.regexes and self.user:
-            self.regexes = compile_regexes(str(self.user.id), self.config)
+            self.regexes = SuggestionRegexes(str(self.user.id), self.config)
 
     async def random_presence(self):
         chosen_status = random.choice(self.config["watching_statūs"])
@@ -164,7 +164,7 @@ class TLDBotto(ExtendedClient):
         log.info("We have logged in as {0.user}".format(self))
 
         if not self.regexes:
-            self.regexes = compile_regexes(str(self.user.id), self.config)
+            self.regexes = SuggestionRegexes(str(self.user.id), self.config)
 
         await self.random_presence()
 

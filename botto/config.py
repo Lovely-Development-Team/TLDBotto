@@ -132,7 +132,7 @@ def parse(config):
         "bot_name_regexes": ["tildy"],
         "pattern_reactions": {
             "pokes": {
-                "trigger": "pokes? {bot_id}",
+                "trigger": "pokes? (?:{bot_id}|{bot_name})",
                 "reactions": ["👈", "👆", "👇", "👉", "😢", "🤪", "😝"],
             },
             "vroom": {
@@ -157,7 +157,7 @@ def parse(config):
                 "reactions": ["🤷"],
             },
             "hello": {
-                "trigger": r"h(i|ello|eya?)\s+({bot_id}|tildy)",
+                "trigger": r"h(i|ello|eya?)\s+({bot_id}|{bot_name})",
                 "reactions": ["👋"],
             },
             "horse": {
@@ -170,7 +170,7 @@ def parse(config):
                 "exclude_guilds": ["833842753799848016"]
             },
             "goodnight": {
-                "trigger": r"[Gg]ood\s?night\s+(?:{bot_id}|tildy)",
+                "trigger": r"[Gg]ood\s?night\s+(?:{bot_id}|{bot_name})",
                 "reactions": [
                     "💤",
                     "😴",
@@ -207,8 +207,8 @@ def parse(config):
             "yell": [r"!bottoyellat(?P<person>[^.]*)(?:\.(?P<text>.*))?"],
             "reminder_explain": ["!remind(?:er)? (?P<timestamp>[^.]*).(?P<text>.*)"],
             "remove_reactions": [
-                r"\(?Not now,?\s+(?:Tildy|{bot_id})[.!]?\)?$",
-                r"\(?Wrong party,?\s+(?:Tildy|{bot_id})[.!]?\)?$",
+                r"\(?Not now,?\s+(?:{bot_name}|{bot_id})[.!]?\)?$",
+                r"\(?Wrong party,?\s+(?:{bot_name}|{bot_id})[.!]?\)?$",
             ],
             "enabled": [r"(?:#|!)enabled\s*(?P<text>.*)?"],
             "drama_llama": [r"Oh\s*no", "drama", "llama", "🦙", r"<:ohno\S*:\d+"],

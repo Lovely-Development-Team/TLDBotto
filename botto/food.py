@@ -129,7 +129,7 @@ default_config = {
     "bone": {"triggers": "🦴", "responses": ["🐶"]},
     "celebrate": {"triggers": "🎂", "responses": ["😋", "party"]},
     "money": {"triggers": ["💸", "💰", "💵"], "responses": ["🤑"]},
-    "gift": {"triggers": ["🎁", "💌"], "responses": ["echo", "🫂", "love"]}
+    "gift": {"triggers": ["🎁", "💌"], "responses": ["echo", "🫂", "love"]},
 }
 
 
@@ -147,7 +147,7 @@ def convert_response(response: str):
 
 
 class FoodLookups:
-    def __init__(self, self_id: str, food_config: dict):
+    def __init__(self, self_id: str, self_name: str, food_config: dict):
         self.lookup = {}
         for item in food_config.values():
             triggers = item["triggers"]
@@ -159,18 +159,21 @@ class FoodLookups:
                 self.lookup.update({triggers: responses})
         self.food_chars = "".join(self.lookup.keys())
         self.food_regex = re.compile(
-            r"""(?:feed|pour)?s?\s{self_id}
+            r"""(?:feed|pour)?s?\s(?:{self_id}|{self_name})
                     .*?
                     ([{chars}])(?:\ufe0f)?""".format(
-                self_id=self_id, chars=self.food_chars
+                self_id=self_id, self_name=self_name, chars=self.food_chars
             ),
             re.IGNORECASE | re.VERBOSE | re.UNICODE,
         )
+        print(self.food_regex)
         self.not_food_regex = re.compile(
-            r"""(?:feed|pour)?s?\s{self_id}
+            r"""(?:feed|pour)?s?\s(?:{self_id}|{self_name})
                     .*?
                     ([{chars}])""".format(
-                self_id=self_id, chars="".join(UNICODE_EMOJI["en"].keys())
+                self_id=self_id,
+                self_name=self_name,
+                chars="".join(UNICODE_EMOJI["en"].keys()),
             ),
             re.IGNORECASE | re.VERBOSE | re.UNICODE,
         )

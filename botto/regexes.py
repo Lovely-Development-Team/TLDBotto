@@ -46,7 +46,9 @@ class SuggestionRegexes:
         for name, triggers in trigger_dict.items():
             trigger_dict[name] = [
                 re.compile(
-                    "^{trigger}".format(trigger=replace_bot_id(trigger, self_id)),
+                    "^{trigger}".format(
+                        trigger=self.replace_bot_name(replace_bot_id(trigger, self_id))
+                    ),
                     re.IGNORECASE,
                 )
                 for trigger in triggers
@@ -56,10 +58,7 @@ class SuggestionRegexes:
     def __init__(self, bot_user_id: str, config: dict) -> None:
         super().__init__()
         self._bot_id = bot_user_id
-        self.bot_name = re.compile(
-            rf"(?:{'|'.join(config.get('bot_name_regexes', []))})",
-            re.IGNORECASE | re.UNICODE,
-        )
+        self.bot_name_pattern = f"(?:{'|'.join(config.get('bot_name_regexes', []))})"
 
         self_id = rf"<@!?{bot_user_id}>"
         # Compile trigger regexes
@@ -69,7 +68,9 @@ class SuggestionRegexes:
         # Compile pattern reactions
         for key, triggers in config["pattern_reactions"].items():
             config["pattern_reactions"][key]["trigger"] = re.compile(
-                replace_bot_id(config["pattern_reactions"][key]["trigger"], self_id),
+                self.replace_bot_name(
+                    replace_bot_id(config["pattern_reactions"][key]["trigger"], self_id)
+                ),
                 re.IGNORECASE | re.UNICODE,
             )
 
@@ -103,7 +104,9 @@ class SuggestionRegexes:
         self.hug = re.compile(
             rf"Hugs? {self_id}|Gives {self_id} a?\s?hugs?", re.IGNORECASE
         )
-        self.food = FoodLookups(self_id, config["food"])
+        self.food = FoodLookups(
+            self_id, self.replace_bot_name("{bot_name}"), config["food"]
+        )
         self.party = re.compile(
             rf"(?<!third)(?<!3rd)(?<!wrong)(?:^|\s)(?P<partyword>part(?:a*y|ies)(?P<punctuation>!+|\?+|$)|WOOT WOOT!?)\s?",
             re.IGNORECASE,
@@ -117,7 +120,7 @@ class SuggestionRegexes:
         )
 
     def replace_bot_name(self, pattern: str) -> str:
-        return self.bot_name.sub("{bot_name}", pattern)
+        return pattern.replace("{bot_name}", self.bot_name_pattern)
 
 
 def replace_bot_id(pattern: str, bot_id: str) -> str:
