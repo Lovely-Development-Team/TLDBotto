@@ -2,6 +2,7 @@ import discord
 import pytest
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
+from botto.clients import ClickUpClient
 from botto.reactions import Reactions
 from botto.reminder_manager import ReminderManager
 from botto.slash_commands import setup_slash
@@ -31,7 +32,11 @@ def test_startup():
     reactions = Reactions({})
     reminder_manager = ReminderManager({}, scheduler, reminder_storage, reactions, timezone_storage)
 
-    client = TLDBotto({}, reactions, scheduler, storage, timezone_storage, reminder_manager, enablement_storage)
+    clickup_client = ClickUpClient("fake_token")
+
+    client = TLDBotto({}, reactions, scheduler,
+                      storage, timezone_storage, reminder_manager, enablement_storage,
+                      clickup_client)
     slash = setup_slash(client, {}, reminder_manager, timezone_storage)
     with pytest.raises(discord.LoginFailure):
         client.run("fake_discord_key")
