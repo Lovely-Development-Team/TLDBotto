@@ -150,7 +150,7 @@ class TLDBotto(ClickupMixin, ExtendedClient):
             messages=True, guilds=True, reactions=True, members=True
         )
         super().__init__(clickup_client=clickup_client,
-                         clickup_enabled_guilds=self.config["clickup_enabled_guilds"],
+                         clickup_enabled_guilds=self.config.get("clickup_enabled_guilds", set()),
                          intents=intents)
 
     async def on_connect(self):
