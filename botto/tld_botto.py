@@ -610,7 +610,8 @@ class TLDBotto(ClickupMixin, ExtendedClient):
                 message.guild, int(tlder.discord_id)
             )
             fetched_member_name = fetched_member.display_name
-            tlder_name = re.sub("\(\w+(?:\/\w+)*\)$", "", fetched_member_name).strip()
+            # Strip pronouns, as we're addressing them by name
+            tlder_name = re.sub(r"\(\w+(?:\/\w+)*\)$", "", fetched_member_name).strip()
         conversion_string_intro = [
             "{time} in {tlder_name}'s timezone is <t:{unix_time}:t> (<t:{unix_time}:R>) for you.".format(
                 time=time[0].strip(),
