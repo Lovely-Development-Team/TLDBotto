@@ -115,3 +115,12 @@ class BadCurrencyError(BadAmountError):
     def __init__(self, text: str, *args: object) -> None:
         self.symbol = text[0] if text else ""
         super().__init__(text, *args)
+
+
+def hex_to_rgb(hex: str):
+    hex = hex.lstrip("#")
+    return tuple(int(hex[i : i + 2], 16) for i in (0, 2, 4))
+
+
+def truncate_string(text: str, limit: int) -> str:
+    return (text[: limit - 1] + "…") if len(text) > limit else text
