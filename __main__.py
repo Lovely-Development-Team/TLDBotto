@@ -3,6 +3,7 @@ import json
 import logging.config
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
+from botto.clients import ClickUpClient
 from botto.reactions import Reactions
 from botto.reminder_manager import ReminderManager
 from botto.storage import AirtableMealStorage, ReminderStorage, TimezoneStorage
@@ -45,9 +46,22 @@ enablement_storage = EnablementStorage(
 )
 
 reactions = Reactions(config)
-reminder_manager = ReminderManager(config, scheduler, reminder_storage, reactions, timezone_storage)
+reminder_manager = ReminderManager(
+    config, scheduler, reminder_storage, reactions, timezone_storage
+)
 
-client = TLDBotto(config, reactions, scheduler, storage, timezone_storage, reminder_manager, enablement_storage)
+clickup_client = ClickUpClient(config["authentication"]["clickup"])
+
+client = TLDBotto(
+    config,
+    reactions,
+    scheduler,
+    storage,
+    timezone_storage,
+    reminder_manager,
+    enablement_storage,
+    clickup_client,
+)
 slash = setup_slash(client, config, reminder_manager, timezone_storage)
 
 client.run(config["authentication"]["discord"])

@@ -49,12 +49,13 @@ bot_id_or_name_pattern = f"(?:{bot_id_pattern}|{bot_name_pattern})"
 
 
 def parse(config):
-    defaults = {
+    defaults: dict = {
         "id": None,
         "authentication": {
             "discord": "",
             "airtable_key": "",
             "airtable_base": "",
+            "clickup": "",
         },
         "channels": {"include": set(), "exclude": set(), "voting": {"voting"}},
         "voting": VotingConfig(
@@ -63,7 +64,7 @@ def parse(config):
             ping_disallowed_roles={
                 PingDisallowedRole(role_id=None, name="voting_ping_disallowed")
             },
-            exclusion_emojis={"🙅‍"}
+            exclusion_emojis={"🙅‍"},
         ),
         "reactions": {
             "success": "📥",
@@ -172,7 +173,7 @@ def parse(config):
             "please": {
                 "trigger": "^pl(?:e+)ase",
                 "reactions": ["🥺"],
-                "exclude_guilds": ["833842753799848016"]
+                "exclude_guilds": ["833842753799848016"],
             },
             "goodnight": {
                 "trigger": rf"[Gg]ood\s?night\s+{bot_id_or_name_pattern}",
@@ -217,10 +218,10 @@ def parse(config):
             ],
             "enabled": [r"(?:#|!)enabled\s*(?P<text>.*)?"],
             "drama_llama": [r"Oh\s*no", "drama", "llama", "🦙", r"<:ohno\S*:\d+"],
-            "remaining_voters": [
-                r"!remaining\s*(?P<ping>!ping)?"
-            ],
+            "remaining_voters": [r"!remaining\s*(?P<ping>!ping)?"],
+            "clickup_task": [r".*#(?P<task_id>\w*).*"],
         },
+        "clickup_enabled_guilds": ["833842753799848016"],
         "drama_llama_id": 760972696284299294,
         "at_triggers": {
             "add_reminder": ["!remind(?:er)? (?P<timestamp>[^.]*).(?P<text>.*)"],
@@ -261,6 +262,9 @@ def parse(config):
 
     if token := os.getenv("TLDBOTTO_AIRTABLE_BASE"):
         defaults["authentication"]["airtable_base"] = token
+
+    if token := os.getenv("TLDBOTTO_CLICKUP_TOKEN"):
+        defaults["authentication"]["clickup"] = token
 
     if channels := decode_base64_env("TLDBOTTO_CHANNELS"):
         for key in channels.keys():
@@ -306,6 +310,11 @@ def parse(config):
 
     if disabled_features := decode_base64_env("TLDBOTTO_DISABLED_FEATURES"):
         defaults["disabled_features"] = set(disabled_features)
+
+    if clickup_enabled_guilds := decode_base64_env("TLDBOTTO_CLICKUP_ENABLED_GUILDS"):
+        defaults["clickup_enabled_guilds"] = clickup_enabled_guilds
+
+    defaults["clickup_enabled_guilds"] = set(defaults["clickup_enabled_guilds"])
 
     if id := os.getenv("TLDBOTTO_ID"):
         defaults["id"] = id

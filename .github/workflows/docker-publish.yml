@@ -185,6 +185,7 @@ jobs:
             -e TLDBOTTO_DISCORD_TOKEN='${{ secrets.DISCORD_TOKEN }}'
             -e TLDBOTTO_AIRTABLE_BASE='${{ secrets.AIRTABLE_BASE }}'
             -e TLDBOTTO_AIRTABLE_KEY='${{ secrets.AIRTABLE_KEY }}'
+            -e TLDBOTTO_CLICKUP_TOKEN='${{ secrets.CLICKUP_TOKEN }}'
             -e TLDBOTTO_MEMBERS_VOTE_NOT_REQUIRED='${{ secrets.MEMBERS_VOTE_NOT_REQUIRED }}'
             -e TLDBOTTO_TIMEZONES='${{ secrets.TIMEZONES }}'
             -e TLDBOTTO_MEAL_CONFIG='${{ secrets.MEAL_CONFIG }}'

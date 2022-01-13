@@ -18,7 +18,9 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 import arrow
 
+from .clients import ClickUpClient
 from .errors import TlderNotFoundError
+from .mixins import ClickupMixin
 
 if TYPE_CHECKING:
     from discord.abc import MessageableChannel
@@ -35,6 +37,8 @@ from .message_helpers import (
     convert_amount,
     BadAmountError,
     BadCurrencyError,
+    truncate_string,
+    hex_to_rgb,
 )
 from .vote_helpers import (
     is_voting_message,
@@ -74,7 +78,7 @@ NUMBERS = [
 DELETE_EMOJI = ("🥕", "❌")
 
 
-class TLDBotto(ExtendedClient):
+class TLDBotto(ClickupMixin, ExtendedClient):
     def __init__(
         self,
         config: dict,
@@ -84,6 +88,7 @@ class TLDBotto(ExtendedClient):
         timezones: TimezoneStorage,
         reminders: ReminderManager,
         enablement: EnablementStorage,
+        clickup_client: ClickUpClient,
     ):
         self.config = config
         self.reactions = reactions
@@ -144,7 +149,9 @@ class TLDBotto(ExtendedClient):
         intents = discord.Intents(
             messages=True, guilds=True, reactions=True, members=True
         )
-        super().__init__(intents=intents)
+        super().__init__(clickup_client=clickup_client,
+                         clickup_enabled_guilds=self.config["clickup_enabled_guilds"],
+                         intents=intents)
 
     async def on_connect(self):
         if not self.regexes and self.user:
@@ -461,6 +468,7 @@ class TLDBotto(ExtendedClient):
             "enabled": self.record_enablement,
             "drama_llama": self.drama_llama,
             "remaining_voters": self.remaining_voters,
+            "clickup_task": self.clickup_task,
         }
 
     @staticmethod
