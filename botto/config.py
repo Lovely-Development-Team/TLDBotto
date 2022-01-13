@@ -43,6 +43,11 @@ class VotingConfig:
     exclusion_emojis: set[str]
 
 
+bot_id_pattern = "{bot_id}"
+bot_name_pattern = "{bot_name}"
+bot_id_or_name_pattern = f"(?:{bot_id_pattern}|{bot_name_pattern})"
+
+
 def parse(config):
     defaults = {
         "id": None,
@@ -132,7 +137,7 @@ def parse(config):
         "bot_name_regexes": ["tildy"],
         "pattern_reactions": {
             "pokes": {
-                "trigger": "pokes? (?:{bot_id}|{bot_name})",
+                "trigger": f"pokes? {bot_id_or_name_pattern}",
                 "reactions": ["👈", "👆", "👇", "👉", "😢", "🤪", "😝"],
             },
             "vroom": {
@@ -144,7 +149,7 @@ def parse(config):
                 "reactions": ["😆", "🤣", "😂", "🤪"],
             },
             "favourite_band": {
-                "trigger": r"What('|’)?s +your +fav(ou?rite)? +band +{bot_id} ?\?*",
+                "trigger": rf"What('|’)?s +your +fav(ou?rite)? +band +{bot_id_pattern} ?\?*",
                 "reactions": ["🇧", "🇹", "🇸"],
                 "reaction_type": "ORDERED",
             },
@@ -153,11 +158,11 @@ def parse(config):
                 "reactions": ["🐌"],
             },
             "complaint": {
-                "trigger": r"(?:(?:BOTTO|TILDY).?\s+COME\.?\s+ON\s*|COME\.?\s+ON\s+(?:BOTTO|TILDY).?\s*)",
+                "trigger": rf"(?:(?:BOTTO|{bot_name_pattern}).?\s+COME\.?\s+ON\s*|COME\.?\s+ON\s+(?:BOTTO|{bot_name_pattern}).?\s*)",
                 "reactions": ["🤷"],
             },
             "hello": {
-                "trigger": r"h(i|ello|eya?)\s+({bot_id}|{bot_name})",
+                "trigger": rf"h(i|ello|eya?)\s+{bot_id_or_name_pattern}",
                 "reactions": ["👋"],
             },
             "horse": {
@@ -170,7 +175,7 @@ def parse(config):
                 "exclude_guilds": ["833842753799848016"]
             },
             "goodnight": {
-                "trigger": r"[Gg]ood\s?night\s+(?:{bot_id}|{bot_name})",
+                "trigger": rf"[Gg]ood\s?night\s+{bot_id_or_name_pattern}",
                 "reactions": [
                     "💤",
                     "😴",
@@ -265,7 +270,7 @@ def parse(config):
         defaults["voting"].any_channel_guilds = channels
 
     if members_vote_not_required_env := decode_base64_env(
-        "TLDBOTTO_MEMBERS_VOTE_NOT_REQUIRED"
+            "TLDBOTTO_MEMBERS_VOTE_NOT_REQUIRED"
     ):
         defaults["voting"].members_not_required = members_vote_not_required_env
 
@@ -273,7 +278,7 @@ def parse(config):
         defaults["voting"].members_not_required[str(guild)] = set(members)
 
     if ping_disallowed_roles := decode_base64_env(
-        "TLDBOTTO_VOTING_PING_DISALLOWED_ROLES"
+            "TLDBOTTO_VOTING_PING_DISALLOWED_ROLES"
     ):
         if isinstance(ping_disallowed_roles, list):
             disallowed_roles_list = [
