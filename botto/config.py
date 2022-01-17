@@ -219,7 +219,7 @@ def parse(config):
             "enabled": [r"(?:#|!)enabled\s*(?P<text>.*)?"],
             "drama_llama": [r"Oh\s*no", "drama", "llama", "🦙", r"<:ohno\S*:\d+"],
             "remaining_voters": [r"!remaining\s*(?P<ping>!ping)?"],
-            "clickup_task": [r".*(?:\s+|^)#(?P<task_id>\w\w+)(?:\s+|\)|$).*"],
+            "clickup_task": [r".*(?:\s+|\(|^)#(?P<task_id>\w\w+)(?:\s+|\)|:|$).*"],
         },
         "clickup_enabled_guilds": ["833842753799848016"],
         "drama_llama_id": 760972696284299294,
