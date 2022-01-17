@@ -17,13 +17,15 @@ class ClickUpClient:
         self._url = "https://api.clickup.com/api/v2"
         self._auth_header = {"Authorization": f"{self._clickup_token}"}
 
-    async def get_task(self, task_id) -> "ClickupTask":
+    async def get_task(self, task_id) -> Optional["ClickupTask"]:
         async with aiohttp.ClientSession() as session:
             url = f"{self._url}/task/{task_id}"
             response = await session.get(url, headers=self._auth_header)
             json = await response.json()
             if response.ok:
                 return ClickupTask.from_json(json)
+            elif response.status == 404:
+                return None
             else:
                 raise ClickupError(url, json)
 

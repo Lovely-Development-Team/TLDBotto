@@ -29,6 +29,9 @@ class ClickupMixin:
             )
         only_contains_task_id = message.content.strip().lstrip("#") == task_id
         task = await self.clickup_client.get_task(task_id)
+        if not task:
+            log.info(f"Clickup task '{task_id}' not found")
+            return
         task_embed = (
             discord.Embed(
                 title=truncate_string(task.name, 256),
