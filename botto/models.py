@@ -1,3 +1,4 @@
+import json
 from collections import namedtuple
 from dataclasses import dataclass
 from datetime import time, datetime
@@ -181,14 +182,19 @@ class ConfigEntry:
     server_id: str
     config_key: str
     value: str
+    parsed_value: Union[list, dict, str, int]
 
     @classmethod
     def from_airtable(cls, data: dict) -> "ConfigEntry":
         fields = data["fields"]
+        parsed_value = json.loads(fields["Value"])
+        if type(parsed_value) is list:
+            parsed_value = set(parsed_value)
         return cls(
             server_id=fields["Server ID"],
             config_key=fields["Key"],
             value=fields["Value"],
+            parsed_value=parsed_value,
         )
 
 
@@ -220,13 +226,10 @@ class AirTableError(Exception):
         )
 
     def __str__(self) -> str:
-        str_rep = (
-            "Error from AirTable operation of type '{error_type}', with message:'{error_message}'. "
-            "\nRequest URL: {url}".format(
-                error_type=self.error_type,
-                error_message=self.error_message,
-                url=self.url,
-            )
+        str_rep = "Error from AirTable operation of type '{error_type}', with message:'{error_message}'. " "\nRequest URL: {url}".format(
+            error_type=self.error_type,
+            error_message=self.error_message,
+            url=self.url,
         )
         if self.request:
             return str_rep + "\nRequest body: {request}".format(request=self.request)

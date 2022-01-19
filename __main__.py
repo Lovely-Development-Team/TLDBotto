@@ -6,7 +6,12 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from botto.clients import ClickUpClient
 from botto.reactions import Reactions
 from botto.reminder_manager import ReminderManager
-from botto.storage import AirtableMealStorage, ReminderStorage, TimezoneStorage
+from botto.storage import (
+    AirtableMealStorage,
+    ReminderStorage,
+    TimezoneStorage,
+    ConfigStorage,
+)
 from botto.storage.enablement_storage import EnablementStorage
 from botto.tld_botto import TLDBotto
 from botto.config import parse
@@ -45,6 +50,10 @@ enablement_storage = EnablementStorage(
     config["authentication"]["airtable_base"], config["authentication"]["airtable_key"]
 )
 
+config_storage = ConfigStorage(
+    config["authentication"]["airtable_base"], config["authentication"]["airtable_key"]
+)
+
 reactions = Reactions(config)
 reminder_manager = ReminderManager(
     config, scheduler, reminder_storage, reactions, timezone_storage
@@ -61,6 +70,7 @@ client = TLDBotto(
     reminder_manager,
     enablement_storage,
     clickup_client,
+    config_storage,
 )
 slash = setup_slash(client, config, reminder_manager, timezone_storage)
 
