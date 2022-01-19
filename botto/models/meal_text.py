@@ -21,4 +21,4 @@ class MealText(Base):
         "MealTime", secondary=meal_time_text, back_populates="meal_texts"
     )
     server_id = Column(Integer, ForeignKey("server.id"))
-    server: relationship("Server", back_populates="meal_times")
+    server = relationship("Server", back_populates="meal_times")
