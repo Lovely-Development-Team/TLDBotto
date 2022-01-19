@@ -20,7 +20,7 @@ import arrow
 
 from .clients import ClickUpClient
 from .errors import TlderNotFoundError
-from .mixins import ClickupMixin
+from .mixins import ClickupMixin, RemoteConfig
 
 if TYPE_CHECKING:
     from discord.abc import MessageableChannel
@@ -54,7 +54,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from reminder_manager import ReminderManager
 from .storage.meal_storage import MealStorage
-from .storage import MealStorage, TimezoneStorage, EnablementStorage
+from .storage import MealStorage, TimezoneStorage, EnablementStorage, ConfigStorage
 from .regexes import SuggestionRegexes
 from .message_checks import is_dm, get_or_fetch_member
 
@@ -78,7 +78,7 @@ NUMBERS = [
 DELETE_EMOJI = ("🥕", "❌")
 
 
-class TLDBotto(ClickupMixin, ExtendedClient):
+class TLDBotto(ClickupMixin, RemoteConfig, ExtendedClient):
     def __init__(
         self,
         config: dict,
@@ -89,6 +89,7 @@ class TLDBotto(ClickupMixin, ExtendedClient):
         reminders: ReminderManager,
         enablement: EnablementStorage,
         clickup_client: ClickUpClient,
+        config_storage: ConfigStorage,
     ):
         self.config = config
         self.reactions = reactions
@@ -149,9 +150,14 @@ class TLDBotto(ClickupMixin, ExtendedClient):
         intents = discord.Intents(
             messages=True, guilds=True, reactions=True, members=True
         )
-        super().__init__(clickup_client=clickup_client,
-                         clickup_enabled_guilds=self.config.get("clickup_enabled_guilds", set()),
-                         intents=intents)
+        super().__init__(
+            clickup_client=clickup_client,
+            clickup_enabled_guilds=self.config.get("clickup_enabled_guilds", set()),
+            config=config,
+            config_storage=config_storage,
+            scheduler=scheduler,
+            intents=intents,
+        )
 
     async def on_connect(self):
         if not self.regexes and self.user:
@@ -396,8 +402,8 @@ class TLDBotto(ClickupMixin, ExtendedClient):
                 await asyncio.wait(pending_emojis)
                 if not message.pinned:
                     await message.pin(reason="New Vote")
-            elif message_is_vote and not self.is_feature_disabled(
-                "vote_emoji_reminder"
+            elif message_is_vote and not await self.is_feature_disabled(
+                "vote_emoji_reminder", message.guild.id
             ):
                 recognised_vote_emoji = " ".join(VOTE_EMOJI)
                 log.info(f"{message} contains no voting emojis")
@@ -942,7 +948,7 @@ You can DM me the following commands:
             await self.reactions.drama_llama(message)
 
     async def remaining_voters(self, message: Message, **kwargs):
-        if self.is_feature_disabled("remaining_voters"):
+        if await self.is_feature_disabled("remaining_voters", message.guild.id):
             await self.reactions.feature_disabled(message)
             log.info(
                 f"{message.author} requested remaining voters for: {message.content} but it was disabled"
