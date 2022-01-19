@@ -1,6 +1,4 @@
-from datetime import datetime
-
-from sqlalchemy import Column, Integer, Date, ForeignKey, String, DECIMAL
+from sqlalchemy import Column, Integer, ForeignKey, String, DECIMAL, TIMESTAMP, VARCHAR
 from sqlalchemy.orm import relationship
 from sqlalchemy.testing.schema import Table
 
@@ -26,6 +24,7 @@ class Enablement(Base):
     id = Column(Integer, primary_key=True)
     enabler = relationship("User", secondary=user_enabler, back_populates="enabler")
     enabled = relationship("User", secondary=user_enabled, back_populates="enabled")
-    date = Column(Date, default=datetime.utcnow())
+    date = Column(TIMESTAMP)
     message_link = Column(String)
     amount = Column(DECIMAL)
+    currency = Column(VARCHAR)
