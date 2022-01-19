@@ -1,6 +1,14 @@
-from sqlalchemy import Column, Integer, ForeignKey, String, DECIMAL, TIMESTAMP, VARCHAR
+from sqlalchemy import (
+    Column,
+    Integer,
+    ForeignKey,
+    String,
+    DECIMAL,
+    TIMESTAMP,
+    VARCHAR,
+    Table,
+)
 from sqlalchemy.orm import relationship
-from sqlalchemy.testing.schema import Table
 
 from botto.models import Base
 

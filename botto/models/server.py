@@ -10,3 +10,6 @@ class Server(Base):
     id = Column(Integer, primary_key=True)
     name = Column(String)
     reminders = relationship("Reminder", back_populates="server")
+    meal_texts = relationship("MealText", back_populates="server")
+    meal_times = relationship("MealTime", back_populates="server")
+    meal_emoji = relationship("MealEmoji", back_populates="server")
