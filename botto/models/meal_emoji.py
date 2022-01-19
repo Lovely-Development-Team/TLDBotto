@@ -19,4 +19,5 @@ class MealEmoji(Base):
     meal_time = relationship(
         "MealTime", secondary=meal_time_emoji, back_populates="meal_emoji"
     )
+    server_id = Column(Integer, ForeignKey("server.id"))
     server: relationship("Server", back_populates="meal_emoji")

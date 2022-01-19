@@ -16,7 +16,9 @@ class MealText(Base):
 
     id = Column(Integer, primary_key=True)
     text = Column(String)
+    meal_time_id = Column(Integer, ForeignKey="meal_time.id")
     meal_time = relationship(
         "MealTime", secondary=meal_time_text, back_populates="meal_texts"
     )
+    server_id = Column(Integer, ForeignKey("server.id"))
     server: relationship("Server", back_populates="meal_times")
