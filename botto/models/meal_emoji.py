@@ -16,6 +16,7 @@ class MealEmoji(Base):
 
     id = Column(Integer, primary_key=True)
     text = Column(String)
+    meal_time_id = Column(Integer, ForeignKey="meal_time.id")
     meal_time = relationship(
         "MealTime", secondary=meal_time_emoji, back_populates="meal_emoji"
     )
