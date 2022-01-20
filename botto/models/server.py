@@ -14,3 +14,4 @@ class Server(Base):
     meal_texts = relationship("MealText", back_populates="server")
     meal_times = relationship("MealTime", back_populates="server")
     meal_emoji = relationship("MealEmoji", back_populates="server")
+    bot_functions = relationship("BotFunction", back_populates="servers")
