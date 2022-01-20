@@ -13,13 +13,13 @@ from sqlalchemy.orm import relationship
 from botto.models import Base
 
 user_enabler = Table(
-    "user_enabler",
+    "enabler_user",
     Base.metadata,
     Column("user_id", ForeignKey("user.id")),
     Column("enablement_id", ForeignKey("enablement.id")),
 )
 user_enabled = Table(
-    "user_enabled",
+    "enabled_user",
     Base.metadata,
     Column("user_id", ForeignKey("user.id")),
     Column("enablement_id", ForeignKey("enablement.id")),
