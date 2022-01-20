@@ -14,7 +14,7 @@ meal_time_text = Table(
 class MealText(Base):
     __tablename__ = "meal_texts"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     text = Column(String)
     meal_time_id = Column(Integer, ForeignKey="meal_time.id")
     meal_time = relationship(

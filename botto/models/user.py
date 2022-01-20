@@ -8,9 +8,9 @@ from botto.models.enablement import user_enabled, user_enabler
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True)
-    airtable_id = Column(String)
-    discord_id = Column(String)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    airtable_id = Column(String, unique=True)
+    discord_id = Column(String, unique=True)
     name = Column(String)
     timezone_id = Column(Integer, ForeignKey("timezone.id"))
     timezone = relationship("Timezone", back_populates="users")

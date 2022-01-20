@@ -7,7 +7,7 @@ from botto.models import Base
 class MealTime(Base):
     __tablename__ = "meal_times"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String)
     start_time = Column(Time)
     end_time = Column(Time)

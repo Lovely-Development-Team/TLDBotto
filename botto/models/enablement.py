@@ -29,7 +29,7 @@ user_enabled = Table(
 class Enablement(Base):
     __tablename__ = "enablement"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     enabler = relationship("User", secondary=user_enabler, back_populates="enabler")
     enabled = relationship("User", secondary=user_enabled, back_populates="enabled")
     date = Column(TIMESTAMP)

@@ -7,7 +7,7 @@ from botto.models import Base
 class Reminder(Base):
     __tablename__ = "reminders"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     date = Column(DateTime)
     notes = Column(String)
     advance_warning = Column(Boolean)
