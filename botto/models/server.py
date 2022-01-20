@@ -2,6 +2,7 @@ from sqlalchemy import Integer, Column, String
 from sqlalchemy.orm import relationship
 
 from botto.models import Base
+from botto.models.bot_function import server_bot_functions
 
 
 class Server(Base):
@@ -14,4 +15,4 @@ class Server(Base):
     meal_texts = relationship("MealText", back_populates="server")
     meal_times = relationship("MealTime", back_populates="server")
     meal_emoji = relationship("MealEmoji", back_populates="server")
-    bot_functions = relationship("BotFunction", back_populates="servers")
+    bot_functions = relationship("BotFunction", secondary=server_bot_functions, back_populates="servers")
