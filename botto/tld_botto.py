@@ -108,6 +108,7 @@ class TLDBotto(ClickupMixin, RemoteConfig, ExtendedClient):
             reminder_hours = ",".join(meal_reminder_hours)
             scheduler.add_job(
                 self.send_meal_reminder,
+                kwargs={"is_scheduled": True},
                 name="Meal Reminder",
                 trigger="cron",
                 hour=reminder_hours,
@@ -778,16 +779,43 @@ You can DM me the following commands:
         reminder_text = "\n".join(reminder_list)
         return f"{intro_text}\n{reminder_text}"
 
-    async def send_meal_reminder(self, reply_to: Optional[Message] = None):
+    async def remove_old_meal_reminders(self, channel: MessageableChannel):
+        meal_reminder_hours = self.config.get("meals", {}).get("auto_reminder_hours")
+        if not meal_reminder_hours:
+            return
+        previous_messages = await channel.history(limit=1).flatten()
+        if len(previous_messages) < 1:
+            return
+        last_message = previous_messages[0]
+        last_message_from_self = previous_messages[0].author.id == self.user.id
+        # This is a bit of a bodge, but we're basically trying to determine "Was this an automated reminder?"
+        if (
+            # Was it from us?
+            last_message_from_self
+            # Was it on a scheduled hour?
+            and str(last_message.created_at.hour) in meal_reminder_hours
+            # Was it within a minute of being "on the hour"?
+            and arrow.get(last_message.created_at).span("minute")[0] == 0
+        ):
+            await last_message.edit(content="🍽")
+
+    async def send_meal_reminder(self, reply_to: Optional[Message] = None, **kwargs):
         log.info("Sending meal reminder")
+        is_scheduled_reminder = kwargs.get("is_scheduled")
         if reply_to:
             log.info(f"Mealtimes from: {reply_to.author}")
             async with reply_to.channel.typing():
-                await reply_to.reply(await self.get_meal_reminder_text())
+                actions = [reply_to.reply(await self.get_meal_reminder_text())]
+                if is_scheduled_reminder:
+                    actions.append(self.remove_old_meal_reminders(reply_to.channel))
+                await asyncio.wait(actions)
         else:
             async for channel in self.get_meal_channels():
                 async with channel.typing():
-                    await channel.send(await self.get_meal_reminder_text())
+                    actions = [channel.send(await self.get_meal_reminder_text())]
+                    if is_scheduled_reminder:
+                        actions.append(self.remove_old_meal_reminders(reply_to.channel))
+                    await asyncio.wait(actions)
 
     async def send_local_times(self, reply_to: Message):
         log.info(f"Times from: {reply_to.author}")
