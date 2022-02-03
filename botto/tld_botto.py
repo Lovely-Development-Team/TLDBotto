@@ -814,7 +814,7 @@ You can DM me the following commands:
                 async with channel.typing():
                     actions = [channel.send(await self.get_meal_reminder_text())]
                     if is_scheduled_reminder:
-                        actions.append(self.remove_old_meal_reminders(reply_to.channel))
+                        actions.append(self.remove_old_meal_reminders(channel))
                     await asyncio.wait(actions)
 
     async def send_local_times(self, reply_to: Message):
