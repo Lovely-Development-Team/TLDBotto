@@ -807,7 +807,7 @@ You can DM me the following commands:
         else:
             log.info(
                 "Last message not a meal reminder:"
-                "Is from self? {from_self} Is "
+                "Is from self? {from_self}"
                 "Is in meal hours? {in_meal_hours} (message hour: {message_hour})"
                 "Is within tolerance? {within_tolerance} (span: {minute_span})".format(
                     from_self=is_last_message_from_self,
