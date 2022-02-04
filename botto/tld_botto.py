@@ -787,17 +787,36 @@ You can DM me the following commands:
         if len(previous_messages) < 1:
             return
         last_message = previous_messages[0]
-        last_message_from_self = previous_messages[0].author.id == self.user.id
+        last_message_hour = str(last_message.created_at.hour)
+        last_message_minute_span = arrow.get(last_message.created_at).span("minute")
+
+        is_last_message_from_self = previous_messages[0].author.id == self.user.id
+        is_last_message_in_meal_hours = last_message_hour in meal_reminder_hours
+        is_last_message_within_tolerance = last_message_minute_span[0] == 0
         # This is a bit of a bodge, but we're basically trying to determine "Was this an automated reminder?"
         if (
             # Was it from us?
-            last_message_from_self
+            is_last_message_from_self
             # Was it on a scheduled hour?
-            and str(last_message.created_at.hour) in meal_reminder_hours
+            and is_last_message_in_meal_hours
             # Was it within a minute of being "on the hour"?
-            and arrow.get(last_message.created_at).span("minute")[0] == 0
+            and is_last_message_within_tolerance
         ):
+            log.info("Previous message was Tildy meal reminder. Editing.")
             await last_message.edit(content="🍽")
+        else:
+            log.info(
+                "Last message not a meal reminder:"
+                "Is from self? {from_self} Is "
+                "Is in meal hours? {in_meal_hours} (message hour: {message_hour})"
+                "Is within tolerance? {within_tolerance} (span: {minute_span})".format(
+                    from_self=is_last_message_from_self,
+                    in_meal_hours=is_last_message_in_meal_hours,
+                    message_hour=last_message_hour,
+                    within_tolerance=is_last_message_within_tolerance,
+                    minute_span=last_message_minute_span,
+                )
+            )
 
     async def send_meal_reminder(self, reply_to: Optional[Message] = None, **kwargs):
         log.info("Sending meal reminder")
