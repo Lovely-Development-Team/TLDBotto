@@ -779,20 +779,16 @@ You can DM me the following commands:
         reminder_text = "\n".join(reminder_list)
         return f"{intro_text}\n{reminder_text}"
 
-    async def remove_old_meal_reminders(self, channel: MessageableChannel):
+    def is_scheduled_meal_reminder(self, message: Message) -> bool:
         meal_reminder_hours = self.config.get("meals", {}).get("auto_reminder_hours")
         if not meal_reminder_hours:
-            return
-        previous_messages = await channel.history(limit=1).flatten()
-        if len(previous_messages) < 1:
-            return
-        last_message = previous_messages[0]
-        last_message_hour = str(last_message.created_at.hour)
+            return False
+        last_message_hour = str(message.created_at.hour)
         last_message_minute_span: (arrow.Arrow, arrow.Arrow) = arrow.get(
-            last_message.created_at
+            message.created_at
         ).span("minute")
 
-        is_last_message_from_self = previous_messages[0].author.id == self.user.id
+        is_last_message_from_self = message.author.id == self.user.id
         is_last_message_in_meal_hours = last_message_hour in meal_reminder_hours
         is_last_message_within_tolerance = last_message_minute_span[0].minute == 0
         # This is a bit of a bodge, but we're basically trying to determine "Was this an automated reminder?"
@@ -805,7 +801,7 @@ You can DM me the following commands:
             and is_last_message_within_tolerance
         ):
             log.info("Previous message was Tildy meal reminder. Editing.")
-            await last_message.edit(content="🍽")
+            return True
         else:
             log.info(
                 "Last message not a meal reminder:"
@@ -819,23 +815,42 @@ You can DM me the following commands:
                     minute_span=last_message_minute_span,
                 )
             )
+            return False
+
+    async def update_old_meal_reminder(
+        self, channel: discord.abc.MessageableChannel, message_id: int
+    ):
+        last_message = await channel.fetch_message(message_id)
+        if self.is_scheduled_meal_reminder(last_message):
+            log.info("Previous message was Tildy meal reminder. Editing.")
+            await last_message.edit(content="🍽")
 
     async def send_meal_reminder(self, reply_to: Optional[Message] = None, **kwargs):
         log.info("Sending meal reminder")
         is_scheduled_reminder = kwargs.get("is_scheduled")
+
+        reminder_text = await self.get_meal_reminder_text()
+
         if reply_to:
             log.info(f"Mealtimes from: {reply_to.author}")
-            async with reply_to.channel.typing():
-                actions = [reply_to.reply(await self.get_meal_reminder_text())]
+            channel = reply_to.channel
+            async with channel.typing():
+                last_channel_message = channel.last_message_id
+                actions = [reply_to.reply(reminder_text)]
                 if is_scheduled_reminder:
-                    actions.append(self.remove_old_meal_reminders(reply_to.channel))
+                    actions.append(
+                        self.update_old_meal_reminder(channel, last_channel_message)
+                    )
                 await asyncio.wait(actions)
         else:
             async for channel in self.get_meal_channels():
                 async with channel.typing():
-                    actions = [channel.send(await self.get_meal_reminder_text())]
+                    last_channel_message = channel.last_message_id
+                    actions = [channel.send(reminder_text)]
                     if is_scheduled_reminder:
-                        actions.append(self.remove_old_meal_reminders(channel))
+                        actions.append(
+                            self.update_old_meal_reminder(channel, last_channel_message)
+                        )
                     await asyncio.wait(actions)
 
     async def send_local_times(self, reply_to: Message):
