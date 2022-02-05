@@ -788,11 +788,13 @@ You can DM me the following commands:
             return
         last_message = previous_messages[0]
         last_message_hour = str(last_message.created_at.hour)
-        last_message_minute_span = arrow.get(last_message.created_at).span("minute")
+        last_message_minute_span: (arrow.Arrow, arrow.Arrow) = arrow.get(
+            last_message.created_at
+        ).span("minute")
 
         is_last_message_from_self = previous_messages[0].author.id == self.user.id
         is_last_message_in_meal_hours = last_message_hour in meal_reminder_hours
-        is_last_message_within_tolerance = last_message_minute_span[0] == 0
+        is_last_message_within_tolerance = last_message_minute_span[0].minute == 0
         # This is a bit of a bodge, but we're basically trying to determine "Was this an automated reminder?"
         if (
             # Was it from us?
