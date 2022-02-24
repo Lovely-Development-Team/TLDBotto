@@ -4,13 +4,16 @@ import discord
 from discord import Message
 
 from botto.clients import ClickUpClient
+from botto.errors import ClickupError
 from botto.message_helpers import truncate_string, hex_to_rgb
 
 log = logging.getLogger(__name__)
 
 
 class ClickupMixin:
-    def __init__(self, clickup_client: ClickUpClient, clickup_enabled_guilds: set[str], **kwargs):
+    def __init__(
+        self, clickup_client: ClickUpClient, clickup_enabled_guilds: set[str], **kwargs
+    ):
         self.clickup_client = clickup_client
         self.enabled_guilds = clickup_enabled_guilds
         super().__init__(**kwargs)
@@ -28,7 +31,13 @@ class ClickupMixin:
                 f"{message.content} by {message.author} match task pattern but no `task_id` found"
             )
         only_contains_task_id = message.content.strip().lstrip("#") == task_id
-        task = await self.clickup_client.get_task(task_id)
+        try:
+            task = await self.clickup_client.get_task(task_id)
+        except ClickupError as err:
+            if err.code == "OAUTH_027":
+                log.info(f"Error finding task in ClickUp: {err}")
+                return
+            raise
         if not task:
             log.info(f"Clickup task '{task_id}' not found")
             return
