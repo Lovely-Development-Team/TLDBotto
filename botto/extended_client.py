@@ -1,4 +1,4 @@
-from typing import Union, Literal
+from typing import Union, Literal, Optional
 
 import discord
 from discord import Guild
@@ -8,7 +8,7 @@ from discord.abc import GuildChannel, PrivateChannel
 class ExtendedClient(discord.Client):
     async def get_or_fetch_channel(
         self, channel_id: int
-    ) -> Union[GuildChannel, PrivateChannel, discord.Thread]:
+    ) -> Optional[Union[GuildChannel, PrivateChannel, discord.Thread]]:
         if channel := self.get_channel(channel_id):
             return channel
         else:
