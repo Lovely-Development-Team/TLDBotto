@@ -129,6 +129,30 @@ def setup_slash(
         converted_string = f"{current_time} converted:\n" if current_time else ""
         await ctx.send(converted_string + local_times_string)
 
+    @slash.subcommand(
+        base="reminders",
+        name="list",
+        description="List the currently-set reminders",
+        options=[
+            create_option(
+                name="channel",
+                description="Limit list to a specific channel",
+                option_type=SlashCommandOptionType.CHANNEL,
+                required=False,
+            ),
+        ],
+    )
+    async def list_reminders(ctx: SlashContext, **kwargs):
+        log.debug(f"/reminder list from: {ctx.author} channel: {ctx.channel}")
+        reminders = await reminder_manager.list_reminders(
+            ctx.guild, kwargs.get("channel")
+        )
+        log.debug(f"Reminders: {reminders}")
+        reminder_message = "\n".join(
+            [await reminder_manager.build_reminder_description(r) for r in reminders]
+        )
+        await ctx.send(discord.utils.escape_mentions(reminder_message))
+
     @slash.slash(
         name="reminder",
         description="Set a reminder",

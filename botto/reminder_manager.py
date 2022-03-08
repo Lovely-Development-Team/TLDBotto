@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Callable
+from typing import Callable, Optional
 
 import arrow
 import dateutil.parser
@@ -143,7 +143,9 @@ class ReminderManager:
             await self.storage.remove_reminder(reminder_id)
         await self.cleanup_missed_reminders()
 
-    async def parse_reminder_time(self, timestamp: str, requester: discord.Member) -> datetime:
+    async def parse_reminder_time(
+        self, timestamp: str, requester: discord.Member
+    ) -> datetime:
         try:
             parsed_date = dateutil.parser.parse(timestamp)
             was_parsed_date_naive = is_naive(parsed_date)
@@ -152,7 +154,9 @@ class ReminderManager:
                 if tlder := await self.timezones.get_tlder(str(requester.id)):
                     tldr_timezone = await self.timezones.get_timezone(tlder.timezone_id)
                     log.debug(f"Parsed reminder datetime: {parsed_date}")
-                    parsed_date = arrow.get(parsed_date).replace(tzinfo=tldr_timezone.name)
+                    parsed_date = arrow.get(parsed_date).replace(
+                        tzinfo=tldr_timezone.name
+                    )
                     log.debug(f"Timezone-adjusted reminder datetime: {parsed_date}")
                 else:
                     log.warning(f"Found no TLDer: {requester}")
@@ -163,7 +167,7 @@ class ReminderManager:
         except (TypeError, dateutil.parser.ParserError) as error:
             raise ReminderParsingError() from error
 
-    async def build_reminder_message(self, reminder: Reminder):
+    async def build_reminder_description(self, reminder: Reminder):
         channel_text = ""
         if channel_id := reminder.channel_id:
             if channel := await self.get_channel_func(channel_id):
@@ -173,10 +177,13 @@ class ReminderManager:
             " with 15 minute reminder" if reminder.remind_15_minutes_before else ""
         )
         return (
-            f"Added reminder '{reminder.notes}' at "
+            f"'{reminder.notes}' at "
             f"{reminder.date.strftime('%a %H:%M:%S %Z')}{advance_reminder_string}{channel_text}. "
             f"Reference `{reminder.id}`."
         )
+
+    async def build_reminder_message(self, reminder: Reminder):
+        return f"Added reminder {await self.build_reminder_description(reminder)}"
 
     async def create_reminder(
         self,
@@ -246,6 +253,23 @@ class ReminderManager:
         )
         await asyncio.gather(self.refresh_reminders(), self.cleanup_missed_reminders())
         return created_reminder
+
+    async def list_reminders(
+        self,
+        guild: discord.Guild,
+        channel: Optional[discord.TextChannel] = None,
+    ) -> list[Reminder]:
+        reminders_for_guild: list[Reminder] = []
+        async for reminder in self.storage.retrieve_reminders():
+            reminder_channel: Optional[
+                discord.TextChannel
+            ] = await self.get_channel_func(reminder.channel_id)
+            if not reminder_channel or reminder_channel.guild.id != guild.id:
+                continue
+            if channel is not None and reminder_channel.id != channel.id:
+                continue
+            reminders_for_guild.append(reminder)
+        return reminders_for_guild
 
 
 class ReminderError(Exception):
