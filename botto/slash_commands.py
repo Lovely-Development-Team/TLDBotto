@@ -377,4 +377,18 @@ def setup_slash(
             hidden=True,
         )
 
+    @slash.subcommand(
+        base="meals",
+        name="times",
+        description="Get currently-configured automatic reminder times",
+        guild_ids=[833842753799848016],
+    )
+    async def get_meal_times(ctx: SlashContext):
+        log.debug(f"/timezones times from {ctx.author}")
+        if meal_reminder_hours := config.get("meals", {}).get("auto_reminder_hours"):
+            reminder_hours = ",".join(meal_reminder_hours)
+            await ctx.reply(f"Meal auto reminder hours sent at: {reminder_hours}")
+        else:
+            await ctx.reply("No meal reminder config found")
+
     return slash
