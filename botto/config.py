@@ -273,7 +273,7 @@ def parse(config):
         defaults["voting"].any_channel_guilds = channels
 
     if members_vote_not_required_env := decode_base64_env(
-            "TLDBOTTO_MEMBERS_VOTE_NOT_REQUIRED"
+        "TLDBOTTO_MEMBERS_VOTE_NOT_REQUIRED"
     ):
         defaults["voting"].members_not_required = members_vote_not_required_env
 
@@ -281,7 +281,7 @@ def parse(config):
         defaults["voting"].members_not_required[str(guild)] = set(members)
 
     if ping_disallowed_roles := decode_base64_env(
-            "TLDBOTTO_VOTING_PING_DISALLOWED_ROLES"
+        "TLDBOTTO_VOTING_PING_DISALLOWED_ROLES"
     ):
         if isinstance(ping_disallowed_roles, list):
             disallowed_roles_list = [
@@ -303,6 +303,11 @@ def parse(config):
 
     if meals := decode_base64_env("TLDBOTTO_MEAL_CONFIG"):
         defaults["meals"] = meals
+
+    if reminder_hours := decode_base64_env("TLDBOTTO_MEAL_REMINDER_HOURS"):
+        current_meals = defaults.get("meals", {})
+        current_meals["auto_reminder_hours"] = reminder_hours
+        defaults["meals"] = current_meals
 
     if threshold := os.getenv("TLDBOTTO_NEXT_DAY_THRESHOLD"):
         defaults["time_is_next_day_threshold_hours"] = int(threshold)
