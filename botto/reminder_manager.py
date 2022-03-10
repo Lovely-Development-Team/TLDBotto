@@ -191,6 +191,7 @@ class ReminderManager:
         text: str,
         msg_id,
         channel_id,
+        requester_id: str,
         force_advance_reminder: bool = False,
     ):
         advance_reminder = force_advance_reminder or "🕰" in text
@@ -201,6 +202,7 @@ class ReminderManager:
             notes=reminder_notes,
             msg_id=str(msg_id) if msg_id else None,
             channel_id=str(channel_id) if channel_id else None,
+            requester_id=requester_id,
             advance_reminder=advance_reminder,
         )
         log.info(f"Created reminder: {created_reminder}")
@@ -249,6 +251,7 @@ class ReminderManager:
             text=f"{requester.mention}" + text,
             msg_id=None,
             channel_id=channel.id,
+            requester_id=str(requester.id),
             force_advance_reminder=advance_reminder,
         )
         await asyncio.gather(self.refresh_reminders(), self.cleanup_missed_reminders())

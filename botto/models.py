@@ -49,6 +49,7 @@ class Reminder:
     remind_15_minutes_before: bool
     msg_id: str
     channel_id: str
+    requester_id: Optional[str]
 
     @classmethod
     def from_airtable(cls, data: dict) -> "Reminder":
@@ -59,6 +60,7 @@ class Reminder:
         advance_reminder = fields.get("15 Minutes Before")
         msg_id = fields.get("Message ID")
         channel_id = fields.get("Channel ID")
+        requester_id = fields.get("Requester ID")
         return cls(
             id=data["id"],
             date=parsed_date,
@@ -66,15 +68,18 @@ class Reminder:
             remind_15_minutes_before=advance_reminder,
             msg_id=msg_id,
             channel_id=channel_id,
+            requester_id=requester_id,
         )
 
     def to_airtable(self, fields=None) -> dict:
-        fields = fields if fields else ["id", "date", "notes"]
+        fields = fields if fields else ["id", "date", "notes", "requester_id"]
         data = {}
         if "date" in fields:
             data["Date"] = self.date.isoformat()
         if "notes" in fields:
             data["Notes"] = self.notes
+        if "requester_id" in fields and self.requester_id:
+            data["Requester ID"] = self.requester_id
         return {
             "id": self.id,
             "fields": data,
@@ -226,10 +231,13 @@ class AirTableError(Exception):
         )
 
     def __str__(self) -> str:
-        str_rep = "Error from AirTable operation of type '{error_type}', with message:'{error_message}'. " "\nRequest URL: {url}".format(
-            error_type=self.error_type,
-            error_message=self.error_message,
-            url=self.url,
+        str_rep = (
+            "Error from AirTable operation of type '{error_type}', with message:'{error_message}'. "
+            "\nRequest URL: {url}".format(
+                error_type=self.error_type,
+                error_message=self.error_message,
+                url=self.url,
+            )
         )
         if self.request:
             return str_rep + "\nRequest body: {request}".format(request=self.request)
