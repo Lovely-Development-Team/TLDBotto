@@ -800,19 +800,20 @@ You can DM me the following commands:
             # Was it within a minute of being "on the hour"?
             and is_last_message_within_tolerance
         ):
-            log.info("Previous message was Tildy meal reminder. Editing.")
             return True
         else:
             log.info(
                 "Last message not a meal reminder:"
-                "Is from self? {from_self}"
-                "Is in meal hours? {in_meal_hours} (message hour: {message_hour})"
-                "Is within tolerance? {within_tolerance} (span: {minute_span})".format(
+                "Is from self? {from_self} "
+                "Is in meal hours? {in_meal_hours} (message hour: {message_hour}) "
+                "Is within tolerance? {within_tolerance} (span: {minute_span}) "
+                "Content: {content}".format(
                     from_self=is_last_message_from_self,
                     in_meal_hours=is_last_message_in_meal_hours,
                     message_hour=last_message_hour,
                     within_tolerance=is_last_message_within_tolerance,
                     minute_span=last_message_minute_span,
+                    content=message.content,
                 )
             )
             return False
