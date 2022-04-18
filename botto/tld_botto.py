@@ -826,7 +826,7 @@ You can DM me the following commands:
             log.info("Previous message was Tildy meal reminder. Editing.")
             await last_message.edit(content="🍽")
             last_three_messages = await channel.history(
-                before=last_message, limit=3, oldest_first=True
+                before=last_message, limit=3
             ).flatten()
             if all(self.is_scheduled_meal_reminder(msg) for msg in last_three_messages):
                 oldest_message = last_three_messages[-1]
