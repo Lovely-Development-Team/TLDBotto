@@ -825,12 +825,13 @@ You can DM me the following commands:
         if self.is_scheduled_meal_reminder(last_message):
             log.info("Previous message was Tildy meal reminder. Editing.")
             await last_message.edit(content="🍽")
-            last_three_messages = await channel.history(
-                before=last_message, limit=3
+            previous_messages_limit = self.config["meals"].get("previous_to_keep", 2)
+            last_messages = await channel.history(
+                before=last_message, limit=previous_messages_limit
             ).flatten()
-            if all(self.is_scheduled_meal_reminder(msg) for msg in last_three_messages):
-                oldest_message = last_three_messages[-1]
-                log.info(f"Deleting old meal reminder: {oldest_message}")
+            if all(self.is_scheduled_meal_reminder(msg) for msg in last_messages):
+                oldest_message = last_messages[-1]
+                log.info(f"Last {previous_messages_limit} message are meal reminders. Deleting old reminder: {oldest_message}")
                 await oldest_message.delete()
 
     async def send_meal_reminder(self, reply_to: Optional[Message] = None, **kwargs):
