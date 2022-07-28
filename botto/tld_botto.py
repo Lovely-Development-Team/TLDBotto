@@ -516,7 +516,8 @@ class TLDBotto(ClickupMixin, RemoteConfig, ExtendedClient):
             food_char = food.group(1)
             await self.reactions.food(self.regexes, message, food_char)
             has_matched = True
-        elif self.regexes.food.not_food_regex.search(message.content):
+        elif not_food := self.regexes.food.not_food_regex.search(message.content):
+            log.info(f"{not_food.group(1)} not recognised as food")
             await self.reactions.unrecognised_food(message)
             has_matched = True
         if pattern_names := self.regexes.patterns.matches(message):
