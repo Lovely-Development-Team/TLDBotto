@@ -109,7 +109,7 @@ class SuggestionRegexes:
             self_id, self.replace_bot_name("{bot_name}"), config["food"]
         )
         self.party = re.compile(
-            rf"(?<!third)(?<!3rd)(?<!wrong)(?:^|\s)(?P<partyword>part(?:a*y|ies)(?P<punctuation>!+|\?+|$)|WOOT WOOT!?)\s?",
+            rf"(?<!third)(?<!3rd)(?<!wrong)(?:^|\s)(?P<partyword>part(?:a*y|ies)(?: time+s?)(?P<punctuation>!+|\?+|$)|WOOT WOOT!?)\s?",
             re.IGNORECASE,
         )
         self.patterns = PatternReactions(config["pattern_reactions"])
