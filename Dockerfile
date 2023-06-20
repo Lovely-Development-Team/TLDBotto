@@ -7,6 +7,9 @@ COPY requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
+ARG bot_version
+ENV TLDBOTTO_VERSION=$bot_version
+
 COPY . .
 
 CMD [ "python", "." ]
