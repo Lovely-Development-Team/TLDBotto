@@ -26,7 +26,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Python 3.9
         uses: actions/setup-python@v1
@@ -43,7 +43,7 @@ jobs:
 
       - name: Load docker image from cache
         id: cache-docker
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         with:
           path: /tmp/docker-save
           key: docker-save-tld-${{ hashFiles('Dockerfile') }}
@@ -80,11 +80,11 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Load docker image from cache
         id: cache-docker
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         with:
           path: /tmp/docker-save
           key: docker-save-tld-${{ hashFiles('Dockerfile') }}
@@ -144,7 +144,7 @@ jobs:
           k8s-secret: ${{ secrets.DISCORD_BOTS_KUBERNETES_SECRET }}
 
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
