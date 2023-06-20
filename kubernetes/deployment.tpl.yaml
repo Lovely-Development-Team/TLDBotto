@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tildy
+  namespace: discord-bots
+  labels:
+    app.kubernetes.io/name: TLDBotto
+    app.kubernetes.io/instance: Tildy
+    app.kubernetes.io/version: ${TLDBOTTO_VERSION}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: TLDBotto
+      app.kubernetes.io/instance: Tildy
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: TLDBotto
+        app.kubernetes.io/instance: Tildy
+        app.kubernetes.io/version: ${TLDBOTTO_VERSION}
+    spec:
+      containers:
+      - name: bot
+        image: ghcr.io/lovely-development-team/${IMAGE_NAME}:latest
+        envFrom:
+          - configMapRef:
+              name: tildy
+          - secretRef:
+              name: tildy
+        env:
+          - name: TLDBOTTO_VERSION
+            value: ${TLDBOTTO_VERSION}
+          - name: LOG_TO_FILE
+            value: "false"
+        resources:
+          requests:
+            cpu: 20m
+            memory: 50Mi
+          limits:
+            cpu: 20m
+            memory: 100Mi
