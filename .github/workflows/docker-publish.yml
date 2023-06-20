@@ -126,6 +126,7 @@ jobs:
     needs: push
 
     concurrency: Tildy
+    environment: Primary Kubernetes
 
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event_name == 'workflow_run'
@@ -135,74 +136,49 @@ jobs:
       packages: read
 
     steps:
+      - name: Set the Kubernetes context
+        uses: azure/k8s-set-context@v3
+        with:
+          method: service-account
+          k8s-url: https://ef264a96-6984-4745-9cd8-dba4192ae195.us-east-1.linodelke.net:443
+          k8s-secret: ${{ secrets.DISCORD_BOTS_KUBERNETES_SECRET }}
+
       - name: Checkout code
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
 
-      - name: Log info
-        uses: appleboy/ssh-action@v0.1.4
-        with:
-          timeout: 120s
-          debug: true
-        env:
-          HOST: ${{ secrets.DEPLOY_HOST }}
-          USERNAME: ${{ secrets.DEPLOY_USERNAME }}
-          PASSPHRASE: ${{ secrets.DEPLOY_SSHKEY_PASSPHRASE }}
-          KEY: ${{ secrets.DEPLOY_SSHKEY }}
-          SCRIPT: pwd && ls && git status && ping ghcr.io && docker images ghcr.io/lovely-development-team/
-        continue-on-error: true
-
       - name: Set env
         run: echo "RELEASE_VERSION=`git describe --tags`" >> $GITHUB_ENV
         continue-on-error: true
 
-      - name: Pull new Tildy image
-        uses: appleboy/ssh-action@v0.1.4
+      - name: Set secrets
+        uses: azure/k8s-create-secret@v4
         with:
-          timeout: 120s
-          debug: true
-        env:
-          HOST: ${{ secrets.DEPLOY_HOST }}
-          USERNAME: ${{ secrets.DEPLOY_USERNAME }}
-          PASSPHRASE: ${{ secrets.DEPLOY_SSHKEY_PASSPHRASE }}
-          KEY: ${{ secrets.DEPLOY_SSHKEY }}
-          SCRIPT: docker pull ghcr.io/lovely-development-team/tld-botto:latest
+          namespace: 'discord-bots'
+          secret-name: 'tildy'
+          secret-type: 'Opaque'
+          string-data: '{"TLDBOTTO_DISCORD_TOKEN":"${{ secrets.DISCORD_TOKEN }}", "TLDBOTTO_AIRTABLE_BASE": "${{ secrets.AIRTABLE_BASE }}", "TLDBOTTO_AIRTABLE_KEY": "${{ secrets.AIRTABLE_KEY }}", "TLDBOTTO_CLICKUP_TOKEN": "${{ secrets.CLICKUP_TOKEN }}"}'
 
-      - name: Start Tildy
-        uses: appleboy/ssh-action@v0.1.4
-        with:
-          timeout: 60s
+      - name: Substitute env into templates
+        run: |
+          cat kubernetes/config.tpl.yaml | envsubst > kubernetes/config.yaml &&
+          cat kubernetes/deployment.tpl.yaml | envsubst > kubernetes/deployment.yaml
         env:
-          HOST: ${{ secrets.DEPLOY_HOST }}
-          USERNAME: ${{ secrets.DEPLOY_USERNAME }}
-          PASSPHRASE: ${{ secrets.DEPLOY_SSHKEY_PASSPHRASE }}
-          KEY: ${{ secrets.DEPLOY_SSHKEY }}
-          SCRIPT: >
-            docker stop tld_botto || true &&
-            docker rm tld_botto || true &&
-            docker run -d -t --restart unless-stopped
-            -e TLDBOTTO_DISCORD_TOKEN='${{ secrets.DISCORD_TOKEN }}'
-            -e TLDBOTTO_AIRTABLE_BASE='${{ secrets.AIRTABLE_BASE }}'
-            -e TLDBOTTO_AIRTABLE_KEY='${{ secrets.AIRTABLE_KEY }}'
-            -e TLDBOTTO_CLICKUP_TOKEN='${{ secrets.CLICKUP_TOKEN }}'
-            -e TLDBOTTO_MEMBERS_VOTE_NOT_REQUIRED='${{ secrets.MEMBERS_VOTE_NOT_REQUIRED }}'
-            -e TLDBOTTO_TIMEZONES='${{ secrets.TIMEZONES }}'
-            -e TLDBOTTO_MEAL_CONFIG='${{ secrets.MEAL_CONFIG }}'
-            -e TLDBOTTO_NEXT_DAY_THRESHOLD='${{ secrets.NEXT_DAY_THRESHOLD }}'
-            -e TLDBOTTO_DISABLED_FEATURES='${{ secrets.DISABLED_FEATURES }}'
-            -e TLDBOTTO_ID='Capys-hosted TLDBotto'
-            -e TLDBOTTO_VERSION='${{ env.RELEASE_VERSION }}'
-            --name tld_botto ghcr.io/lovely-development-team/tld-botto:latest
+          MEMBERS_VOTE_NOT_REQUIRED: ${{ vars.MEMBERS_VOTE_NOT_REQUIRED }}
+          TIMEZONES: ${{ vars.TIMEZONES }}
+          MEAL_CONFIG: ${{ vars.MEAL_CONFIG }}
+          NEXT_DAY_THRESHOLD: ${{ vars.NEXT_DAY_THRESHOLD }}
+          DISABLED_FEATURES: ${{ vars.DISABLED_FEATURES }}
+          TLDBOTTO_VERSION: ${{ env.RELEASE_VERSION }}
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
 
-      - name: Cleanup Docker images
-        uses: appleboy/ssh-action@v0.1.4
+      - name: Deploy to the Kubernetes cluster
+        uses: azure/k8s-deploy@v4
         with:
-          timeout: 60s
-        env:
-          HOST: ${{ secrets.DEPLOY_HOST }}
-          USERNAME: ${{ secrets.DEPLOY_USERNAME }}
-          PASSPHRASE: ${{ secrets.DEPLOY_SSHKEY_PASSPHRASE }}
-          KEY: ${{ secrets.DEPLOY_SSHKEY }}
-          SCRIPT: >
-            docker system prune -f
+          namespace: discord-bots
+          manifests: |
+            kubernetes/config.yaml
+            kubernetes/deployment.yaml
+          images: |
+            ghcr.io/lovely-development-team/${{ env.IMAGE_NAME }}:latest
