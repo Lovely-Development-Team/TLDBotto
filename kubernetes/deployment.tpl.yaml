@@ -29,8 +29,6 @@ spec:
           - secretRef:
               name: tildy
         env:
-          - name: TLDBOTTO_VERSION
-            value: ${TLDBOTTO_VERSION}
           - name: LOG_TO_FILE
             value: "false"
         resources:
