@@ -1,11 +1,15 @@
-from typing import Union, Literal, Optional
+from typing import Union, Optional, Any
 
 import discord
-from discord import Guild
+from discord import app_commands
 from discord.abc import GuildChannel, PrivateChannel
 
 
 class ExtendedClient(discord.Client):
+    def __init__(self, **kwargs: Any):
+        super().__init__(**kwargs)
+        self.tree = app_commands.CommandTree(self)
+
     async def get_or_fetch_channel(
         self, channel_id: int
     ) -> Optional[Union[GuildChannel, PrivateChannel, discord.Thread]]:

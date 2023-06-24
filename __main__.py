@@ -73,5 +73,11 @@ client = TLDBotto(
     config_storage,
 )
 slash = setup_slash(client, config, reminder_manager, timezone_storage)
+async def main():
+    async with client:
+        await client.start(config["authentication"]["discord"])
 
-client.run(config["authentication"]["discord"])
+
+loop = asyncio.get_event_loop()
+loop.run_until_complete(main())
+loop.close()
