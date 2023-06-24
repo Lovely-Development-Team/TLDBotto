@@ -79,6 +79,17 @@ DELETE_EMOJI = ("🥕", "❌")
 
 
 class TLDBotto(ClickupMixin, RemoteConfig, ExtendedClient):
+    snailed_it_guild = discord.Object(id=833842753799848016)
+    snailed_it_beta_guild = discord.Object(id=890978723451523083)
+    tld_guild = discord.Object(id=880491989995499600)
+    developer_hub_guild = discord.Object(id=1044371582291812472)
+    expected_guilds: list[discord.utils.Snowflake] = [
+        snailed_it_guild,
+        snailed_it_beta_guild,
+        tld_guild,
+        developer_hub_guild,
+    ]
+
     def __init__(
         self,
         config: dict,
@@ -149,7 +160,11 @@ class TLDBotto(ClickupMixin, RemoteConfig, ExtendedClient):
         self.regexes: Optional[SuggestionRegexes] = None
 
         intents = discord.Intents(
-            messages=True, guilds=True, reactions=True, members=True
+            messages=True,
+            guilds=True,
+            reactions=True,
+            members=True,
+            message_content=True,
         )
         super().__init__(
             clickup_client=clickup_client,
@@ -174,11 +189,17 @@ class TLDBotto(ClickupMixin, RemoteConfig, ExtendedClient):
             )
         )
 
+    async def setup_hook(self) -> None:
+        if not self.regexes:
+            self.regexes = SuggestionRegexes(str(self.user.id), self.config)
+
     async def on_ready(self):
         log.info("We have logged in as {0.user}".format(self))
 
-        if not self.regexes:
-            self.regexes = SuggestionRegexes(str(self.user.id), self.config)
+        log.info("Syncing commands")
+        sync_tasks = [self.tree.sync(guild=guild) for guild in self.expected_guilds] + [
+            self.tree.sync()
+        ]
 
         await self.random_presence()
 
@@ -191,6 +212,9 @@ class TLDBotto(ClickupMixin, RemoteConfig, ExtendedClient):
             ]
         )
         log.info(f"Meal reminders for: {reminder_log_text}")
+
+        await asyncio.wait(sync_tasks)
+        log.info("Synced commands")
 
     async def on_disconnect(self):
         log.warning("Bot disconnected")
@@ -239,8 +263,7 @@ class TLDBotto(ClickupMixin, RemoteConfig, ExtendedClient):
         except AttributeError:
             return False
 
-    async def on_raw_reaction_remove(self, payload):
-
+    async def on_raw_reaction_remove(self, payload: discord.RawReactionActionEvent):
         if payload.emoji.name not in VOTE_EMOJI:
             return
 
@@ -699,25 +722,27 @@ You can DM me the following commands:
             return
 
         if message_content == "!version":
-            await message.channel.trigger_typing()
-            git_version = os.getenv("TLDBOTTO_VERSION")
-            try:
-                git_version = (
-                    subprocess.check_output(["git", "describe", "--tags"])
-                    .decode("utf-8")
-                    .strip()
-                )
-            except subprocess.CalledProcessError as error:
-                log.warning(
-                    "Git command failed with code: {code}".format(code=error.returncode)
-                )
-            except FileNotFoundError:
-                log.warning("Git command not found")
-            response = f"Version: {git_version}"
-            if bot_id := self.config["id"]:
-                response = f"{response} ({bot_id})"
-            await dm_channel.send(response)
-            return
+            async with message.channel.typing():
+                git_version = os.getenv("TLDBOTTO_VERSION")
+                try:
+                    git_version = (
+                        subprocess.check_output(["git", "describe", "--tags"])
+                        .decode("utf-8")
+                        .strip()
+                    )
+                except subprocess.CalledProcessError as error:
+                    log.warning(
+                        "Git command failed with code: {code}".format(
+                            code=error.returncode
+                        )
+                    )
+                except FileNotFoundError:
+                    log.warning("Git command not found")
+                response = f"Version: {git_version}"
+                if bot_id := self.config["id"]:
+                    response = f"{response} ({bot_id})"
+                await dm_channel.send(response)
+                return
 
         if not await self.react(message):
             await self.reactions.unknown_dm(message)

@@ -230,7 +230,7 @@ def parse(config):
         "meals": {
             "auto_reminder_hours": ["8", "13", "18", "20", "1"],
             "guilds": [],
-            "previous_to_keep": 2
+            "previous_to_keep": 2,
         },
         "time_is_next_day_threshold_hours": 6,
         "reminder_channel": "833842753799848019",
@@ -310,10 +310,12 @@ def parse(config):
         current_meals["auto_reminder_hours"] = reminder_hours
         defaults["meals"] = current_meals
 
-    if reminders_to_keep := decode_base64_env("TLDBOTTO_MEAL_PREVIOUS_REMINDERS_TO_KEEP"):
+    if reminders_to_keep := decode_base64_env(
+        "TLDBOTTO_MEAL_PREVIOUS_REMINDERS_TO_KEEP"
+    ):
         current_meals = defaults.get("meals", {})
         current_meals["previous_to_keep"] = int(reminders_to_keep)
-        defaults["meals"] = current_meals 
+        defaults["meals"] = current_meals
 
     if threshold := os.getenv("TLDBOTTO_NEXT_DAY_THRESHOLD"):
         defaults["time_is_next_day_threshold_hours"] = int(threshold)
