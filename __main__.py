@@ -1,6 +1,7 @@
 import os
 import json
 import logging.config
+import asyncio
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from botto.clients import ClickUpClient
@@ -11,6 +12,7 @@ from botto.storage import (
     ReminderStorage,
     TimezoneStorage,
     ConfigStorage,
+    TestFlightStorage,
 )
 from botto.storage.enablement_storage import EnablementStorage
 from botto.tld_botto import TLDBotto
@@ -54,6 +56,16 @@ config_storage = ConfigStorage(
     config["authentication"]["airtable_base"], config["authentication"]["airtable_key"]
 )
 
+testflight_storage = TestFlightStorage(
+    config["authentication"]["snailed_it"]["airtable_base"],
+    config["authentication"]["snailed_it"]["airtable_key"],
+)
+
+testflight_config_storage = ConfigStorage(
+    config["authentication"]["snailed_it"]["airtable_base"],
+    config["authentication"]["snailed_it"]["airtable_key"],
+)
+
 reactions = Reactions(config)
 reminder_manager = ReminderManager(
     config, scheduler, reminder_storage, reactions, timezone_storage
@@ -71,8 +83,14 @@ client = TLDBotto(
     enablement_storage,
     clickup_client,
     config_storage,
+    testflight_storage,
+    testflight_config_storage,
 )
-slash = setup_slash(client, config, reminder_manager, timezone_storage)
+slash = setup_slash(
+    client, config, reminder_manager, timezone_storage, testflight_storage
+)
+
+
 async def main():
     async with client:
         await client.start(config["authentication"]["discord"])

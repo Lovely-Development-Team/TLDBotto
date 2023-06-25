@@ -25,7 +25,7 @@ class RemoteConfig:
             coalesce=True,
             next_run_time=datetime.now() + timedelta(seconds=5),
         )
-        super().__init__(**kwargs)
+        super().__init__(scheduler=scheduler, **kwargs)
 
     async def is_feature_disabled(
         self,

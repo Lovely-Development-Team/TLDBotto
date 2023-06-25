@@ -16,19 +16,21 @@ from botto.reminder_manager import (
     TimeTravelError,
     ReminderParsingError,
 )
-from botto.storage import TimezoneStorage
+from botto.storage import TimezoneStorage, TestFlightStorage
 from botto.errors import TlderNotFoundError
 from botto.tld_botto import TLDBotto
+from botto.views.test_flight_form import TestFlightForm
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
 
 
 def setup_slash(
-    client: discord.Client,
+    client: TLDBotto,
     config: dict,
     reminder_manager: ReminderManager,
     timezones: TimezoneStorage,
+    testflight_storage: TestFlightStorage,
 ):
     client.tree.clear_commands(guild=None)
     client.tree.clear_commands(guild=discord.Object(890978723451523083))
@@ -367,3 +369,54 @@ def setup_slash(
 
     client.tree.add_command(meals)
 
+    testflight = app_commands.Group(
+        name="testflight",
+        description="Commands for TestFlight",
+        default_permissions=discord.Permissions(send_messages=True),
+    )
+
+    def check_mutual_guilds(ctx: discord.Interaction) -> bool:
+        return len(ctx.user.mutual_guilds) > 0
+
+    @testflight.command(
+        name="register",
+        description="Register your email for TestFlight",
+    )
+    @app_commands.checks.cooldown(rate=1, per=5.0)
+    @app_commands.check(check_mutual_guilds)
+    async def testflight_register(ctx: Interaction):
+        logging.info("/testflight register")
+        if ctx.guild_id:
+            approvals_channel = await client.get_default_approvals_channel_id(
+                str(ctx.guild_id)
+            )
+        elif (
+            testing_requests := await testflight_storage.list_requests(
+                tester_id=ctx.user.id
+            )
+        ) and len(testing_requests) > 0:
+            guild_ids_with_requests = set(
+                (request.server_id for request in testing_requests)
+            )
+            approvals_channel = await (
+                (await client.get_default_approvals_channel_id(guild_id))
+                for guild_id in guild_ids_with_requests
+            ).__anext__()
+        else:
+            approvals_channel = None
+
+        logging.debug(
+            f"Sending registration form with approvals channel: {approvals_channel}"
+        )
+        await ctx.response.send_modal(
+            TestFlightForm(
+                testflight_storage,
+                approvals_channel,
+            )
+        )
+
+    @testflight_register.error
+    async def on_testflight_registration_error(ctx: Interaction, error: Exception):
+        logging.error("Failed to show registration form", exc_info=True)
+
+    client.tree.add_command(testflight)

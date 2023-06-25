@@ -24,7 +24,12 @@ class ReminderStorage(Storage):
         sort: Optional[list[str]] = None,
         session: Optional[ClientSession] = None,
     ) -> AsyncGenerator[dict, None]:
-        return self._iterate(self.reminders_url, filter_by_formula, sort, session)
+        return self._iterate(
+            self.reminders_url,
+            filter_by_formula=filter_by_formula,
+            sort=sort,
+            session=session,
+        )
 
     async def retrieve_reminders(self) -> AsyncGenerator[Reminder, None]:
         reminders_iterator = self._list_all_reminders(filter_by_formula=None)
