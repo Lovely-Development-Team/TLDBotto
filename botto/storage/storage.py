@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from collections.abc import AsyncGenerator
-from typing import Callable, Awaitable, Optional, Literal, Protocol
+from typing import Callable, Awaitable, Optional, Literal, Protocol, Union
 
 import aiohttp
 from aiohttp import ClientSession
@@ -63,9 +63,11 @@ class Storage:
     async def _iterate(
         self,
         base_url: str,
+        *,
         filter_by_formula: Optional[str],
         sort: Optional[list[str]] = None,
         session: Optional[ClientSession] = None,
+        fields: Optional[Union[list[str], str]] = None,
     ) -> AsyncGenerator[dict]:
         params = {}
         if filter_by_formula:
@@ -74,6 +76,8 @@ class Storage:
             for idx, field in enumerate(sort):
                 params.update({"sort[{index}][field]".format(index=idx): field})
                 params.update({"sort[{index}][direction]".format(index=idx): "asc"})
+        if fields:
+            params.update({"fields[]": fields})
         offset = None
         while True:
             if offset:
@@ -121,14 +125,30 @@ class Storage:
         url: str,
         method: Literal["post", "patch"],
         record: dict,
+        upsert_fields: Optional[list[str]],
         session: Optional[ClientSession] = None,
     ):
         async def run_insert(session_to_use: ClientSession):
-            is_single_record = "fields" not in record and "records" not in record
-            data = {"fields": record} if is_single_record else record
+            is_single_record = "records" not in record
+            has_fields = "fields" not in record
+            data: dict[str, Union[str, dict, list]] = (
+                {"fields": record} if is_single_record and has_fields else record
+            )
+            entity_url = url
+            if upsert_fields is not None:
+                if "records" not in record:
+                    data["records"] = [data.copy()]
+                    data.pop("fields")
+                    if data.get("id"):
+                        data.pop("id")
+                data["performUpsert"] = {"fieldsToMergeOn": upsert_fields}
+            elif is_single_record and (record_id := record.get("id")):
+                entity_url += "/" + record_id
+                record.pop("id")
+
             async with session_to_use.request(
                 method,
-                url,
+                entity_url,
                 json=data,
                 headers=self.auth_header,
             ) as r:
@@ -143,11 +163,19 @@ class Storage:
             return result
 
     async def _insert(
-        self, url: str, record: dict, session: Optional[ClientSession] = None
+        self,
+        url: str,
+        record: dict,
+        session: Optional[ClientSession] = None,
+        upsert_fields: Optional[list[str]] = None,
     ) -> dict:
-        return await self._modify(url, "post", record, session)
+        return await self._modify(url, "post", record, upsert_fields, session)
 
     async def _update(
-        self, url: str, record: dict, session: Optional[ClientSession] = None
+        self,
+        url: str,
+        record: dict,
+        session: Optional[ClientSession] = None,
+        upsert_fields: Optional[list[str]] = None,
     ) -> dict:
-        return await self._modify(url, "patch", record, session)
+        return await self._modify(url, "patch", record, upsert_fields, session)

@@ -56,6 +56,7 @@ def parse(config):
             "airtable_key": "",
             "airtable_base": "",
             "clickup": "",
+            "snailed_it": {"airtable_key": "", "airtable_base": ""},
         },
         "channels": {"include": set(), "exclude": set(), "voting": {"voting"}},
         "voting": VotingConfig(
@@ -265,6 +266,12 @@ def parse(config):
 
     if token := os.getenv("TLDBOTTO_CLICKUP_TOKEN"):
         defaults["authentication"]["clickup"] = token
+
+    if token := os.getenv("SNAILEDIT_AIRTABLE_KEY"):
+        defaults["authentication"]["snailed_it"]["airtable_key"] = token
+
+    if token := os.getenv("SNAILEDIT_AIRTABLE_BASE"):
+        defaults["authentication"]["snailed_it"]["airtable_base"] = token
 
     if channels := decode_base64_env("TLDBOTTO_CHANNELS"):
         for key in channels.keys():

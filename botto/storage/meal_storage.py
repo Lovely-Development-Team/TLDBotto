@@ -49,7 +49,12 @@ class AirtableMealStorage(MealStorage):
         sort: Optional[list[str]] = None,
         session: Optional[ClientSession] = None,
     ) -> AsyncGenerator[dict, None]:
-        return self._iterate(self.times_url, filter_by_formula, sort, session)
+        return self._iterate(
+            self.times_url,
+            filter_by_formula=filter_by_formula,
+            sort=sort,
+            session=session,
+        )
 
     async def get_intros(self) -> Intro:
         texts_iterator = self._list_all_texts(filter_by_formula="{Name}='Intro'")

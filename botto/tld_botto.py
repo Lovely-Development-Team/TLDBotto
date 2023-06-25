@@ -20,7 +20,8 @@ import arrow
 
 from .clients import ClickUpClient
 from .errors import TlderNotFoundError
-from .mixins import ClickupMixin, RemoteConfig
+from .mixins import ClickupMixin, RemoteConfig, ReactionRoles
+from .views.test_flight_form import TestFlightForm
 
 if TYPE_CHECKING:
     from discord.abc import MessageableChannel
@@ -53,8 +54,13 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from reminder_manager import ReminderManager
-from .storage.meal_storage import MealStorage
-from .storage import MealStorage, TimezoneStorage, EnablementStorage, ConfigStorage
+from .storage import (
+    MealStorage,
+    TimezoneStorage,
+    EnablementStorage,
+    ConfigStorage,
+    TestFlightStorage,
+)
 from .regexes import SuggestionRegexes
 from .message_checks import is_dm, get_or_fetch_member
 
@@ -78,7 +84,7 @@ NUMBERS = [
 DELETE_EMOJI = ("🥕", "❌")
 
 
-class TLDBotto(ClickupMixin, RemoteConfig, ExtendedClient):
+class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
     snailed_it_guild = discord.Object(id=833842753799848016)
     snailed_it_beta_guild = discord.Object(id=890978723451523083)
     tld_guild = discord.Object(id=880491989995499600)
@@ -101,6 +107,8 @@ class TLDBotto(ClickupMixin, RemoteConfig, ExtendedClient):
         enablement: EnablementStorage,
         clickup_client: ClickUpClient,
         config_storage: ConfigStorage,
+        test_flight_storage: TestFlightStorage,
+        testflight_config_storage: ConfigStorage,
     ):
         self.config = config
         self.reactions = reactions
@@ -172,6 +180,8 @@ class TLDBotto(ClickupMixin, RemoteConfig, ExtendedClient):
             config=config,
             config_storage=config_storage,
             scheduler=scheduler,
+            reactions_roles_storage=test_flight_storage,
+            testflight_config_storage=testflight_config_storage,
             intents=intents,
         )
 
@@ -302,6 +312,8 @@ class TLDBotto(ClickupMixin, RemoteConfig, ExtendedClient):
             payload.emoji.name.startswith(emoji)
             for emoji in self.config["voting"].exclusion_emojis
         )
+        await self.handle_role_reaction(payload)
+        await self.handle_role_approval(payload)
         if not is_vote and not is_delete and not is_vote_exclusion:
             return
 
@@ -404,7 +416,7 @@ class TLDBotto(ClickupMixin, RemoteConfig, ExtendedClient):
 
     async def on_message(self, message: Message):
         if message.author.id == self.user.id:
-            log.info("Ignoring message from self")
+            log.debug("Ignoring message from self")
             return
 
         if is_dm(message):
