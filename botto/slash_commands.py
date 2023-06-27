@@ -390,18 +390,6 @@ def setup_slash(
             approvals_channel = await client.get_default_approvals_channel_id(
                 str(ctx.guild_id)
             )
-        elif (
-            testing_requests := await testflight_storage.list_requests(
-                tester_id=ctx.user.id
-            )
-        ) and len(testing_requests) > 0:
-            guild_ids_with_requests = set(
-                (request.server_id for request in testing_requests)
-            )
-            approvals_channel = await (
-                (await client.get_default_approvals_channel_id(guild_id))
-                for guild_id in guild_ids_with_requests
-            ).__anext__()
         else:
             approvals_channel = None
 

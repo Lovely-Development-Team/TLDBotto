@@ -110,7 +110,7 @@ class ReactionRoles(ExtendedClient):
                 log.warning(f"No approvals channel found for server {payload.guild_id}")
                 return
             approvals_channel = self.get_channel(int(approvals_channel_id))
-            await self.send_notification_message(
+            await self.send_request_notification_message(
                 approvals_channel,
                 payload.member or await self.get_or_fetch_user(payload.user_id),
                 tester,
@@ -119,7 +119,7 @@ class ReactionRoles(ExtendedClient):
         # role = guild.get_role(int(reaction_role.role_id))
         # await payload.member.add_roles(role)
 
-    async def send_notification_message(
+    async def send_request_notification_message(
         self,
         default_channel: discord.TextChannel,
         user: discord.User,
@@ -128,6 +128,14 @@ class ReactionRoles(ExtendedClient):
     ) -> (TestingRequest, discord.Message):
         if request_approval_channel_id := request.approval_channel_id:
             approval_channel = self.get_channel(int(request_approval_channel_id))
+        elif (
+            guild_approvals_channel_id := await self.get_default_approvals_channel_id(
+                request.server_id
+            )
+        ) and (
+            guild_approvals_channel := self.get_channel(int(guild_approvals_channel_id))
+        ):
+            approval_channel = guild_approvals_channel
         else:
             approval_channel = default_channel
         message = await approval_channel.send(

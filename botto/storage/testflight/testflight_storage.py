@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Optional, Union
+from typing import Optional, Union, AsyncGenerator
 
 from botto.models import AirTableError
 from botto.storage.storage import Storage
@@ -151,12 +151,16 @@ class TestFlightStorage(Storage):
         )
         return TestingRequest.from_airtable(result)
 
-    async def list_requests(self, tester_id: Union[str, int]) -> list[TestingRequest]:
+    def list_requests(
+        self, tester_id: Union[str, int]
+    ) -> AsyncGenerator[TestingRequest, None]:
         result_iterator = self._iterate(
             self.testing_requests_url,
             filter_by_formula=f"{{Tester Discord ID}}={tester_id}",
         )
-        return [TestingRequest.from_airtable(x) async for x in result_iterator]
+        # PyCharm complains that the return type is actually a `Generator` not an `AsyncGenerator`. PyCharm is wrong.
+        # noinspection PyTypeChecker
+        return (TestingRequest.from_airtable(x) async for x in result_iterator)
 
     notification_message_id_field = "fldz3nfv1dougxSd4"
 
