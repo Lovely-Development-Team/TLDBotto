@@ -149,6 +149,17 @@ class ReactionRoles(ExtendedClient):
         request.notification_message_id = message.id
         await self.testflight_storage.update_request(request)
 
+    async def send_approval_notification(
+        self,
+        request: TestingRequest,
+    ):
+        user = await self.get_or_fetch_user(int(request.tester_discord_id))
+        await user.send(
+            f"Hi again!\n "
+            f"Your request to test **{request.app_name}** has been approved.\n"
+            f"A TestFlight invite should have been sent to {request.tester_email}"
+        )
+
     async def handle_role_approval(self, payload: discord.RawReactionActionEvent):
         guild_id = payload.guild_id
         if guild_id is None:
@@ -188,6 +199,14 @@ class ReactionRoles(ExtendedClient):
                     delete_after=30,
                 )
                 return
+        if testing_request.tester_email is None:
+            await channel.send(
+                f"{payload.member.mention} Received approval reaction '{payload.emoji.name}'"
+                f" but tester does not have an associated email!",
+                reference=message.to_reference(),
+                mention_author=False,
+            )
+            return
         testing_request.approved = True
         testing_request = await self.testflight_storage.update_request(testing_request)
 
@@ -203,6 +222,17 @@ class ReactionRoles(ExtendedClient):
             await channel.send(
                 f"{payload.member.mention} Received approval reaction '{payload.emoji.name}'"
                 f" but failed to add roles to member due to error: {e}",
+                reference=message.to_reference(),
+                mention_author=False,
+            )
+            raise
+        try:
+            await self.send_approval_notification(testing_request)
+        except discord.DiscordException as e:
+            log.error("Failed to add roles to member", exc_info=True)
+            await channel.send(
+                f"{payload.member.mention} Received approval reaction '{payload.emoji.name}'and added roles to member"
+                f" but failed to notify member due to error: {e}",
                 reference=message.to_reference(),
                 mention_author=False,
             )
