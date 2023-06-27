@@ -2,7 +2,7 @@ import discord
 import pytest
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from botto.clients import ClickUpClient
+from botto.clients import ClickUpClient, AppStoreConnectClient
 from botto.reactions import Reactions
 from botto.reminder_manager import ReminderManager
 from botto.slash_commands import setup_slash
@@ -12,6 +12,7 @@ from botto.storage import (
     TimezoneStorage,
     EnablementStorage,
     ConfigStorage,
+    TestFlightStorage,
 )
 from botto.tld_botto import TLDBotto
 
@@ -28,6 +29,16 @@ def test_startup():
     enablement_storage = EnablementStorage("fake_base", "fake_key")
 
     config_storage = ConfigStorage("fake_base", "fake_key")
+
+    testflight_storage = TestFlightStorage(
+        "fake_base",
+        "fake_key",
+    )
+
+    testflight_config_storage = ConfigStorage(
+        "fake_base",
+        "fake_key",
+    )
 
     reactions = Reactions({})
     reminder_manager = ReminderManager(
@@ -46,7 +57,12 @@ def test_startup():
         enablement_storage,
         clickup_client,
         config_storage,
+        testflight_storage,
+        testflight_config_storage,
+        app_store_connect_client=AppStoreConnectClient({}),
     )
-    slash = setup_slash(client, {}, reminder_manager, timezone_storage)
+    slash = setup_slash(
+        client, {}, reminder_manager, timezone_storage, testflight_storage
+    )
     with pytest.raises(discord.LoginFailure):
         client.run("fake_discord_key")
