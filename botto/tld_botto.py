@@ -462,7 +462,6 @@ class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
         await self.process_suggestion(message)
 
     def clean_message(self, actual_motto: str, guild: Guild) -> str:
-
         for channel_id in CHANNEL_REGEX.findall(actual_motto):
             channel = self.get_channel(int(channel_id))
             if not channel:
@@ -623,7 +622,6 @@ class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
 
         parsed_local_times = []
         for match in matches:
-
             hours = int(match.group("hours"))
             minutes = match.group("minutes")
             ampm = match.group("am_pm")
@@ -871,7 +869,9 @@ You can DM me the following commands:
             ).flatten()
             if all(self.is_scheduled_meal_reminder(msg) for msg in last_messages):
                 oldest_message = last_messages[-1]
-                log.info(f"Last {previous_messages_limit} message are meal reminders. Deleting old reminder: {oldest_message}")
+                log.info(
+                    f"Last {previous_messages_limit} message are meal reminders. Deleting old reminder: {oldest_message}"
+                )
                 await oldest_message.delete()
 
     async def send_meal_reminder(self, reply_to: Optional[Message] = None, **kwargs):
