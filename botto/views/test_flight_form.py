@@ -52,19 +52,22 @@ class TestFlightForm(discord.ui.Modal, title="TestFlight Registration"):
             default_approvals_channel = interaction.client.get_channel(
                 int(self.default_approvals_channel_id)
             )
-            requests = await self.testflight_storage.list_requests(
-                tester_id=interaction.user.id
+        else:
+            default_approvals_channel = None
+        requests_generator = self.testflight_storage.list_requests(
+            tester_id=interaction.user.id
+        )
+        log.info(
+            f"Testing requests from {updated_tester.discord_id} ({updated_tester.username}): {requests_generator}"
+        )
+        message_sends = [
+            client.send_request_notification_message(
+                default_approvals_channel, interaction.user, updated_tester, request
             )
-            log.info(
-                f"Testing requests from {updated_tester.discord_id} ({updated_tester.username}): {requests}"
-            )
-            message_sends = [
-                client.send_notification_message(
-                    default_approvals_channel, interaction.user, updated_tester, request
-                )
-                for request in requests
-            ]
-            await asyncio.wait(message_sends)
+            async for request in requests_generator
+        ]
+
+        await asyncio.wait(message_sends)
 
         await interaction.response.send_message(
             f"Thanks for registering with {self.email.value}!"
