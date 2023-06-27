@@ -61,10 +61,11 @@ class ConfigStorage(Storage):
 
     async def get_config(self, server_id: str, key: str) -> Optional[ConfigEntry]:
         await self.config_lock.acquire()
-        if server_config := self.config_cache.get(str(server_id)):
-            if config := server_config[key]:
-                self.config_lock.release()
-                return config
+        if (server_config := self.config_cache.get(str(server_id))) and (
+            config := server_config.get(key)
+        ):
+            self.config_lock.release()
+            return config
         else:
             self.config_lock.release()
             return await self.retrieve_config(server_id, key)
