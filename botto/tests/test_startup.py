@@ -12,7 +12,7 @@ from botto.storage import (
     TimezoneStorage,
     EnablementStorage,
     ConfigStorage,
-    TestFlightStorage,
+    BetaTestersStorage,
 )
 from botto.tld_botto import TLDBotto
 
@@ -30,7 +30,7 @@ def test_startup():
 
     config_storage = ConfigStorage("fake_base", "fake_key")
 
-    testflight_storage = TestFlightStorage(
+    testflight_storage = BetaTestersStorage(
         "fake_base",
         "fake_key",
     )

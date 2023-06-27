@@ -1,1 +1,1 @@
-from . import test_flight_form
+from . import testflight_form
