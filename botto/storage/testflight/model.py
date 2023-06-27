@@ -86,6 +86,8 @@ class Tester:
 @dataclass
 class TestingRequest:
     tester: str
+    tester_discord_id: str
+    tester_email: Optional[str]
     app: str
     server_id: str
     app_name: Optional[str] = None  # Formula field
@@ -119,6 +121,17 @@ class TestingRequest:
         except IndexError:
             tester = fields["Tester"]
         try:
+            tester_discord_id: str = fields["Tester Discord ID"][0]
+        except IndexError:
+            tester_discord_id = fields["Tester Discord ID"]
+        try:
+            if tester_email_list := fields.get("Tester Email"):
+                tester_email = tester_email_list[0]
+            else:
+                tester_email = None
+        except IndexError:
+            tester_email = fields.get("Tester Discord ID")
+        try:
             app: str = fields["App"][0]
         except IndexError:
             app = fields["App"]
@@ -129,6 +142,8 @@ class TestingRequest:
         return cls(
             id=data["id"],
             tester=tester,
+            tester_discord_id=tester_discord_id,
+            tester_email=tester_email,
             app=app,
             app_name=app_name,
             _approved=fields.get("Approved"),
