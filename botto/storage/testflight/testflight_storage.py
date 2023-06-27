@@ -9,6 +9,7 @@ from botto.storage.testflight.model import (
     Tester,
     TestingRequest,
     MissingRecordIDError,
+    App,
 )
 
 log = logging.getLogger(__name__)
@@ -25,6 +26,9 @@ class TestFlightStorage(Storage):
             )
         )
         self.testers_url = "https://api.airtable.com/v0/{base}/Testers".format(
+            base=snailedit_airtable_base
+        )
+        self.apps_url = "https://api.airtable.com/v0/{base}/Apps".format(
             base=snailedit_airtable_base
         )
         self.testing_requests_url = (
@@ -74,8 +78,13 @@ class TestFlightStorage(Storage):
         async with self.config_lock:
             return self.config_cache
 
-    async def fetch_tester(self, discord_id: str) -> Optional[Tester]:
-        log.debug(f"Fetching tester with ID {discord_id}")
+    async def fetch_tester(self, record_id: str) -> Optional[Tester]:
+        log.debug(f"Fetching tester with ID {record_id}")
+        result = await self._get(self.testers_url + "/" + record_id)
+        return Tester.from_airtable(result)
+
+    async def find_tester(self, discord_id: str) -> Optional[Tester]:
+        log.debug(f"Finding tester with ID {discord_id}")
         try:
             result_iterator = self._iterate(
                 self.testers_url, filter_by_formula=f"{{Discord ID}}='{discord_id}'"
@@ -221,3 +230,8 @@ class TestFlightStorage(Storage):
         else:
             self.config_lock.release()
             return await self._fetch_reaction(server_id, msg_id, key)
+
+    async def fetch_app(self, record_id: str) -> Optional[App]:
+        log.debug(f"Fetching app with ID {record_id}")
+        result = await self._get(self.apps_url + "/" + record_id)
+        return App.from_airtable(result)

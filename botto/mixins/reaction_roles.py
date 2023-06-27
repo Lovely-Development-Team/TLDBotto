@@ -6,10 +6,16 @@ from typing import Optional
 import discord
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
+from botto.clients import AppStoreConnectClient
 from botto.extended_client import ExtendedClient
 from botto.models import AirTableError
 from botto.storage import TestFlightStorage, ConfigStorage
-from botto.storage.testflight.model import Tester, TestingRequest
+from botto.storage.testflight.model import (
+    Tester,
+    TestingRequest,
+    ApiKeyNotSetError,
+    BetaGroupNotSetError,
+)
 
 log = logging.getLogger(__name__)
 
@@ -20,10 +26,12 @@ class ReactionRoles(ExtendedClient):
         scheduler: AsyncIOScheduler,
         reactions_roles_storage: TestFlightStorage,
         testflight_config_storage: ConfigStorage,
+        app_store_connect_client: AppStoreConnectClient,
         **kwargs,
     ):
         self.testflight_storage = reactions_roles_storage
         self.config_storage = testflight_config_storage
+        self.app_store_connect_client = app_store_connect_client
         scheduler.add_job(
             self.refresh_caches,
             name="Refresh reaction-role watched messages and approval channels",
@@ -76,7 +84,7 @@ class ReactionRoles(ExtendedClient):
         if reaction_role is None:
             log.info("No reaction-role mapping found")
             return
-        tester = await self.testflight_storage.fetch_tester(str(payload.member.id))
+        tester = await self.testflight_storage.find_tester(str(payload.member.id))
         log.debug(f"Existing tester: {tester and tester.username or 'No'}")
         if tester is None:
             tester = Tester(
@@ -116,8 +124,6 @@ class ReactionRoles(ExtendedClient):
                 tester,
                 testing_request,
             )
-        # role = guild.get_role(int(reaction_role.role_id))
-        # await payload.member.add_roles(role)
 
     async def send_request_notification_message(
         self,
@@ -149,15 +155,12 @@ class ReactionRoles(ExtendedClient):
         request.notification_message_id = message.id
         await self.testflight_storage.update_request(request)
 
-    async def send_approval_notification(
-        self,
-        request: TestingRequest,
-    ):
+    async def send_approval_notification(self, request: TestingRequest, tester: Tester):
         user = await self.get_or_fetch_user(int(request.tester_discord_id))
         await user.send(
             f"Hi again!\n "
             f"Your request to test **{request.app_name}** has been approved.\n"
-            f"A TestFlight invite should have been sent to {request.tester_email}"
+            f"A TestFlight invite should have been sent to {tester.email}"
         )
 
     async def handle_role_approval(self, payload: discord.RawReactionActionEvent):
@@ -199,15 +202,53 @@ class ReactionRoles(ExtendedClient):
                     delete_after=30,
                 )
                 return
-        if testing_request.tester_email is None:
+        tester = await self.testflight_storage.fetch_tester(testing_request.tester)
+        if tester is None:
             await channel.send(
                 f"{payload.member.mention} Received approval reaction '{payload.emoji.name}'"
-                f" but tester does not have an associated email!",
+                f" but could not find tester!",
                 reference=message.to_reference(),
                 mention_author=False,
             )
             return
+        app = await self.testflight_storage.fetch_app(testing_request.app)
+        if app is None:
+            log.error(
+                f"Failed fetch app {testing_request.app} ({testing_request.app_name})",
+                exc_info=True,
+            )
+            await channel.send(
+                f"{payload.member.mention} Failed to fetch app {testing_request.app} ({testing_request.app_name})",
+                reference=message.to_reference(),
+                mention_author=False,
+            )
         testing_request.approved = True
+
+        try:
+            await self.app_store_connect_client.create_beta_tester(
+                app, tester.email, tester.given_name, tester.family_name
+            )
+            log.info(f"Added {tester} to Beta Testers")
+        except ApiKeyNotSetError:
+            log.error(
+                f"App Store Api Key not set for {app}",
+                exc_info=True,
+            )
+            await channel.send(
+                f"{payload.member.mention} No Api Key is set for {app.name}, unable to add tester automatically)",
+                reference=message.to_reference(),
+                mention_author=False,
+            )
+        except BetaGroupNotSetError:
+            log.error(
+                f"Beta group not set for {app}",
+                exc_info=True,
+            )
+            await channel.send(
+                f"{payload.member.mention} No Beta Group is set for {app.name}, unable to add tester automatically)",
+                reference=message.to_reference(),
+                mention_author=False,
+            )
 
         roles = [
             guild.get_role(int(role_id))
@@ -226,7 +267,7 @@ class ReactionRoles(ExtendedClient):
             )
             raise
         try:
-            await self.send_approval_notification(testing_request)
+            await self.send_approval_notification(testing_request, tester)
         except discord.DiscordException as e:
             log.error("Failed to add roles to member", exc_info=True)
             await channel.send(

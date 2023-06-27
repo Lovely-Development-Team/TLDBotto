@@ -87,7 +87,6 @@ class Tester:
 class TestingRequest:
     tester: str
     tester_discord_id: str
-    tester_email: Optional[str]
     app: str
     server_id: str
     app_name: Optional[str] = None  # Formula field
@@ -125,13 +124,6 @@ class TestingRequest:
         except IndexError:
             tester_discord_id = fields["Tester Discord ID"]
         try:
-            if tester_email_list := fields.get("Tester Email"):
-                tester_email = tester_email_list[0]
-            else:
-                tester_email = None
-        except IndexError:
-            tester_email = fields.get("Tester Discord ID")
-        try:
             app: str = fields["App"][0]
         except IndexError:
             app = fields["App"]
@@ -143,7 +135,6 @@ class TestingRequest:
             id=data["id"],
             tester=tester,
             tester_discord_id=tester_discord_id,
-            tester_email=tester_email,
             app=app,
             app_name=app_name,
             _approved=fields.get("Approved"),
@@ -188,7 +179,45 @@ class TestingRequest:
         return airtable_dict
 
 
+@dataclass
+class App:
+    id: str
+    name: str
+    approval_channel: Optional[str]
+    reaction_role_ids: list[str]
+    app_store_key_id: Optional[str]
+    beta_group_id: Optional[str]
+
+    @classmethod
+    def from_airtable(cls, data: dict) -> "App":
+        fields = data["fields"]
+        return cls(
+            id=data["id"],
+            name=fields["Name"],
+            approval_channel=fields.get("Approval Channel"),
+            reaction_role_ids=fields["Reaction Role IDs"],
+            app_store_key_id=fields["App Store Key ID"],
+            beta_group_id=fields["Beta Group ID"],
+        )
+
+
 class MissingRecordIDError(Exception):
     def __init__(self, record: Optional[object], *args: object) -> None:
         self.record = record
         super().__init__(record, *args)
+
+
+class AppStoreConnectError(Exception):
+    pass
+
+
+class ApiKeyNotSetError(AppStoreConnectError):
+    def __init__(self, app: App, *args: object) -> None:
+        self.app_name = app.name
+        super().__init__(app.name, *args)
+
+
+class BetaGroupNotSetError(AppStoreConnectError):
+    def __init__(self, app: App, *args: object) -> None:
+        self.app_name = app.name
+        super().__init__(app.name, *args)

@@ -57,6 +57,8 @@ def parse(config):
             "airtable_base": "",
             "clickup": "",
             "snailed_it": {"airtable_key": "", "airtable_base": ""},
+            # Format: {"theKeyId": "iss": "theIssuerId", "kid": "theKeyId", "secret": "theKey"}
+            "app_store_connect": {},
         },
         "channels": {"include": set(), "exclude": set(), "voting": {"voting"}},
         "voting": VotingConfig(
@@ -272,6 +274,20 @@ def parse(config):
 
     if token := os.getenv("SNAILEDIT_AIRTABLE_BASE"):
         defaults["authentication"]["snailed_it"]["airtable_base"] = token
+
+    if app_store_connect_api_keys := decode_base64_env("APP_STORE_CONNECT_API_KEYS"):
+        defaults["authentication"]["app_store_connect"] = app_store_connect_api_keys
+        for key, value in app_store_connect_api_keys.items():
+            try:
+                defaults["authentication"]["app_store_connect"][key] = {
+                    "iss": value["iss"],
+                    "kid": value["kid"],
+                    "secret": base64.b64decode(value["secret"]).decode("utf-8"),
+                }
+            except binascii.Error:
+                log.error(
+                    f"Unable to decode base64 secret for kid '{key}'", exc_info=True
+                )
 
     if channels := decode_base64_env("TLDBOTTO_CHANNELS"):
         for key in channels.keys():

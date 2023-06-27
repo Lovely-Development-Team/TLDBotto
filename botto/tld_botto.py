@@ -19,7 +19,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 import arrow
 
-from .clients import ClickUpClient
+from .clients import ClickUpClient, AppStoreConnectClient
 from .errors import TlderNotFoundError
 from .mixins import ClickupMixin, RemoteConfig, ReactionRoles
 from .views.test_flight_form import TestFlightForm
@@ -110,6 +110,7 @@ class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
         config_storage: ConfigStorage,
         test_flight_storage: TestFlightStorage,
         testflight_config_storage: ConfigStorage,
+        app_store_connect_client: AppStoreConnectClient,
     ):
         self.config = config
         self.reactions = reactions
@@ -184,6 +185,7 @@ class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
             scheduler=scheduler,
             reactions_roles_storage=test_flight_storage,
             testflight_config_storage=testflight_config_storage,
+            app_store_connect_client=app_store_connect_client,
             intents=intents,
         )
 
