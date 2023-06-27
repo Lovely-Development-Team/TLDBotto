@@ -55,7 +55,7 @@ class TestFlightForm(discord.ui.Modal, title="TestFlight Registration"):
         else:
             default_approvals_channel = None
         requests_generator = self.testflight_storage.list_requests(
-            tester_id=interaction.user.id
+            tester_id=interaction.user.id, exclude_approved=True
         )
         log.info(
             f"Testing requests from {updated_tester.discord_id} ({updated_tester.username}): {requests_generator}"

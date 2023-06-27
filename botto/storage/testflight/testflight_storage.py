@@ -152,11 +152,16 @@ class TestFlightStorage(Storage):
         return TestingRequest.from_airtable(result)
 
     def list_requests(
-        self, tester_id: Union[str, int]
+        self, tester_id: Union[str, int], exclude_approved: bool = False
     ) -> AsyncGenerator[TestingRequest, None]:
+        tester_id_condition = f"{{Tester Discord ID}}={tester_id}"
+        if exclude_approved:
+            formula = f"AND({tester_id_condition},{{Approved}}=FALSE())"
+        else:
+            formula = tester_id_condition
         result_iterator = self._iterate(
             self.testing_requests_url,
-            filter_by_formula=f"{{Tester Discord ID}}={tester_id}",
+            filter_by_formula=formula,
         )
         # PyCharm complains that the return type is actually a `Generator` not an `AsyncGenerator`. PyCharm is wrong.
         # noinspection PyTypeChecker
