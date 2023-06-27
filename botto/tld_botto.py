@@ -22,7 +22,7 @@ import arrow
 from .clients import ClickUpClient, AppStoreConnectClient
 from .errors import TlderNotFoundError
 from .mixins import ClickupMixin, RemoteConfig, ReactionRoles
-from .views.test_flight_form import TestFlightForm
+from .views.testflight_form import TestFlightForm
 
 if TYPE_CHECKING:
     from discord.abc import MessageableChannel
@@ -60,7 +60,7 @@ from .storage import (
     TimezoneStorage,
     EnablementStorage,
     ConfigStorage,
-    TestFlightStorage,
+    BetaTestersStorage,
 )
 from .regexes import SuggestionRegexes
 from .message_checks import is_dm, get_or_fetch_member
@@ -108,7 +108,7 @@ class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
         enablement: EnablementStorage,
         clickup_client: ClickUpClient,
         config_storage: ConfigStorage,
-        test_flight_storage: TestFlightStorage,
+        test_flight_storage: BetaTestersStorage,
         testflight_config_storage: ConfigStorage,
         app_store_connect_client: AppStoreConnectClient,
     ):

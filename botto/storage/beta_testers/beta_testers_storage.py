@@ -8,7 +8,7 @@ from cachetools.keys import hashkey
 
 from botto.models import AirTableError
 from botto.storage.storage import Storage
-from botto.storage.testflight.model import (
+from botto.storage.beta_testers.model import (
     ReactionRole,
     Tester,
     TestingRequest,
@@ -21,7 +21,7 @@ log = logging.getLogger(__name__)
 ConfigCache = dict[str, dict[str, dict[str, ReactionRole]]]
 
 
-class TestFlightStorage(Storage):
+class BetaTestersStorage(Storage):
     def __init__(self, snailedit_airtable_base: str, snailedit_airtable_key: str):
         super().__init__(snailedit_airtable_base, snailedit_airtable_key)
         self.reactions_roles_config_url = (

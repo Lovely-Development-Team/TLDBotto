@@ -6,7 +6,11 @@ import aiohttp
 import arrow
 import jwt
 
-from botto.storage.testflight.model import App, BetaGroupNotSetError, ApiKeyNotSetError
+from botto.storage.beta_testers.model import (
+    App,
+    BetaGroupNotSetError,
+    ApiKeyNotSetError,
+)
 
 
 @dataclass

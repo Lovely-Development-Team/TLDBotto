@@ -16,10 +16,10 @@ from botto.reminder_manager import (
     TimeTravelError,
     ReminderParsingError,
 )
-from botto.storage import TimezoneStorage, TestFlightStorage
+from botto.storage import TimezoneStorage, BetaTestersStorage
 from botto.errors import TlderNotFoundError
 from botto.tld_botto import TLDBotto
-from botto.views.test_flight_form import TestFlightForm
+from botto.views.testflight_form import TestFlightForm
 
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
@@ -30,7 +30,7 @@ def setup_slash(
     config: dict,
     reminder_manager: ReminderManager,
     timezones: TimezoneStorage,
-    testflight_storage: TestFlightStorage,
+    testflight_storage: BetaTestersStorage,
 ):
     client.tree.clear_commands(guild=None)
     client.tree.clear_commands(guild=discord.Object(890978723451523083))

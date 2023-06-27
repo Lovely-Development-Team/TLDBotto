@@ -5,8 +5,8 @@ from typing import Optional
 import discord
 
 from botto.mixins import ReactionRoles
-from botto.storage.testflight.model import Tester
-from botto.storage.testflight.testflight_storage import TestFlightStorage
+from botto.storage.beta_testers.model import Tester
+from botto.storage.beta_testers.beta_testers_storage import BetaTestersStorage
 
 log = logging.getLogger(__name__)
 
@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 class TestFlightForm(discord.ui.Modal, title="TestFlight Registration"):
     def __init__(
         self,
-        testflight_storage: TestFlightStorage,
+        testflight_storage: BetaTestersStorage,
         default_approvals_channel_id: Optional[str],
     ) -> None:
         self.testflight_storage = testflight_storage

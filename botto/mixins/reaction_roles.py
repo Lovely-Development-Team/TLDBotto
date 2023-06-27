@@ -9,8 +9,8 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from botto.clients import AppStoreConnectClient
 from botto.extended_client import ExtendedClient
 from botto.models import AirTableError
-from botto.storage import TestFlightStorage, ConfigStorage
-from botto.storage.testflight.model import (
+from botto.storage import BetaTestersStorage, ConfigStorage
+from botto.storage.beta_testers.model import (
     Tester,
     TestingRequest,
     ApiKeyNotSetError,
@@ -24,7 +24,7 @@ class ReactionRoles(ExtendedClient):
     def __init__(
         self,
         scheduler: AsyncIOScheduler,
-        reactions_roles_storage: TestFlightStorage,
+        reactions_roles_storage: BetaTestersStorage,
         testflight_config_storage: ConfigStorage,
         app_store_connect_client: AppStoreConnectClient,
         **kwargs,
