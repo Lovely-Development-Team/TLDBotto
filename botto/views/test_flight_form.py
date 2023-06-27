@@ -8,6 +8,8 @@ from botto.mixins import ReactionRoles
 from botto.storage.testflight.model import Tester
 from botto.storage.testflight.testflight_storage import TestFlightStorage
 
+log = logging.getLogger(__name__)
+
 
 class TestFlightForm(discord.ui.Modal, title="TestFlight Registration"):
     def __init__(
@@ -45,7 +47,7 @@ class TestFlightForm(discord.ui.Modal, title="TestFlight Registration"):
             family_name=self.family_name.value,
         )
         updated_tester = await self.testflight_storage.upsert_tester(updated_tester)
-        logging.info(f"Stored tester: {self.email.value}")
+        log.info(f"Stored tester: {self.email.value}")
         if self.default_approvals_channel_id:
             default_approvals_channel = interaction.client.get_channel(
                 int(self.default_approvals_channel_id)
@@ -53,7 +55,7 @@ class TestFlightForm(discord.ui.Modal, title="TestFlight Registration"):
             requests = await self.testflight_storage.list_requests(
                 tester_id=interaction.user.id
             )
-            logging.info(
+            log.info(
                 f"Testing requests from {updated_tester.discord_id} ({updated_tester.username}): {requests}"
             )
             message_sends = [
@@ -69,7 +71,7 @@ class TestFlightForm(discord.ui.Modal, title="TestFlight Registration"):
         )
 
     async def on_error(self, interaction: discord.Interaction, error: Exception):
-        logging.error(
+        log.error(
             f"Failed to register user from interaction {interaction.id}", exc_info=True
         )
 
