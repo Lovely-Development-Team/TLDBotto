@@ -40,7 +40,7 @@ class TestFlightForm(discord.ui.Modal, title="TestFlight Registration"):
     async def on_submit(self, interaction: discord.Interaction):
         client: ReactionRoles = interaction.client
         updated_tester = Tester(
-            username=interaction.user.global_name or interaction.user.name,
+            username=interaction.user.name,
             discord_id=str(interaction.user.id),
             email=self.email.value,
             given_name=self.given_name.value,
