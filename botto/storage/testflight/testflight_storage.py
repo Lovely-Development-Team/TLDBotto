@@ -1,6 +1,10 @@
 import asyncio
 import logging
+from functools import partial
 from typing import Optional, Union, AsyncGenerator
+
+from cachetools import cachedmethod, TTLCache
+from cachetools.keys import hashkey
 
 from botto.models import AirTableError
 from botto.storage.storage import Storage
@@ -37,10 +41,11 @@ class TestFlightStorage(Storage):
             )
         )
         self.config_lock = asyncio.Lock()
-        self.config_cache: ConfigCache = {}
+        self.reaction_roles_cache: ConfigCache = {}
         self.watched_message_ids: set[str] = set()
         self.approvals_channel_ids: set[str] = set()
         self.auth_header = {"Authorization": f"Bearer {self.airtable_key}"}
+        self.cache = TTLCache(maxsize=20, ttl=60 * 60)
 
     async def list_watched_message_ids(self) -> list[str]:
         reaction_roles_iterator = self._iterate(
@@ -63,10 +68,10 @@ class TestFlightStorage(Storage):
         ]
         async with self.config_lock:
             for config in reaction_role_entries:
-                server_config = self.config_cache.get(config.server_id)
+                server_config = self.reaction_roles_cache.get(config.server_id)
                 if server_config is None:
                     server_config = {}
-                    self.config_cache[config.server_id] = server_config
+                    self.reaction_roles_cache[config.server_id] = server_config
                 message_config = server_config.get(config.message_id, {})
                 message_config[config.reaction_name] = config
                 server_config[config.message_id] = message_config
@@ -76,7 +81,7 @@ class TestFlightStorage(Storage):
     async def list_reaction_roles_by_server(self) -> ConfigCache:
         await self.list_reaction_roles()
         async with self.config_lock:
-            return self.config_cache
+            return self.reaction_roles_cache
 
     async def fetch_tester(self, record_id: str) -> Optional[Tester]:
         log.debug(f"Fetching tester with ID {record_id}")
@@ -121,10 +126,10 @@ class TestFlightStorage(Storage):
                 )
                 return None
             async with self.config_lock:
-                server_config = self.config_cache.get(server_id)
+                server_config = self.reaction_roles_cache.get(server_id)
                 if server_config is None:
                     server_config = {}
-                    self.config_cache[server_id] = server_config
+                    self.reaction_roles_cache[server_id] = server_config
                 message_config = server_config.get(msg_id, {})
                 message_config[reaction_name] = reaction_role
                 server_config[msg_id] = message_config
@@ -221,7 +226,7 @@ class TestFlightStorage(Storage):
     ) -> Optional[ReactionRole]:
         await self.config_lock.acquire()
         if (
-            (server_config := self.config_cache.get(str(server_id)))
+            (server_config := self.reaction_roles_cache.get(str(server_id)))
             and (msg_config := server_config.get(str(msg_id)))
             and (config := msg_config[key])
         ):
@@ -231,6 +236,7 @@ class TestFlightStorage(Storage):
             self.config_lock.release()
             return await self._fetch_reaction(server_id, msg_id, key)
 
+    @cachedmethod(lambda self: self.cache, key=partial(hashkey, "app"))
     async def fetch_app(self, record_id: str) -> Optional[App]:
         log.debug(f"Fetching app with ID {record_id}")
         result = await self._get(self.apps_url + "/" + record_id)
