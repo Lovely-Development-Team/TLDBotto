@@ -196,6 +196,26 @@ class ReactionRoles(ExtendedClient):
             for role_id in testing_request.app_reaction_roles_ids
         ]
         log.debug(f"Adding roles {roles} to {payload.member}")
-        await payload.member.add_roles(*roles)
+        try:
+            await payload.member.add_roles(*roles)
+        except discord.DiscordException as e:
+            log.error("Failed to add roles to member", exc_info=True)
+            await channel.send(
+                f"{payload.member.mention} Received approval reaction '{payload.emoji.name}'"
+                f" but failed to add roles to member due to error: {e}",
+                reference=message.to_reference(),
+                mention_author=False,
+            )
+            raise
         message = channel.get_partial_message(payload.message_id)
-        await message.add_reaction("✅")
+        try:
+            await message.add_reaction("✅")
+        except discord.DiscordException as e:
+            log.error("Failed to mark message with ✅", exc_info=True)
+            await channel.send(
+                f"{payload.member.mention} Received approval reaction '{payload.emoji.name}' and added roles to member"
+                f" but failed to mark message with ✅ due to error: {e}",
+                reference=message.to_reference(),
+                mention_author=False,
+            )
+            raise
