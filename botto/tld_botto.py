@@ -147,7 +147,7 @@ class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
             self.storage.update_meals_cache,
             name="Refresh meals cache",
             trigger="cron",
-            minute="*/30",
+            hour="*/3",
             coalesce=True,
             next_run_time=initial_refresh_run,
         )
