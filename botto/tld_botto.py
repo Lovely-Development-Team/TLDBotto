@@ -13,6 +13,7 @@ from typing import Optional, Callable, TYPE_CHECKING
 import subprocess
 
 import discord
+import pytz
 from discord import Message, Guild
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
@@ -131,6 +132,7 @@ class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
                 name="Meal Reminder",
                 trigger="cron",
                 hour=reminder_hours,
+                timezone=pytz.UTC,
                 coalesce=True,
             )
         scheduler.add_job(
