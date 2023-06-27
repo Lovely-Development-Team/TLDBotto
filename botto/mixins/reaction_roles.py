@@ -208,7 +208,6 @@ class ReactionRoles(ExtendedClient):
             )
             return
         testing_request.approved = True
-        testing_request = await self.testflight_storage.update_request(testing_request)
 
         roles = [
             guild.get_role(int(role_id))
@@ -237,8 +236,19 @@ class ReactionRoles(ExtendedClient):
                 mention_author=False,
             )
             raise
-        message = channel.get_partial_message(payload.message_id)
+
         try:
+            await self.testflight_storage.update_request(testing_request)
+        except AirTableError as e:
+            log.error("Failed to mark request as approved", exc_info=True)
+            await channel.send(
+                f"{payload.member.mention} Failed to mark request as approved in airtable: {e}",
+                reference=message.to_reference(),
+                mention_author=False,
+            )
+
+        try:
+            message = channel.get_partial_message(payload.message_id)
             await message.add_reaction("✅")
         except discord.DiscordException as e:
             log.error("Failed to mark message with ✅", exc_info=True)
