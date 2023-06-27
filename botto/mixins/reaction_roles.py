@@ -80,11 +80,11 @@ class ReactionRoles(ExtendedClient):
         log.debug(f"Existing tester: {tester and tester.username or 'No'}")
         if tester is None:
             tester = Tester(
-                username=payload.member.global_name or payload.member.name,
+                username=payload.member.name,
                 discord_id=str(payload.member.id),
             )
         else:
-            tester.username = payload.member.global_name or payload.member.name
+            tester.username = payload.member.name
             tester.discord_id = str(payload.member.id)
         tester = await self.testflight_storage.upsert_tester(tester)
         log.debug(f"Updated tester: {tester}")
