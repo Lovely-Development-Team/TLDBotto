@@ -866,9 +866,12 @@ You can DM me the following commands:
             log.info("Previous message was Tildy meal reminder. Editing.")
             await last_message.edit(content="🍽")
             previous_messages_limit = self.config["meals"].get("previous_to_keep", 2)
-            last_messages = await channel.history(
-                before=last_message, limit=previous_messages_limit
-            ).flatten()
+            last_messages = [
+                message
+                async for message in channel.history(
+                    before=last_message, limit=previous_messages_limit
+                )
+            ]
             if all(self.is_scheduled_meal_reminder(msg) for msg in last_messages):
                 oldest_message = last_messages[-1]
                 log.info(
