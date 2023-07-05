@@ -1,4 +1,4 @@
-FROM python:3.9-alpine
+FROM python:3.11-alpine
 LABEL org.opencontainers.image.source=https://github.com/Lovely-Development-Team/TLDBotto
 
 RUN apk add --no-cache gcc musl-dev git
