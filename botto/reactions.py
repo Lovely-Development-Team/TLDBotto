@@ -32,7 +32,9 @@ async def _random_reaction(message: Message, reactions: list[str]):
 
 
 async def _all_reactions(message: Message, reactions: list[str]):
-    await asyncio.wait([message.add_reaction(reaction) for reaction in reactions])
+    await asyncio.wait(
+        [asyncio.create_task(message.add_reaction(reaction)) for reaction in reactions]
+    )
 
 
 async def _ordered_reactions(message: Message, reactions: list[str]):
@@ -90,12 +92,16 @@ class Reactions:
         if trigger_word.isupper() or "!!" in trigger_word:
             log.info("Party harder!")
             tasks = [
-                message.add_reaction(reaction)
+                asyncio.create_task(message.add_reaction(reaction))
                 for reaction in self.config["reactions"]["party"]
             ]
         else:
             tasks = [
-                message.add_reaction(random.choice(self.config["reactions"]["party"]))
+                asyncio.create_task(
+                    message.add_reaction(
+                        random.choice(self.config["reactions"]["party"])
+                    )
+                )
                 for _ in range(5)
             ]
         await asyncio.wait(tasks)
