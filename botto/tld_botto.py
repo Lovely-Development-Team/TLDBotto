@@ -211,9 +211,12 @@ class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
         log.info("We have logged in as {0.user}".format(self))
 
         log.info("Syncing commands")
-        sync_tasks = [self.tree.sync(guild=guild) for guild in self.expected_guilds] + [
-            self.tree.sync()
-        ]
+        sync_tasks = [
+            asyncio.create_task(
+                self.tree.sync(guild=guild), name=f"Sync commands for guild {guild}"
+            )
+            for guild in self.expected_guilds
+        ] + [asyncio.create_task(self.tree.sync(), name=f"Sync global commands")]
 
         await self.random_presence()
 
@@ -389,7 +392,9 @@ class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
         ):
             if is_vote_exclusion:
                 reaction_removals = [
-                    message.remove_reaction(reaction.emoji, self.user)
+                    asyncio.create_task(
+                        message.remove_reaction(reaction.emoji, self.user)
+                    )
                     for reaction in message.reactions
                     if reaction.emoji in VOTE_EMOJI and reaction.me
                 ]
@@ -434,7 +439,7 @@ class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
             self.is_any_channel_voting_guild(message.guild) and message_is_vote
         ):
             pending_emojis = [
-                message.add_reaction(emoji)
+                asyncio.create_task(message.add_reaction(emoji))
                 for emoji in VOTE_EMOJI
                 if emoji in message.content in message.content
             ]
@@ -890,22 +895,24 @@ You can DM me the following commands:
             channel = reply_to.channel
             async with channel.typing():
                 last_channel_message = channel.last_message_id
-                actions = [reply_to.reply(reminder_text)]
-                if is_scheduled_reminder:
-                    actions.append(
-                        self.update_old_meal_reminder(channel, last_channel_message)
-                    )
-                await asyncio.wait(actions)
+                async with asyncio.TaskGroup() as tg:
+                    tg.create_task(reply_to.reply(reminder_text))
+                    if is_scheduled_reminder:
+                        tg.create_task(
+                            self.update_old_meal_reminder(channel, last_channel_message)
+                        )
         else:
             async for channel in self.get_meal_channels():
                 async with channel.typing():
                     last_channel_message = channel.last_message_id
-                    actions = [channel.send(reminder_text)]
-                    if is_scheduled_reminder:
-                        actions.append(
-                            self.update_old_meal_reminder(channel, last_channel_message)
-                        )
-                    await asyncio.wait(actions)
+                    async with asyncio.TaskGroup() as tg:
+                        tg.create_task(channel.send(reminder_text))
+                        if is_scheduled_reminder:
+                            tg.create_task(
+                                self.update_old_meal_reminder(
+                                    channel, last_channel_message
+                                )
+                            )
 
     async def send_local_times(self, reply_to: Message):
         log.info(f"Times from: {reply_to.author}")

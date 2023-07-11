@@ -27,7 +27,10 @@ async def remove_user_reactions(
         for r in message.reactions
         if any(u.id == user.id for u in await r.users().flatten())
     ]
-    clearing_reactions = [message.remove_reaction(r.emoji, user) for r in my_reactions]
+    clearing_reactions = [
+        asyncio.create_task(message.remove_reaction(r.emoji, user))
+        for r in my_reactions
+    ]
     try:
         await asyncio.wait(clearing_reactions)
     except ValueError:
