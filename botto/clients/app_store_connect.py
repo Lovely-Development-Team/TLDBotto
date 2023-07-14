@@ -10,6 +10,7 @@ from botto.storage.beta_testers.model import (
     App,
     BetaGroupNotSetError,
     ApiKeyNotSetError,
+    ConfigError,
 )
 
 
@@ -30,7 +31,10 @@ class AppStoreConnectClient:
         super().__init__()
 
     def create_token(self, key_id: str) -> str:
-        api_key = self.config[key_id]
+        try:
+            api_key = self.config[key_id]
+        except KeyError as e:
+            raise ConfigError(f"Api Key {key_id} not found in config") from e
         now = arrow.utcnow()
         expiration = now.shift(minutes=20)
         return jwt.encode(

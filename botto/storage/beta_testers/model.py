@@ -221,3 +221,8 @@ class BetaGroupNotSetError(AppStoreConnectError):
     def __init__(self, app: App, *args: object) -> None:
         self.app_name = app.name
         super().__init__(app.name, *args)
+
+
+class ConfigError(Exception):
+    def __init__(self, message: str, *args: object) -> None:
+        super().__init__(message, *args)
