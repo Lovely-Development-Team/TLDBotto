@@ -99,6 +99,7 @@ class ReactionRoles(ExtendedClient):
         testing_request = await self.testflight_storage.add_request(
             TestingRequest(
                 tester=tester.id,
+                tester_discord_id=tester.discord_id,
                 app=reaction_role.app_ids[0],
                 server_id=str(payload.guild_id),
             )
