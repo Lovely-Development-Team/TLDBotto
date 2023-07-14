@@ -4,7 +4,7 @@ import logging
 import random
 from enum import Enum, auto
 
-from discord import Message
+from discord import Message, PartialMessage
 
 from typing import TYPE_CHECKING, Callable
 
@@ -183,8 +183,8 @@ class Reactions:
             message, self.config["reactions"]["unknown_person_timezone"]
         )
 
-    async def dizzy(self, message: Message):
-        log.info(f"Dizzy to: {message.author}")
+    async def dizzy(self, message: PartialMessage):
+        log.info(f"Dizzy to: {message}")
         await message.add_reaction(self.config["reactions"]["dizzy"])
 
     async def drama_llama(self, message: Message):

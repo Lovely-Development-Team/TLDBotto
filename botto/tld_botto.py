@@ -240,13 +240,27 @@ class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
         log.error(f"Exception in {event_method}", exc_info=True)
         # noinspection PyBroadException
         try:
-            if event_method == "on_message":
-                if message := next(arg for arg in args if isinstance(arg, Message)):
-                    await self.reactions.dizzy(message)
-                else:
-                    log.warning(
-                        "Received 'on_message' event error without message parameter"
-                    )
+            match event_method:
+                case "on_message":
+                    if message := next(arg for arg in args if isinstance(arg, Message)):
+                        await self.reactions.dizzy(message)
+                    else:
+                        log.warning(
+                            "Received 'on_message' event error without message parameter"
+                        )
+                case "on_raw_reaction_add" | "on_raw_reaction_remove":
+                    if event := next(
+                        arg
+                        for arg in args
+                        if isinstance(arg, discord.RawReactionActionEvent)
+                    ):
+                        channel = await self.get_or_fetch_channel(event.channel_id)
+                        message = channel.get_partial_message(event.message_id)
+                        await self.reactions.dizzy(message)
+                    else:
+                        log.warning(
+                            "Received 'on_message' event error without message parameter"
+                        )
         except Exception:
             log.error("Custom error handling failed", exc_info=True)
 
