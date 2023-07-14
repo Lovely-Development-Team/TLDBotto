@@ -163,7 +163,7 @@ jobs:
           namespace: 'discord-bots'
           secret-name: 'tildy'
           secret-type: 'Opaque'
-          string-data: '{"TLDBOTTO_DISCORD_TOKEN":"${{ secrets.DISCORD_TOKEN }}", "TLDBOTTO_AIRTABLE_KEY": "${{ secrets.AIRTABLE_KEY }}", "TLDBOTTO_CLICKUP_TOKEN": "${{ secrets.CLICKUP_TOKEN }}", "SNAILEDIT_AIRTABLE_KEY": "${{ secrets.SNAILEDIT_AIRTABLE_KEY }}"}'
+          string-data: '{"TLDBOTTO_DISCORD_TOKEN":"${{ secrets.DISCORD_TOKEN }}", "TLDBOTTO_AIRTABLE_KEY": "${{ secrets.AIRTABLE_KEY }}", "TLDBOTTO_CLICKUP_TOKEN": "${{ secrets.CLICKUP_TOKEN }}", "SNAILEDIT_AIRTABLE_KEY": "${{ secrets.SNAILEDIT_AIRTABLE_KEY }}", "APP_STORE_CONNECT_API_KEYS": "${{ secrets.APP_STORE_CONNECT_API_KEYS }}"}'
 
       - name: Substitute env into templates
         run: |
