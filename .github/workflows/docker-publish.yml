@@ -175,6 +175,7 @@ jobs:
           MEAL_CONFIG: ${{ vars.MEAL_CONFIG }}
           NEXT_DAY_THRESHOLD: ${{ vars.NEXT_DAY_THRESHOLD }}
           DISABLED_FEATURES: ${{ vars.DISABLED_FEATURES }}
+          TLDBOTTO_AIRTABLE_BASE: ${{ vars.TLD_AIRTABLE_BASE }}
           SNAILEDIT_AIRTABLE_BASE: ${{ vars.SNAILEDIT_AIRTABLE_BASE }}
           TLDBOTTO_VERSION: ${{ env.RELEASE_VERSION }}
           IMAGE_NAME: ${{ env.IMAGE_NAME }}
