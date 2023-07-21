@@ -255,9 +255,10 @@ class ReactionRoles(ExtendedClient):
             guild.get_role(int(role_id))
             for role_id in testing_request.app_reaction_roles_ids
         ]
+        tester_user = guild.get_member(int(tester.discord_id))
         log.debug(f"Adding roles {roles} to {payload.member}")
         try:
-            await payload.member.add_roles(*roles)
+            await tester_user.add_roles(*roles)
         except discord.DiscordException as e:
             log.error("Failed to add roles to member", exc_info=True)
             await channel.send(
