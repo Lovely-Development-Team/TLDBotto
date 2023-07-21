@@ -3,8 +3,9 @@ import logging
 from functools import partial
 from typing import Optional, Union, AsyncGenerator
 
-from cachetools import cachedmethod, TTLCache
+from cachetools import TTLCache
 from cachetools.keys import hashkey
+from asyncache import cachedmethod
 
 from botto.models import AirTableError
 from botto.storage.storage import Storage
