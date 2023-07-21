@@ -5,6 +5,8 @@ from typing import Optional
 
 import discord
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from asyncache import cachedmethod
+from cachetools import TTLCache
 
 from botto.clients import AppStoreConnectClient
 from botto.extended_client import ExtendedClient
@@ -32,6 +34,7 @@ class ReactionRoles(ExtendedClient):
         self.testflight_storage = reactions_roles_storage
         self.config_storage = testflight_config_storage
         self.app_store_connect_client = app_store_connect_client
+        self.approvals_channels_cache = TTLCache(10, 600)
         scheduler.add_job(
             self.refresh_caches,
             name="Refresh reaction-role watched messages and approval channels",
@@ -49,6 +52,7 @@ class ReactionRoles(ExtendedClient):
             self.testflight_storage.list_approvals_channel_ids(),
         )
 
+    @cachedmethod(lambda self: self.approvals_channels_cache)
     async def get_default_approvals_channel_id(self, guild_id: str) -> Optional[str]:
         if result := await self.config_storage.get_config(
             guild_id, "default_approvals_channel"
