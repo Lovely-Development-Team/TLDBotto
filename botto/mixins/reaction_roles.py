@@ -112,8 +112,7 @@ class ReactionRoles(ExtendedClient):
         )
         if tester is None or not tester.email:
             log.debug(f"Sending registration message to {payload.member}")
-            dm_channel = payload.member.dm_channel or await payload.member.create_dm()
-            await dm_channel.send(
+            await payload.member.send(
                 "Hi!\n You've requested access to one of our TestFlights, but we don't have your email on file.\n"
                 "Please enter `/testflight register` to register your details"
             )
