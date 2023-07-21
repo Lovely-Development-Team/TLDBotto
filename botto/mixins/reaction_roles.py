@@ -244,7 +244,7 @@ class ReactionRoles(ExtendedClient):
         ]
         tester_user = guild.get_member(int(tester.discord_id))
         if not all(r in tester_user.roles for r in roles):
-            log.debug(f"Adding roles {roles} to {payload.member}")
+            log.debug(f"Adding roles {roles} to {tester_user}")
             try:
                 await tester_user.add_roles(
                     *roles, reason=f"Testflight request for {app.name} approved"
