@@ -56,7 +56,7 @@ class ConfigStorage(Storage):
                 self.config_cache[config.server_id] = server_config
             return config
         except (StopIteration, StopAsyncIteration):
-            log.info(f"No Config found with Server ID {server_id}")
+            log.info(f"No config found for Key {key} with Server ID {server_id}")
             return None
 
     async def get_config(self, server_id: str, key: str) -> Optional[ConfigEntry]:
