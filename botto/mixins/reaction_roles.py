@@ -12,6 +12,7 @@ from botto.clients import AppStoreConnectClient
 from botto.extended_client import ExtendedClient
 from botto.models import AirTableError
 from botto.storage import BetaTestersStorage, ConfigStorage
+from botto.storage.beta_testers import model
 from botto.storage.beta_testers.model import (
     Tester,
     TestingRequest,
@@ -207,6 +208,8 @@ class ReactionRoles(ExtendedClient):
                     delete_after=30,
                 )
                 return
+        is_previously_approved_testing_request = testing_request.approved
+
         tester = await self.testflight_storage.fetch_tester(testing_request.tester)
         if tester is None:
             await channel.send(
@@ -248,17 +251,19 @@ class ReactionRoles(ExtendedClient):
                 mention_author=False,
             )
             raise
-        try:
-            await self.send_approval_notification(testing_request, tester)
-        except discord.DiscordException as e:
-            log.error("Failed to add roles to member", exc_info=True)
-            await channel.send(
-                f"{payload.member.mention} Received approval reaction '{payload.emoji.name}'and added roles to member"
-                f" but failed to notify member due to error: {e}",
-                reference=message.to_reference(),
-                mention_author=False,
-            )
-            raise
+
+        if not is_previously_approved_testing_request:
+            try:
+                await self.send_approval_notification(testing_request, tester)
+            except discord.DiscordException as e:
+                log.error("Failed to add roles to member", exc_info=True)
+                await channel.send(
+                    f"{payload.member.mention} Received approval reaction '{payload.emoji.name}'and added roles to member"
+                    f" but failed to notify member due to error: {e}",
+                    reference=message.to_reference(),
+                    mention_author=False,
+                )
+                raise
 
         try:
             await self.testflight_storage.update_request(testing_request)
