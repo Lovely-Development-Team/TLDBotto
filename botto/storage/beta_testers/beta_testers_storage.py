@@ -41,33 +41,36 @@ class BetaTestersStorage(Storage):
                 base=snailedit_airtable_base
             )
         )
-        self.config_lock = asyncio.Lock()
+        self.reaction_roles_lock = asyncio.Lock()
         self.reaction_roles_cache: ConfigCache = {}
         self.watched_message_ids: set[str] = set()
+        self.approval_channels_lock = asyncio.Lock()
         self.approvals_channel_ids: set[str] = set()
         self.auth_header = {"Authorization": f"Bearer {self.airtable_key}"}
         self.cache = TTLCache(maxsize=20, ttl=60 * 60)
 
     async def list_watched_message_ids(self) -> list[str]:
-        reaction_roles_iterator = self._iterate(
-            self.reactions_roles_config_url, filter_by_formula=None, fields="Message ID"
-        )
-        reaction_role_entries = [
-            reaction_role["fields"]["Message ID"]
-            async for reaction_role in reaction_roles_iterator
-        ]
-        async with self.config_lock:
+        async with self.reaction_roles_lock:
+            reaction_roles_iterator = self._iterate(
+                self.reactions_roles_config_url,
+                filter_by_formula=None,
+                fields="Message ID",
+            )
+            reaction_role_entries = [
+                reaction_role["fields"]["Message ID"]
+                async for reaction_role in reaction_roles_iterator
+            ]
             self.watched_message_ids = set(reaction_role_entries)
         return reaction_role_entries
 
     async def list_reaction_roles(self) -> list[ReactionRole]:
-        reaction_roles_iterator = self._iterate(
-            self.reactions_roles_config_url, filter_by_formula=None
-        )
-        reaction_role_entries = [
-            ReactionRole.from_airtable(x) async for x in reaction_roles_iterator
-        ]
-        async with self.config_lock:
+        async with self.reaction_roles_lock:
+            reaction_roles_iterator = self._iterate(
+                self.reactions_roles_config_url, filter_by_formula=None
+            )
+            reaction_role_entries = [
+                ReactionRole.from_airtable(x) async for x in reaction_roles_iterator
+            ]
             for config in reaction_role_entries:
                 server_config = self.reaction_roles_cache.get(config.server_id)
                 if server_config is None:
@@ -81,8 +84,7 @@ class BetaTestersStorage(Storage):
 
     async def list_reaction_roles_by_server(self) -> ConfigCache:
         await self.list_reaction_roles()
-        async with self.config_lock:
-            return self.reaction_roles_cache
+        return self.reaction_roles_cache
 
     @cachedmethod(lambda self: self.cache, key=partial(hashkey, "tester_record_id"))
     async def fetch_tester(self, record_id: str) -> Optional[Tester]:
@@ -127,15 +129,14 @@ class BetaTestersStorage(Storage):
                     f"No Role found for Server '{server_id}' on message '{msg_id}' with name '{reaction_name}'"
                 )
                 return None
-            async with self.config_lock:
-                server_config = self.reaction_roles_cache.get(server_id)
-                if server_config is None:
-                    server_config = {}
-                    self.reaction_roles_cache[server_id] = server_config
-                message_config = server_config.get(msg_id, {})
-                message_config[reaction_name] = reaction_role
-                server_config[msg_id] = message_config
-                self.watched_message_ids.add(msg_id)
+            server_config = self.reaction_roles_cache.get(server_id)
+            if server_config is None:
+                server_config = {}
+                self.reaction_roles_cache[server_id] = server_config
+            message_config = server_config.get(msg_id, {})
+            message_config[reaction_name] = reaction_role
+            server_config[msg_id] = message_config
+            self.watched_message_ids.add(msg_id)
             return reaction_role
         except AirTableError as e:
             if e.error_type == "NOT_FOUND":
@@ -209,34 +210,32 @@ class BetaTestersStorage(Storage):
         )
 
     async def list_approvals_channel_ids(self) -> list[str]:
-        reaction_roles_iterator = self._iterate(
-            self.testing_requests_url,
-            filter_by_formula="{Approval Channel}",
-            fields="Approval Channel",
-        )
-        approval_channel_entries = [
-            reaction_role["fields"]["Approval Channel"]
-            async for reaction_role in reaction_roles_iterator
-            if reaction_role["fields"].get("Approval Channel")
-        ]
-        async with self.config_lock:
+        async with self.approval_channels_lock:
+            reaction_roles_iterator = self._iterate(
+                self.testing_requests_url,
+                filter_by_formula="{Approval Channel}",
+                fields="Approval Channel",
+            )
+            approval_channel_entries = [
+                reaction_role["fields"]["Approval Channel"]
+                async for reaction_role in reaction_roles_iterator
+                if reaction_role["fields"].get("Approval Channel")
+            ]
             self.approvals_channel_ids = set(approval_channel_entries)
         return approval_channel_entries
 
     async def get_reaction_role(
         self, server_id: str, msg_id: str, key: str
     ) -> Optional[ReactionRole]:
-        await self.config_lock.acquire()
-        if (
-            (server_config := self.reaction_roles_cache.get(str(server_id)))
-            and (msg_config := server_config.get(str(msg_id)))
-            and (config := msg_config[key])
-        ):
-            self.config_lock.release()
-            return config
-        else:
-            self.config_lock.release()
-            return await self._fetch_reaction(server_id, msg_id, key)
+        async with self.reaction_roles_lock:
+            if (
+                (server_config := self.reaction_roles_cache.get(str(server_id)))
+                and (msg_config := server_config.get(str(msg_id)))
+                and (config := msg_config[key])
+            ):
+                return config
+            else:
+                return await self._fetch_reaction(server_id, msg_id, key)
 
     @cachedmethod(lambda self: self.cache, key=partial(hashkey, "app"))
     async def fetch_app(self, record_id: str) -> Optional[App]:
