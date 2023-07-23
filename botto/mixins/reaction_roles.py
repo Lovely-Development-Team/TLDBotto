@@ -113,8 +113,9 @@ class ReactionRoles(ExtendedClient):
         if tester is None or not tester.email:
             log.debug(f"Sending registration message to {payload.member}")
             await payload.member.send(
-                "Hi!\n You've requested access to one of our TestFlights, but we don't have your email on file.\n"
-                "Please enter `/testflight register` to register your details"
+                "Hi!\n"
+                "You've requested access to one of our TestFlights, but we don't have your email on file.\n"
+                "Please reply and use the command `/testflight register` to register your details"
             )
             return
         else:
@@ -165,9 +166,9 @@ class ReactionRoles(ExtendedClient):
     async def send_approval_notification(self, request: TestingRequest, tester: Tester):
         user = await self.get_or_fetch_user(int(request.tester_discord_id))
         await user.send(
-            f"Hi again!\n "
+            f"Hi again!\n"
             f"Your request to test **{request.app_name}** has been approved.\n"
-            f"A TestFlight invite should have been sent to {tester.email}"
+            f"A TestFlight invite should have been sent to `{tester.email}`"
         )
 
     async def handle_role_approval(self, payload: discord.RawReactionActionEvent):
