@@ -325,7 +325,7 @@ class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
 
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
         if payload.user_id == self.user.id:
-            log.debug("Reaction from self. Ignoring.")
+            log.debug(f"Ignoring reaction from self on {payload.message_id}")
             return
         is_vote = payload.emoji.name in VOTE_EMOJI
         is_delete = payload.emoji.name in DELETE_EMOJI
@@ -439,7 +439,7 @@ class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
 
     async def on_message(self, message: Message):
         if message.author.id == self.user.id:
-            log.debug("Ignoring message from self")
+            log.debug(f"Ignoring message {message.id} from self")
             return
 
         if is_dm(message):
