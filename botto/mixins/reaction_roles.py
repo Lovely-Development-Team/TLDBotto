@@ -195,6 +195,7 @@ class ReactionRoles(ExtendedClient):
         approval_emojis = await self.get_approval_emojis(str(payload.guild_id))
         if payload.emoji.name not in approval_emojis:
             return
+
         testing_request = await self.testflight_storage.fetch_request(
             payload.message_id
         )
@@ -219,6 +220,7 @@ class ReactionRoles(ExtendedClient):
                 mention_author=False,
             )
             return
+
         app = await self.testflight_storage.fetch_app(testing_request.app)
         if app is None:
             log.error(
@@ -230,6 +232,7 @@ class ReactionRoles(ExtendedClient):
                 reference=message.to_reference(),
                 mention_author=False,
             )
+
         testing_request.approved = True
 
         await self.add_tester_to_group(payload, tester, app)
