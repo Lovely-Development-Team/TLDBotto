@@ -84,6 +84,7 @@ class BetaTestersStorage(Storage):
         async with self.config_lock:
             return self.reaction_roles_cache
 
+    @cachedmethod(lambda self: self.cache, key=partial(hashkey, "tester_record_id"))
     async def fetch_tester(self, record_id: str) -> Optional[Tester]:
         log.debug(f"Fetching tester with ID {record_id}")
         result = await self._get(self.testers_url + "/" + record_id)
