@@ -1,4 +1,5 @@
 import asyncio
+import itertools
 import logging
 from datetime import datetime, timedelta
 from typing import Optional
@@ -301,8 +302,10 @@ class ReactionRoles(ExtendedClient):
             testers_with_email = await self.app_store_connect_client.find_beta_tester(
                 tester.email, app
             )
-            groups_for_testers = sum(
-                [tester.beta_group_ids for tester in testers_with_email], []
+            groups_for_testers = list(
+                itertools.chain.from_iterable(
+                    [tester.beta_group_ids for tester in testers_with_email]
+                )
             )
             if app.beta_group_id in groups_for_testers:
                 log.info(f"{tester.email} already in group {app.beta_group_id}")
