@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from datetime import datetime
 from typing import Union, Optional
@@ -9,6 +10,7 @@ import discord
 from discord import app_commands, Interaction
 
 from botto import responses
+from botto.clients import AppStoreConnectClient
 from botto.message_checks import get_or_fetch_member
 from botto.models import AirTableError, Timezone
 from botto.reminder_manager import (
@@ -31,9 +33,10 @@ def setup_slash(
     reminder_manager: ReminderManager,
     timezones: TimezoneStorage,
     testflight_storage: BetaTestersStorage,
+    app_store_connect: AppStoreConnectClient,
 ):
     client.tree.clear_commands(guild=None)
-    client.tree.clear_commands(guild=discord.Object(890978723451523083))
+    client.tree.clear_commands(guild=client.snailed_it_beta_guild)
 
     @client.tree.command(
         name="ping",
@@ -408,3 +411,56 @@ def setup_slash(
         log.error("Failed to show registration form", exc_info=True)
 
     client.tree.add_command(testflight)
+
+    app_store = app_commands.Group(
+        name="appstore",
+        description="Commands for the App Store",
+        guild_ids=[client.snailed_it_beta_guild.id],
+        default_permissions=discord.Permissions(administrator=True),
+    )
+
+    @app_store.command(
+        name="lookup_tester",
+        description="Lookup details of a Beta Tester",
+    )
+    @app_commands.describe(
+        tester_email="Email address of the tester.",
+    )
+    @app_commands.checks.has_role("Snailed It")
+    async def lookup_tester(
+        ctx: Interaction,
+        tester_email: str,
+    ):
+        log.info(f"Finding beta testers with email {tester_email}")
+        await ctx.response.defer(ephemeral=True, thinking=True)
+        matching_testers = await app_store_connect.find_beta_tester(email=tester_email)
+        apps_to_testers = {}
+        for tester in matching_testers:
+            apps_to_testers[tester.id] = asyncio.create_task(
+                testflight_storage.find_apps_by_beta_group(*tester.beta_group_ids)
+            )
+        response_message = ""
+        for tester in matching_testers:
+            response_message += f"**ID**: {tester.id}\n"
+            if tester.first_name:
+                response_message += f"**First name**: {tester.first_name}\n"
+            if tester.last_name:
+                response_message += f"**Last name**: {tester.last_name}\n"
+            if tester.email:
+                response_message += f"**Email name**: {tester.email}\n"
+            apps = await apps_to_testers[tester.id]
+            app_names = [app.name for app in apps]
+            log.debug(f"App names: {app_names}")
+            response_message += "**Apps**: " + ",".join(app_names)
+            if len(app_names) > 0:
+                response_message += "\n\n"
+            else:
+                response_message += "\n"
+
+        await ctx.followup.send(f"{response_message}", ephemeral=True)
+
+    @app_store.error
+    async def on_app_store_error(ctx: Interaction, error: Exception):
+        log.error("Failed to query app store", exc_info=True)
+
+    client.tree.add_command(app_store)

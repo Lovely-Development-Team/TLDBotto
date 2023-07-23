@@ -242,3 +242,16 @@ class BetaTestersStorage(Storage):
         log.debug(f"Fetching app with ID {record_id}")
         result = await self._get(self.apps_url + "/" + record_id)
         return App.from_airtable(result)
+
+    @cachedmethod(lambda self: self.cache, key=partial(hashkey, "app_beta_groups"))
+    async def find_apps_by_beta_group(self, *group_ids: str) -> list[App]:
+        log.debug(f"Finding apps for Beta Group IDs {group_ids}")
+        joined_beta_groups = ",".join(
+            [f"{{Beta Group ID}}='{group_id}'" for group_id in group_ids]
+        )
+        formula = f"OR({joined_beta_groups})"
+        apps_iterator = self._iterate(
+            self.apps_url,
+            filter_by_formula=formula,
+        )
+        return [App.from_airtable(app_data) async for app_data in apps_iterator]

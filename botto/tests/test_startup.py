@@ -47,6 +47,8 @@ def test_startup():
 
     clickup_client = ClickUpClient("fake_token")
 
+    app_store_connect_client = AppStoreConnectClient({})
+
     client = TLDBotto(
         {},
         reactions,
@@ -59,10 +61,15 @@ def test_startup():
         config_storage,
         testflight_storage,
         testflight_config_storage,
-        app_store_connect_client=AppStoreConnectClient({}),
+        app_store_connect_client=app_store_connect_client,
     )
     slash = setup_slash(
-        client, {}, reminder_manager, timezone_storage, testflight_storage
+        client,
+        {},
+        reminder_manager,
+        timezone_storage,
+        testflight_storage,
+        app_store_connect_client,
     )
     with pytest.raises(discord.LoginFailure):
         client.run("fake_discord_key")

@@ -73,6 +73,9 @@ reminder_manager = ReminderManager(
 
 clickup_client = ClickUpClient(config["authentication"]["clickup"])
 
+app_store_connect_client = AppStoreConnectClient(
+    config["authentication"]["app_store_connect"]
+)
 client = TLDBotto(
     config,
     reactions,
@@ -85,12 +88,15 @@ client = TLDBotto(
     config_storage,
     testflight_storage,
     testflight_config_storage,
-    app_store_connect_client=AppStoreConnectClient(
-        config["authentication"]["app_store_connect"]
-    ),
+    app_store_connect_client=app_store_connect_client,
 )
 slash = setup_slash(
-    client, config, reminder_manager, timezone_storage, testflight_storage
+    client,
+    config,
+    reminder_manager,
+    timezone_storage,
+    testflight_storage,
+    app_store_connect_client,
 )
 
 
