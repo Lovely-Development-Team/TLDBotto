@@ -229,31 +229,7 @@ class ReactionRoles(ExtendedClient):
             )
         testing_request.approved = True
 
-        try:
-            await self.app_store_connect_client.create_beta_tester(
-                app, tester.email, tester.given_name, tester.family_name
-            )
-            log.info(f"Added {tester} to Beta Testers")
-        except ApiKeyNotSetError:
-            log.error(
-                f"App Store Api Key not set for {app}",
-                exc_info=True,
-            )
-            await channel.send(
-                f"{payload.member.mention} No Api Key is set for {app.name}, unable to add tester automatically)",
-                reference=message.to_reference(),
-                mention_author=False,
-            )
-        except BetaGroupNotSetError:
-            log.error(
-                f"Beta group not set for {app}",
-                exc_info=True,
-            )
-            await channel.send(
-                f"{payload.member.mention} No Beta Group is set for {app.name}, unable to add tester automatically)",
-                reference=message.to_reference(),
-                mention_author=False,
-            )
+        await self.add_tester_to_group(payload, tester, app)
 
         roles = [
             guild.get_role(int(role_id))
@@ -306,3 +282,45 @@ class ReactionRoles(ExtendedClient):
                 mention_author=False,
             )
             raise
+
+    async def add_tester_to_group(
+        self, payload: discord.RawReactionActionEvent, tester: Tester, app: model.App
+    ):
+        try:
+            testers_with_email = await self.app_store_connect_client.find_beta_tester(
+                tester.email, app
+            )
+            groups_for_testers = sum(
+                [tester.beta_group_ids for tester in testers_with_email], []
+            )
+            if app.beta_group_id in groups_for_testers:
+                log.info(f"{tester.email} already in group {app.beta_group_id}")
+                return
+            await self.app_store_connect_client.create_beta_tester(
+                app, tester.email, tester.given_name, tester.family_name
+            )
+            log.info(f"Added {tester} to Beta Testers")
+        except ApiKeyNotSetError:
+            log.error(
+                f"App Store Api Key not set for {app}",
+                exc_info=True,
+            )
+            channel = self.get_channel(payload.channel_id)
+            message = channel.get_partial_message(payload.message_id)
+            await channel.send(
+                f"{payload.member.mention} No Api Key is set for {app.name}, unable to add tester automatically)",
+                reference=message.to_reference(),
+                mention_author=False,
+            )
+        except BetaGroupNotSetError:
+            log.error(
+                f"Beta group not set for {app}",
+                exc_info=True,
+            )
+            channel = self.get_channel(payload.channel_id)
+            message = channel.get_partial_message(payload.message_id)
+            await channel.send(
+                f"{payload.member.mention} No Beta Group is set for {app.name}, unable to add tester automatically)",
+                reference=message.to_reference(),
+                mention_author=False,
+            )
