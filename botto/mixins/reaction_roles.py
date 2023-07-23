@@ -239,18 +239,21 @@ class ReactionRoles(ExtendedClient):
             for role_id in testing_request.app_reaction_roles_ids
         ]
         tester_user = guild.get_member(int(tester.discord_id))
-        log.debug(f"Adding roles {roles} to {payload.member}")
-        try:
-            await tester_user.add_roles(*roles)
-        except discord.DiscordException as e:
-            log.error("Failed to add roles to member", exc_info=True)
-            await channel.send(
-                f"{payload.member.mention} Received approval reaction '{payload.emoji.name}'"
-                f" but failed to add roles to member due to error: {e}",
-                reference=message.to_reference(),
-                mention_author=False,
-            )
-            raise
+        if not all(r in tester_user.roles for r in roles):
+            log.debug(f"Adding roles {roles} to {payload.member}")
+            try:
+                await tester_user.add_roles(
+                    *roles, reason=f"Testflight request for {app.name} approved"
+                )
+            except discord.DiscordException as e:
+                log.error("Failed to add roles to member", exc_info=True)
+                await channel.send(
+                    f"{payload.member.mention} Received approval reaction '{payload.emoji.name}'"
+                    f" but failed to add roles to member due to error: {e}",
+                    reference=message.to_reference(),
+                    mention_author=False,
+                )
+                raise
 
         if not is_previously_approved_testing_request:
             try:
