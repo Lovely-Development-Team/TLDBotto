@@ -257,10 +257,10 @@ def parse(config):
 
     # Environment variables override config files
 
-    if token := os.getenv("TLDBOTTO_DISCORD_TOKEN"):
+    if token := os.getenv("DISCORD_TOKEN"):
         defaults["authentication"]["discord"] = token
 
-    if token := os.getenv("TLDBOTTO_AIRTABLE_KEY"):
+    if token := os.getenv("TLD_AIRTABLE_KEY"):
         defaults["authentication"]["airtable_key"] = token
 
     if token := os.getenv("TLDBOTTO_AIRTABLE_BASE"):
