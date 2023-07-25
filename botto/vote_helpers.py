@@ -24,10 +24,8 @@ VOTE_EMOJI = (
     "👎",
     "💬",
     "🙌",
-    "🙋‍♀️"
-    "🙋"
-    "🙋‍♂️",
-    "🦙"
+    "🙋‍♀️" "🙋" "🙋‍♂️",
+    "🦙",
 )
 
 
@@ -42,7 +40,7 @@ async def extract_voted_users(
     for reaction in message.reactions:
         if reaction.emoji not in VOTE_EMOJI:
             continue
-        users = await reaction.users().flatten()
+        users = [user async for user in reaction.users()]
         reacted_users |= set(u for u in users if str(u.id) not in excluded_user_ids)
 
     return reacted_users
