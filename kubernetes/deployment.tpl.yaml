@@ -7,6 +7,10 @@ metadata:
     app.kubernetes.io/name: TLDBotto
     app.kubernetes.io/instance: Tildy
     app.kubernetes.io/version: ${TLDBOTTO_VERSION}
+  annotations:
+    operator.1password.io/item-path: "vaults/du4s3tc4ab7wnrijmb5fxjpbse/items/Tildy Credentials"
+    operator.1password.io/item-name: "tildy-credentials"
+    operator.1password.io/auto-restart: "true"
 spec:
   replicas: 1
   selector:
