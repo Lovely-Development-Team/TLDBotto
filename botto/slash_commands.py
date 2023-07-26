@@ -389,20 +389,11 @@ def setup_slash(
     @app_commands.check(check_mutual_guilds)
     async def testflight_register(ctx: Interaction):
         log.info("/testflight register")
-        if ctx.guild_id:
-            approvals_channel = await client.get_default_approvals_channel_id(
-                str(ctx.guild_id)
-            )
-        else:
-            approvals_channel = None
 
-        log.debug(
-            f"Sending registration form with approvals channel: {approvals_channel}"
-        )
+        log.debug(f"Sending registration form")
         await ctx.response.send_modal(
             TestFlightForm(
                 testflight_storage,
-                approvals_channel,
             )
         )
 

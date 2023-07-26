@@ -34,6 +34,7 @@ class Tester:
     full_name: Optional[str] = None
     testing_requests: Optional[list[str]] = None
     id: Optional[str] = None
+    registration_message_id: Optional[str] = None
 
     @classmethod
     def from_airtable(cls, data: dict) -> "Tester":
@@ -47,6 +48,7 @@ class Tester:
             family_name=fields.get("Family Name"),
             full_name=fields.get("Full Name"),
             testing_requests=fields.get("Testing Requests"),
+            registration_message_id=fields.get("Registration Message ID"),
         )
 
     def to_airtable(self, fields=None) -> dict:
@@ -60,6 +62,7 @@ class Tester:
                 "given_name",
                 "family_name",
                 "testing_requests",
+                "registration_message_id",
             ]
         )
         data = {}
@@ -75,6 +78,11 @@ class Tester:
             data["Family Name"] = self.family_name
         if "testing_requests" in fields and self.testing_requests is not None:
             data["Testing Requests"] = self.testing_requests
+        if (
+            "registration_message_id" in fields
+            and self.registration_message_id is not None
+        ):
+            data["Registration Message ID"] = self.registration_message_id
         airtable_dict = {
             "fields": data,
         }
