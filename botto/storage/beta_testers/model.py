@@ -1,5 +1,8 @@
+import logging
 from dataclasses import dataclass
 from typing import Optional
+
+import arrow
 
 
 @dataclass
@@ -102,6 +105,7 @@ class TestingRequest:
     _notification_message_id: Optional[str] = None
     approval_channel_id: Optional[str] = None
     app_reaction_roles_ids: Optional[list[str]] = None
+    created: Optional[arrow.Arrow] = None
     id: Optional[str] = None
 
     @property
@@ -139,6 +143,14 @@ class TestingRequest:
             app_name: str = fields["App Name"][0]
         except IndexError:
             app_name = fields["App Name"]
+        try:
+            created = arrow.get(fields["Created"])
+        except arrow.ParserError:
+            logging.error(
+                f"Failed to parse 'Created' field from Airtable: {fields['Created']}",
+                exc_info=True,
+            )
+            created = None
         return cls(
             id=data["id"],
             tester=tester,
@@ -150,6 +162,7 @@ class TestingRequest:
             approval_channel_id=fields.get("Approval Channel"),
             app_reaction_roles_ids=fields.get("App Reaction Role IDs"),
             server_id=fields["Server ID"],
+            created=created,
         )
 
     def to_airtable(self, fields=None) -> dict:

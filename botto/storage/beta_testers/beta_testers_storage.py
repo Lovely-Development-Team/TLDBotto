@@ -175,13 +175,17 @@ class BetaTestersStorage(Storage):
         return TestingRequest.from_airtable(result)
 
     def list_requests(
-        self, tester_id: Union[str, int], exclude_approved: bool = False
+        self,
+        tester_id: Union[str, int],
+        app_id: Optional[Union[str, int]] = None,
+        exclude_approved: bool = False,
     ) -> AsyncGenerator[TestingRequest, None]:
-        tester_id_condition = f"{{Tester Discord ID}}={tester_id}"
+        formula = f"AND({{Tester Discord ID}}={tester_id}"
+        if app_id is not None:
+            formula += f",{{App Record ID}}='{app_id}'"
         if exclude_approved:
-            formula = f"AND({tester_id_condition},{{Approved}}=FALSE())"
-        else:
-            formula = tester_id_condition
+            formula += f",{{Approved}}=FALSE()"
+        formula += ")"
         result_iterator = self._iterate(
             self.testing_requests_url,
             filter_by_formula=formula,

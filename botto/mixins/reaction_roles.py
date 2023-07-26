@@ -111,14 +111,21 @@ class ReactionRoles(ExtendedClient):
                 )  # This should always be a no-op?
             tester = await self.testflight_storage.upsert_tester(tester)
             log.debug(f"Updated tester: {tester}")
-            testing_request = await self.testflight_storage.add_request(
-                TestingRequest(
-                    tester=tester.id,
-                    tester_discord_id=tester.discord_id,
-                    app=reaction_role.app_ids[0],
-                    server_id=str(payload.guild_id),
+            existing_testing_requests = [
+                r
+                async for r in self.testflight_storage.list_requests(
+                    tester_id=tester.discord_id, app_id=reaction_role.app_ids[0]
                 )
-            )
+            ]
+            if len(existing_testing_requests) == 0:
+                testing_request = await self.testflight_storage.add_request(
+                    TestingRequest(
+                        tester=tester.id,
+                        tester_discord_id=tester.discord_id,
+                        app=reaction_role.app_ids[0],
+                        server_id=str(payload.guild_id),
+                    )
+                )
             if not tester.email:
                 if registration_message_id := tester.registration_message_id:
                     previous_registration_message = await payload.member.fetch_message(
@@ -140,11 +147,20 @@ class ReactionRoles(ExtendedClient):
                 await self.testflight_storage.upsert_tester(tester)
                 return
 
-        await self.send_request_notification_message(
-            payload.member or await self.get_or_fetch_user(payload.user_id),
-            tester,
-            testing_request,
-        )
+        if len(existing_testing_requests) == 0:
+            await self.send_request_notification_message(
+                payload.member or await self.get_or_fetch_user(payload.user_id),
+                tester,
+                testing_request,
+            )
+        else:
+            most_recent_existing_request = existing_testing_requests[-1]
+            await self.send_request_notification_message(
+                payload.member or await self.get_or_fetch_user(payload.user_id),
+                tester,
+                most_recent_existing_request,
+                is_repeat=True,
+            )
 
     async def send_registration_message(
         self, member: discord.Member
@@ -160,6 +176,7 @@ class ReactionRoles(ExtendedClient):
         user: discord.User,
         tester: Tester,
         request: TestingRequest,
+        is_repeat: bool = False,
     ) -> (TestingRequest, discord.Message):
         if request_approval_channel_id := request.approval_channel_id:
             approval_channel = self.get_channel(int(request_approval_channel_id))
@@ -174,16 +191,32 @@ class ReactionRoles(ExtendedClient):
         else:
             log.warning(f"No approvals channel found for server {request.server_id}")
             return
-        message = await approval_channel.send(
+        text = ""
+        if is_repeat:
+            relative_date = discord.utils.format_dt(request.created.datetime, style="R")
+            original_message_link = ""
+            if notification_message_id := request.notification_message_id:
+                notification_message = approval_channel.get_partial_message(
+                    int(notification_message_id)
+                )
+                original_message_link += f" {notification_message.jump_url}"
+            text += f"_This is a repeat request. Original request{original_message_link} was {relative_date}_\n"
+            if request.approved:
+                text += "**This request was already approved**\n"
+        text += (
             f"{user.mention} wants access to **{request.app_name}**\n"
             f"Name: {tester.full_name}\n"
             f"Email: {tester.email}\n"
-            f"{self.testflight_storage.url_for_request(request)}",
+            f"{self.testflight_storage.url_for_request(request)}"
+        )
+        message = await approval_channel.send(
+            text,
             suppress_embeds=True,
         )
         log.debug(f"Sent message: {message}")
-        request.notification_message_id = message.id
-        await self.testflight_storage.update_request(request)
+        if not is_repeat:
+            request.notification_message_id = message.id
+            await self.testflight_storage.update_request(request)
 
     async def send_approval_notification(self, request: TestingRequest, tester: Tester):
         user = await self.get_or_fetch_user(int(request.tester_discord_id))
