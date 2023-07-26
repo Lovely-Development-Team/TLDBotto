@@ -15,10 +15,8 @@ class TestFlightForm(discord.ui.Modal, title="TestFlight Registration"):
     def __init__(
         self,
         testflight_storage: BetaTestersStorage,
-        default_approvals_channel_id: Optional[str],
     ) -> None:
         self.testflight_storage = testflight_storage
-        self.default_approvals_channel_id = default_approvals_channel_id
         super().__init__()
 
     email = discord.ui.TextInput(
@@ -48,12 +46,6 @@ class TestFlightForm(discord.ui.Modal, title="TestFlight Registration"):
         )
         updated_tester = await self.testflight_storage.upsert_tester(updated_tester)
         log.info(f"Stored tester: {self.email.value}")
-        if self.default_approvals_channel_id:
-            default_approvals_channel = interaction.client.get_channel(
-                int(self.default_approvals_channel_id)
-            )
-        else:
-            default_approvals_channel = None
         requests_generator = self.testflight_storage.list_requests(
             tester_id=interaction.user.id, exclude_approved=True
         )
@@ -63,7 +55,7 @@ class TestFlightForm(discord.ui.Modal, title="TestFlight Registration"):
         message_sends = [
             asyncio.create_task(
                 client.send_request_notification_message(
-                    default_approvals_channel, interaction.user, updated_tester, request
+                    interaction.user, updated_tester, request
                 )
             )
             async for request in requests_generator

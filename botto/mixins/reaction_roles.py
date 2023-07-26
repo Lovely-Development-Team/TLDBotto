@@ -3,6 +3,7 @@ import itertools
 import logging
 from datetime import datetime, timedelta
 from typing import Optional
+from weakref import WeakValueDictionary
 
 import discord
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -46,6 +47,7 @@ class ReactionRoles(ExtendedClient):
             next_run_time=datetime.now() + timedelta(seconds=5),
             misfire_grace_time=10,
         )
+        self.tester_locks = WeakValueDictionary()
         super().__init__(**kwargs)
 
     async def refresh_caches(self):
@@ -90,52 +92,71 @@ class ReactionRoles(ExtendedClient):
         if reaction_role is None:
             log.info("No reaction-role mapping found")
             return
-        tester = await self.testflight_storage.find_tester(str(payload.member.id))
-        log.debug(f"Existing tester: {tester and tester.username or 'No'}")
-        if tester is None:
-            tester = Tester(
-                username=payload.member.name,
-                discord_id=str(payload.member.id),
+
+        # Acquire a lock so that multiple reactions don't trample over each other
+        async with self.tester_locks.setdefault(str(payload.user_id), asyncio.Lock()):
+            tester = await self.testflight_storage.find_tester(str(payload.member.id))
+            log.debug(f"Existing tester: {tester and tester.username or 'No'}")
+            if tester is None:
+                # This is the first time we've seen this tester
+                tester = Tester(
+                    username=payload.member.name,
+                    discord_id=str(payload.member.id),
+                )
+            else:
+                # In case they've changed, update our record
+                tester.username = payload.member.name
+                tester.discord_id = str(
+                    payload.member.id
+                )  # This should always be a no-op?
+            tester = await self.testflight_storage.upsert_tester(tester)
+            log.debug(f"Updated tester: {tester}")
+            testing_request = await self.testflight_storage.add_request(
+                TestingRequest(
+                    tester=tester.id,
+                    tester_discord_id=tester.discord_id,
+                    app=reaction_role.app_ids[0],
+                    server_id=str(payload.guild_id),
+                )
             )
-        else:
-            tester.username = payload.member.name
-            tester.discord_id = str(payload.member.id)
-        tester = await self.testflight_storage.upsert_tester(tester)
-        log.debug(f"Updated tester: {tester}")
-        testing_request = await self.testflight_storage.add_request(
-            TestingRequest(
-                tester=tester.id,
-                tester_discord_id=tester.discord_id,
-                app=reaction_role.app_ids[0],
-                server_id=str(payload.guild_id),
-            )
-        )
-        if tester is None or not tester.email:
-            log.debug(f"Sending registration message to {payload.member}")
-            await payload.member.send(
-                "Hi!\n"
-                "You've requested access to one of our TestFlights, but we don't have your email on file.\n"
-                "Please reply and use the command `/testflight register` to register your details"
-            )
-            return
-        else:
-            approvals_channel_id = await self.get_default_approvals_channel_id(
-                str(payload.guild_id)
-            )
-            if approvals_channel_id is None:
-                log.warning(f"No approvals channel found for server {payload.guild_id}")
+            if not tester.email:
+                if registration_message_id := tester.registration_message_id:
+                    previous_registration_message = await payload.member.fetch_message(
+                        int(registration_message_id)
+                    )
+                    # If the last message was recent, we don't want to send it again.
+                    if previous_registration_message.created_at > (
+                        datetime.now() - timedelta(minutes=30)
+                    ):
+                        log.info(
+                            f"Skipping registration message. Previously sent at: {previous_registration_message.created_at}"
+                        )
+                        return
+                log.debug(f"Sending registration message to {payload.member}")
+                registration_message = await self.send_registration_message(
+                    payload.member
+                )
+                tester.registration_message_id = str(registration_message.id)
+                await self.testflight_storage.upsert_tester(tester)
                 return
-            approvals_channel = self.get_channel(int(approvals_channel_id))
-            await self.send_request_notification_message(
-                approvals_channel,
-                payload.member or await self.get_or_fetch_user(payload.user_id),
-                tester,
-                testing_request,
-            )
+
+        await self.send_request_notification_message(
+            payload.member or await self.get_or_fetch_user(payload.user_id),
+            tester,
+            testing_request,
+        )
+
+    async def send_registration_message(
+        self, member: discord.Member
+    ) -> discord.Message:
+        return await member.send(
+            "Hi!\n"
+            "You've requested access to one of our TestFlights, but we don't have your email on file.\n"
+            "Please reply and use the command `/testflight register` to register your details"
+        )
 
     async def send_request_notification_message(
         self,
-        default_channel: discord.TextChannel,
         user: discord.User,
         tester: Tester,
         request: TestingRequest,
@@ -151,7 +172,8 @@ class ReactionRoles(ExtendedClient):
         ):
             approval_channel = guild_approvals_channel
         else:
-            approval_channel = default_channel
+            log.warning(f"No approvals channel found for server {request.server_id}")
+            return
         message = await approval_channel.send(
             f"{user.mention} wants access to **{request.app_name}**\n"
             f"Name: {tester.full_name}\n"
