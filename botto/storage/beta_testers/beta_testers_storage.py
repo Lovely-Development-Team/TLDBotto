@@ -86,7 +86,9 @@ class BetaTestersStorage(Storage):
         await self.list_reaction_roles()
         return self.reaction_roles_cache
 
-    @cachedmethod(lambda self: self.cache, key=partial(hashkey, "tester_record_id"))
+    generate_fetch_tester_key = partial(hashkey, "tester_record_id")
+
+    @cachedmethod(lambda self: self.cache, key=generate_fetch_tester_key)
     async def fetch_tester(self, record_id: str) -> Optional[Tester]:
         log.debug(f"Fetching tester with ID {record_id}")
         result = await self._get(self.testers_url + "/" + record_id)
@@ -147,11 +149,15 @@ class BetaTestersStorage(Storage):
         result = await self._update(
             self.testers_url, tester.to_airtable(), upsert_fields=["Discord ID"]
         )
-        return next(
+        modified_tester = next(
             Tester.from_airtable(data)
             for data in result["records"]
             if data["fields"]["Discord ID"] == tester.discord_id
         )
+        self.cache[
+            self.generate_fetch_tester_key(self, modified_tester.id)
+        ] = modified_tester
+        return modified_tester
 
     async def add_request(self, request: TestingRequest) -> TestingRequest:
         return TestingRequest.from_airtable(
