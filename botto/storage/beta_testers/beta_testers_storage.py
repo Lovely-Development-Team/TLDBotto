@@ -231,7 +231,7 @@ class BetaTestersStorage(Storage):
             if (
                 (server_config := self.reaction_roles_cache.get(str(server_id)))
                 and (msg_config := server_config.get(str(msg_id)))
-                and (config := msg_config[key])
+                and (config := msg_config.get(key))
             ):
                 return config
             else:
