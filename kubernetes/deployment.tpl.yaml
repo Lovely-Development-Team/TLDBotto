@@ -31,7 +31,7 @@ spec:
           - configMapRef:
               name: tildy
           - secretRef:
-              name: tildy
+              name: tildy-credentials
         env:
           - name: LOG_TO_FILE
             value: "false"
