@@ -242,7 +242,9 @@ class ReactionRoles(ExtendedClient):
 
         log.debug(f"Role approval for: {payload}")
         channel = self.get_channel(payload.channel_id)
-        message = channel.get_partial_message(payload.message_id)
+        message = await channel.fetch_message(payload.message_id)
+        if message.author.id != self.user.id:
+            return
 
         guild = self.get_guild(guild_id)
         if guild is None:
