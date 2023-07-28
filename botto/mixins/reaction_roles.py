@@ -220,6 +220,7 @@ class ReactionRoles(ExtendedClient):
 
     async def send_approval_notification(self, request: TestingRequest, tester: Tester):
         user = await self.get_or_fetch_user(int(request.tester_discord_id))
+        log.debug(f"Notifying {user} of TestFlight approval")
         await user.send(
             f"Hi again!\n"
             f"Your request to test **{request.app_name}** has been approved.\n"
