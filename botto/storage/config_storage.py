@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Optional
+from typing import Optional, Union
 
 from botto.models import ConfigEntry
 from botto.storage.storage import Storage
@@ -37,7 +37,7 @@ class ConfigStorage(Storage):
             return self.config_cache
 
     async def retrieve_config(
-        self, server_id: str, key: Optional[str]
+        self, server_id: str, key: Optional[Union[str, int]]
     ) -> Optional[ConfigEntry]:
         log.debug(f"Fetching {key or 'config'} for {server_id}")
         filter_by_formula = f"AND({{Server ID}}='{server_id}'"
