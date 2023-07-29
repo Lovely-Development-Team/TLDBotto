@@ -1,6 +1,7 @@
 import asyncio
 import itertools
 import logging
+from collections import namedtuple
 from datetime import datetime, timedelta
 from typing import Optional
 from weakref import WeakValueDictionary
@@ -23,6 +24,8 @@ from botto.storage.beta_testers.model import (
 )
 
 log = logging.getLogger(__name__)
+
+AgreementMessage = namedtuple("AgreementMessage", ["channel_id", "message_id"])
 
 
 class ReactionRoles(ExtendedClient):
@@ -64,6 +67,27 @@ class ReactionRoles(ExtendedClient):
             return result.value
         return None
 
+    @cachedmethod(lambda self: self.approvals_channels_cache)
+    async def get_rule_agreement_role_id(self, guild_id: str) -> Optional[str]:
+        if result := await self.config_storage.get_config(
+            guild_id, "rule_agreement_role"
+        ):
+            return result.value
+        return None
+
+    async def get_rule_agreement_message(
+        self, guild_id: str
+    ) -> Optional[AgreementMessage]:
+        if result := await self.config_storage.get_config(
+            guild_id, "rule_agreement_message"
+        ):
+            parsed_result = result.parsed_value
+            if (channel_id := parsed_result.get("channel")) and (
+                message_id := parsed_result.get("message")
+            ):
+                return AgreementMessage(channel_id, message_id)
+        return None
+
     async def get_approval_emojis(self, guild_id: str) -> set[str]:
         if result := await self.config_storage.get_config(guild_id, "approval_emojis"):
             return set(result.parsed_value)
@@ -78,6 +102,11 @@ class ReactionRoles(ExtendedClient):
         if str(payload.message_id) not in watched_message_ids:
             return
 
+        if payload.member is None:
+            log.warning(
+                f"Received a {payload.event_type} reaction with no associated `member`"
+            )
+            return
         guild_id = payload.guild_id
         if guild_id is None:
             log.debug("Reaction on non-guild message. Ignoring")
@@ -92,6 +121,26 @@ class ReactionRoles(ExtendedClient):
         if reaction_role is None:
             log.info("No reaction-role mapping found")
             return
+
+        if rule_agreement_role_id := await self.get_rule_agreement_role_id(
+            str(guild_id)
+        ):
+            if payload.member.get_role(int(rule_agreement_role_id)) is None:
+                log.warning("Role reaction from user who has not agreed to the rules!")
+                rules_text = "server rules"
+                if rules_message_details := await self.get_rule_agreement_message(
+                    str(guild_id)
+                ):
+                    rules_message = guild.get_channel(
+                        rules_message_details.channel_id
+                    ).get_partial_message(rules_message_details.message_id)
+                    rules_text += f" ({rules_message.jump_url})"
+                await payload.member.send(
+                    "Hi!\n"
+                    f"You've requested access to one of our TestFlights, but have not agreed to the {rules_text}.\n"
+                    "Please make sure you agree to the rules before requesting access to a TestFlight."
+                )
+                return
 
         # Acquire a lock so that multiple reactions don't trample over each other
         async with self.tester_locks.setdefault(str(payload.user_id), asyncio.Lock()):
