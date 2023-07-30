@@ -133,7 +133,7 @@ class ReactionRoles(ExtendedClient):
                     )
                     # If the last message was recent, we don't want to send it again.
                     if previous_registration_message.created_at > (
-                        datetime.now() - timedelta(minutes=30)
+                        discord.utils.utcnow() - timedelta(minutes=30)
                     ):
                         log.info(
                             f"Skipping registration message. Previously sent at: {previous_registration_message.created_at}"
