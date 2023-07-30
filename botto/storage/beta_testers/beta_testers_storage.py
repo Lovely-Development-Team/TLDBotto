@@ -50,6 +50,7 @@ class BetaTestersStorage(Storage):
         self.cache = TTLCache(maxsize=20, ttl=60 * 60)
 
     async def list_watched_message_ids(self) -> list[str]:
+        log.debug("Listing watched message IDs")
         async with self.reaction_roles_lock:
             reaction_roles_iterator = self._iterate(
                 self.reactions_roles_config_url,
@@ -220,6 +221,7 @@ class BetaTestersStorage(Storage):
         )
 
     async def list_approvals_channel_ids(self) -> list[str]:
+        log.debug("Listing approval channel IDs")
         async with self.approval_channels_lock:
             reaction_roles_iterator = self._iterate(
                 self.testing_requests_url,
