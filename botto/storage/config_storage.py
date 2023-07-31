@@ -21,6 +21,11 @@ class ConfigStorage(Storage):
         self.config_cache: ConfigCache = {}
         self.auth_header = {"Authorization": f"Bearer {self.airtable_key}"}
 
+    async def clear_server_cache(self, server_id: str):
+        log.debug(f"Clearing cache for server {server_id}")
+        async with self.config_lock:
+            self.config_cache.pop(server_id, None)
+
     async def list_config(self) -> list[ConfigEntry]:
         config_iterator = self._iterate(self.config_url, filter_by_formula=None)
         config_entries = [ConfigEntry.from_airtable(x) async for x in config_iterator]

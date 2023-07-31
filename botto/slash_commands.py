@@ -455,3 +455,60 @@ def setup_slash(
         log.error("Failed to query app store", exc_info=True)
 
     client.tree.add_command(app_store)
+
+    cache = app_commands.Group(
+        name="cache",
+        description="Manage caches",
+        guild_ids=[
+            client.snailed_it_beta_guild.id,
+        ],
+        default_permissions=discord.Permissions(administrator=True),
+    )
+
+    cache_clear = app_commands.Group(
+        name="clear",
+        description="Clear caches",
+        parent=cache,
+        default_permissions=discord.Permissions(administrator=True),
+    )
+
+    @cache_clear.command(
+        name="reaction_roles",
+        description="Clear cached reaction roles",
+    )
+    @app_commands.checks.has_role("Snailed It")
+    async def clear_reaction_roles(
+        ctx: Interaction,
+    ):
+        await ctx.response.defer(ephemeral=True, thinking=True)
+        log.info("Starting ID cache refresh")
+        async with asyncio.TaskGroup() as tg:
+            tg.create_task(client.refresh_reaction_role_caches())
+            tg.create_task(
+                client.reaction_roles_config_storage.clear_server_cache(
+                    str(ctx.guild_id)
+                )
+            )
+        log.info("Completed ID cache refresh")
+        log.info("Clearing role approvals channel cache")
+        client.role_approvals_channels_cache.clear()
+        log.info("Clearing reaction roles cache")
+        client.testflight_storage.reaction_roles_cache.clear()
+        await ctx.followup.send(f"Cleared reaction roles cache", ephemeral=True)
+
+    @cache_clear.command(
+        name="config",
+        description="Clear cached config for this server",
+    )
+    @app_commands.checks.has_role("Snailed It")
+    async def clear_config(
+        ctx: Interaction,
+    ):
+        await client.reaction_roles_config_storage.clear_server_cache(str(ctx.guild_id))
+        await ctx.response.send_message(f"Cleared server config cache", ephemeral=True)
+
+    @cache.error
+    async def on_cache_error(ctx: Interaction, error: Exception):
+        log.error("Failed to execute cache command", exc_info=True)
+
+    client.tree.add_command(cache)
