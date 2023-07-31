@@ -3,6 +3,7 @@ import itertools
 import logging
 from collections import namedtuple
 from datetime import datetime, timedelta
+from functools import partial
 from typing import Optional
 from weakref import WeakValueDictionary
 
@@ -10,6 +11,7 @@ import discord
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from asyncache import cachedmethod
 from cachetools import TTLCache
+from cachetools.keys import hashkey
 
 from botto.clients import AppStoreConnectClient
 from botto.extended_client import ExtendedClient
@@ -40,7 +42,7 @@ class ReactionRoles(ExtendedClient):
         self.testflight_storage = reactions_roles_storage
         self.reaction_roles_config_storage = testflight_config_storage
         self.app_store_connect_client = app_store_connect_client
-        self.role_approvals_channels_cache = TTLCache(10, 600)
+        self.role_approvals_channels_cache = TTLCache(20, 600)
         scheduler.add_job(
             self.refresh_reaction_role_caches,
             name="Refresh reaction-role watched messages and approval channels",
@@ -59,7 +61,10 @@ class ReactionRoles(ExtendedClient):
             self.testflight_storage.list_approvals_channel_ids(),
         )
 
-    @cachedmethod(lambda self: self.role_approvals_channels_cache)
+    @cachedmethod(
+        lambda self: self.role_approvals_channels_cache,
+        key=partial(hashkey, "approvals_channels"),
+    )
     async def get_default_approvals_channel_id(self, guild_id: str) -> Optional[str]:
         if result := await self.reaction_roles_config_storage.get_config(
             guild_id, "default_approvals_channel"
@@ -67,7 +72,10 @@ class ReactionRoles(ExtendedClient):
             return result.value
         return None
 
-    @cachedmethod(lambda self: self.role_approvals_channels_cache)
+    @cachedmethod(
+        lambda self: self.role_approvals_channels_cache,
+        key=partial(hashkey, "rule_agreement_role"),
+    )
     async def get_rule_agreement_role_id(self, guild_id: str) -> Optional[str]:
         if result := await self.reaction_roles_config_storage.get_config(
             guild_id, "rule_agreement_role"
