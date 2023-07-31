@@ -83,6 +83,19 @@ class ReactionRoles(ExtendedClient):
             return result.value
         return None
 
+    @cachedmethod(
+        lambda self: self.approvals_channels_cache,
+        key=partial(hashkey, "tester_exit_notification_channel"),
+    )
+    async def get_tester_exit_notification_channel(
+        self, guild_id: str
+    ) -> Optional[str]:
+        if result := await self.reaction_roles_config_storage.get_config(
+            guild_id, "tester_exit_notification_channel"
+        ):
+            return result.value
+        return None
+
     async def get_rule_agreement_message(
         self, guild_id: str
     ) -> Optional[AgreementMessage]:
@@ -456,3 +469,32 @@ class ReactionRoles(ExtendedClient):
                 reference=message.to_reference(),
                 mention_author=False,
             )
+
+    def on_raw_member_remove(self, payload: discord.RawMemberRemoveEvent):
+        exit_notification_channel_id = await self.get_tester_exit_notification_channel(
+            str(payload.guild_id)
+        )
+        if not exit_notification_channel_id:
+            return
+
+        user_testing_apps = [
+            (await self.testflight_storage.fetch_app(r.app)).name
+            async for r in self.testflight_storage.list_requests(
+                tester_id=str(payload.user.id)
+            )
+        ]
+        if len(user_testing_apps) == 0:
+            return
+
+        exit_notification_channel = self.get_channel(int(exit_notification_channel_id))
+        if not exit_notification_channel:
+            log.warning(
+                f"Unable to notify of tester exit: No channel found with id {exit_notification_channel_id}"
+            )
+            return
+
+        testing_apps_text = ", ".join(user_testing_apps)
+        await exit_notification_channel.send(
+            f"{payload.user.mention} is testing {testing_apps_text}"
+            f" but has left the server!",
+        )
