@@ -338,7 +338,6 @@ class ReactionRoles(ExtendedClient):
                     f" but no testing requests found for this message!",
                     reference=message.to_reference(),
                     mention_author=False,
-                    delete_after=30,
                 )
                 return
         is_previously_approved_testing_request = testing_request.approved
