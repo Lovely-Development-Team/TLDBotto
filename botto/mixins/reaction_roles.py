@@ -208,7 +208,8 @@ class ReactionRoles(ExtendedClient):
                         discord.utils.utcnow() - timedelta(minutes=30)
                     ):
                         log.info(
-                            f"Skipping registration message. Previously sent at: {previous_registration_message.created_at}"
+                            f"Skipping registration message."
+                            f" Previously sent at: {previous_registration_message.created_at}"
                         )
                         return
                 log.debug(f"Sending registration message to {payload.member}")
@@ -395,8 +396,8 @@ class ReactionRoles(ExtendedClient):
             except discord.DiscordException as e:
                 log.error("Failed to add roles to member", exc_info=True)
                 await channel.send(
-                    f"{payload.member.mention} Received approval reaction '{payload.emoji.name}'and added roles to member"
-                    f" but failed to notify member due to error: {e}",
+                    f"{payload.member.mention} Received approval reaction '{payload.emoji.name}'"
+                    f" and added roles to member but failed to notify member due to error: {e}",
                     reference=message.to_reference(),
                     mention_author=False,
                 )
