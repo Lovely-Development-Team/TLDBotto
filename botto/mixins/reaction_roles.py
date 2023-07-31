@@ -38,11 +38,11 @@ class ReactionRoles(ExtendedClient):
         **kwargs,
     ):
         self.testflight_storage = reactions_roles_storage
-        self.config_storage = testflight_config_storage
+        self.reaction_roles_config_storage = testflight_config_storage
         self.app_store_connect_client = app_store_connect_client
-        self.approvals_channels_cache = TTLCache(10, 600)
+        self.role_approvals_channels_cache = TTLCache(10, 600)
         scheduler.add_job(
-            self.refresh_caches,
+            self.refresh_reaction_role_caches,
             name="Refresh reaction-role watched messages and approval channels",
             trigger="cron",
             minute="*/30",
@@ -53,23 +53,23 @@ class ReactionRoles(ExtendedClient):
         self.tester_locks = WeakValueDictionary()
         super().__init__(**kwargs)
 
-    async def refresh_caches(self):
+    async def refresh_reaction_role_caches(self):
         await asyncio.gather(
             self.testflight_storage.list_watched_message_ids(),
             self.testflight_storage.list_approvals_channel_ids(),
         )
 
-    @cachedmethod(lambda self: self.approvals_channels_cache)
+    @cachedmethod(lambda self: self.role_approvals_channels_cache)
     async def get_default_approvals_channel_id(self, guild_id: str) -> Optional[str]:
-        if result := await self.config_storage.get_config(
+        if result := await self.reaction_roles_config_storage.get_config(
             guild_id, "default_approvals_channel"
         ):
             return result.value
         return None
 
-    @cachedmethod(lambda self: self.approvals_channels_cache)
+    @cachedmethod(lambda self: self.role_approvals_channels_cache)
     async def get_rule_agreement_role_id(self, guild_id: str) -> Optional[str]:
-        if result := await self.config_storage.get_config(
+        if result := await self.reaction_roles_config_storage.get_config(
             guild_id, "rule_agreement_role"
         ):
             return result.value
@@ -78,7 +78,7 @@ class ReactionRoles(ExtendedClient):
     async def get_rule_agreement_message(
         self, guild_id: str
     ) -> Optional[AgreementMessage]:
-        if result := await self.config_storage.get_config(
+        if result := await self.reaction_roles_config_storage.get_config(
             guild_id, "rule_agreement_message"
         ):
             parsed_result = result.parsed_value
@@ -89,7 +89,9 @@ class ReactionRoles(ExtendedClient):
         return None
 
     async def get_approval_emojis(self, guild_id: str) -> set[str]:
-        if result := await self.config_storage.get_config(guild_id, "approval_emojis"):
+        if result := await self.reaction_roles_config_storage.get_config(
+            guild_id, "approval_emojis"
+        ):
             return set(result.parsed_value)
         return set()
 
