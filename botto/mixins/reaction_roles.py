@@ -149,7 +149,8 @@ class ReactionRoles(ExtendedClient):
                 await payload.member.send(
                     "Hi!\n"
                     f"You've requested access to one of our TestFlights, but have not agreed to the {rules_text}.\n"
-                    "Please make sure you agree to the rules before requesting access to a TestFlight."
+                    "Please make sure you agree to the rules before requesting access to a TestFlight.",
+                    suppress_embeds=True,
                 )
                 return
 
