@@ -470,7 +470,7 @@ class ReactionRoles(ExtendedClient):
                 mention_author=False,
             )
 
-    def on_raw_member_remove(self, payload: discord.RawMemberRemoveEvent):
+    async def on_raw_member_remove(self, payload: discord.RawMemberRemoveEvent):
         exit_notification_channel_id = await self.get_tester_exit_notification_channel(
             str(payload.guild_id)
         )
