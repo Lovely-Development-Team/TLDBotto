@@ -133,9 +133,18 @@ class ReactionRoles(ExtendedClient):
                 if rules_message_details := await self.get_rule_agreement_message(
                     str(guild_id)
                 ):
-                    rules_message = guild.get_channel(
-                        rules_message_details.channel_id
-                    ).get_partial_message(rules_message_details.message_id)
+                    rules_agreement_channel = guild.get_channel(
+                        int(rules_message_details.channel_id)
+                    )
+                    if rules_agreement_channel is None:
+                        log.warning(
+                            f"Could not find rules agreement channel with "
+                            f"ID {rules_message_details.channel_id} in guild {guild.id}"
+                        )
+                        return
+                    rules_message = rules_agreement_channel.get_partial_message(
+                        rules_message_details.message_id
+                    )
                     rules_text += f" ({rules_message.jump_url})"
                 await payload.member.send(
                     "Hi!\n"
