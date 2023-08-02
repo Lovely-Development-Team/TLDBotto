@@ -177,6 +177,20 @@ class ReactionRoles(ExtendedClient):
                 )
                 return
 
+        if len(reaction_role.app_ids) == 0:
+            log.info(
+                f"Reaction Role {reaction_role} not associated with an app. Adding immediately."
+            )
+            role = guild.get_role(int(reaction_role.role_id))
+            if role is None:
+                log.warning(f"No role found with ID {reaction_role.role_id}")
+                return
+            if role not in payload.member.roles:
+                await payload.member.add_roles(
+                    role, reason="Reaction role (", atomic=False
+                )
+            return
+
         # Acquire a lock so that multiple reactions don't trample over each other
         async with self.tester_locks.setdefault(str(payload.user_id), asyncio.Lock()):
             tester = await self.testflight_storage.find_tester(str(payload.member.id))
