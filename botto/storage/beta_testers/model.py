@@ -13,6 +13,7 @@ class ReactionRole:
     reaction_name: str
     role_id: str
     app_ids: list[str]
+    requires_rules_approval: bool
 
     @classmethod
     def from_airtable(cls, data: dict) -> "ReactionRole":
@@ -24,6 +25,7 @@ class ReactionRole:
             reaction_name=fields["Reaction"],
             role_id=fields["Role"],
             app_ids=fields["Apps"],
+            requires_rules_approval=fields.get("Requires Rules Approval", False),
         )
 
 
