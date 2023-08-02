@@ -24,7 +24,7 @@ class ReactionRole:
             message_id=fields["Message ID"],
             reaction_name=fields["Reaction"],
             role_id=fields["Role"],
-            app_ids=fields["Apps"],
+            app_ids=fields.get("Apps", []),
             requires_rules_approval=fields.get("Requires Rules Approval", False),
         )
 
