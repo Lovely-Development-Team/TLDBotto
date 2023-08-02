@@ -145,8 +145,10 @@ class ReactionRoles(ExtendedClient):
             log.info("No reaction-role mapping found")
             return
 
-        if rule_agreement_role_id := await self.get_rule_agreement_role_id(
-            str(guild_id)
+        if reaction_role.requires_rules_approval and (
+            rule_agreement_role_id := await self.get_rule_agreement_role_id(
+                str(guild_id)
+            )
         ):
             if payload.member.get_role(int(rule_agreement_role_id)) is None:
                 log.warning("Role reaction from user who has not agreed to the rules!")
