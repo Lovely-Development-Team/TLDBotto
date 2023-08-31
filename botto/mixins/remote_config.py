@@ -29,9 +29,11 @@ class RemoteConfig:
 
     async def is_feature_disabled(
         self,
-        feature_name: Literal["remaining_voters", "vote_emoji_reminder"],
+        feature_name: Literal[
+            "remaining_voters", "vote_emoji_reminder", "apology_reaction"
+        ],
         server_id: Optional[Union[str, int]] = None,
-    ):
+    ) -> bool:
         if feature_name in self.config["disabled_features"]:
             return True
         if server_id := server_id:

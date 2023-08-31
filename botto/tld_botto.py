@@ -547,24 +547,30 @@ class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
             return
 
     @property
-    def simple_reactions(self) -> list[tuple[Callable, Callable]]:
+    def simple_reactions(self) -> list[tuple[Callable[[str], re.Match[str]], Callable]]:
         return [
             (
-                lambda content: self.regexes.apologising.search(content)
-                and not self.regexes.sorry.search(content),
-                self.reactions.rule_1,
+                lambda content: self.regexes.sorry.search(content),
+                self.reactions.love,
             ),
-            (lambda content: self.regexes.sorry.search(content), self.reactions.love),
             (lambda content: self.regexes.love.search(content), self.reactions.love),
             (lambda content: self.regexes.hug.search(content), self.reactions.hug),
         ]
 
-    async def react(self, message):
+    async def react(self, message: Message):
         has_matched = False
         for reaction in self.simple_reactions:
             if reaction[0](message.content):
                 await reaction[1](message)
                 has_matched = True
+        if (
+            not await self.is_feature_disabled(
+                "apology_reaction", str(message.guild.id)
+            )
+            and not self.regexes.sorry.search(message.content)
+            and self.regexes.apologising.search(message.content)
+        ):
+            await self.reactions.rule_1(message)
         if party_match := self.regexes.party.search(message.content):
             matched_string = party_match.group("partyword")
             await self.reactions.party(message, matched_string)
