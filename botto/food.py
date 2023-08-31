@@ -159,7 +159,7 @@ class FoodLookups:
                 self.lookup.update({triggers: responses})
         self.food_chars = "".join(self.lookup.keys())
         self.food_regex = re.compile(
-            r"""(?:feed|pour)?s?\s(?:{self_id}|{self_name})
+            r"""(?:feed|pour|give)s?\s(?:{self_id}|{self_name})
                     .*?
                     ([{chars}])(?:\ufe0f)?""".format(
                 self_id=self_id, self_name=self_name, chars=self.food_chars
