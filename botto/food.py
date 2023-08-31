@@ -168,7 +168,7 @@ class FoodLookups:
         )
         print(self.food_regex)
         self.not_food_regex = re.compile(
-            r"""(?:feed|pour)?s?\s(?:{self_id}|{self_name})
+            r"""(?:feed|pour|give)s?\s(?:{self_id}|{self_name})
                     .*?
                     ([{chars}])""".format(
                 self_id=self_id,
