@@ -166,7 +166,7 @@ class FoodLookups:
             ),
             re.IGNORECASE | re.VERBOSE | re.UNICODE,
         )
-        print(self.food_regex)
+        log.debug(f"Food regex: {self.food_regex}")
         self.not_food_regex = re.compile(
             r"""(?:feed|pour|give)s?\s(?:{self_id}|{self_name})
                     .*?
