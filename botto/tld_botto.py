@@ -133,7 +133,6 @@ class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
                 name="Meal Reminder",
                 trigger="cron",
                 hour=reminder_hours,
-                timezone=pytz.UTC,
                 coalesce=True,
             )
         scheduler.add_job(

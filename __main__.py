@@ -2,6 +2,8 @@ import os
 import json
 import logging.config
 import asyncio
+
+import pytz
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from botto.clients import ClickUpClient, AppStoreConnectClient
@@ -34,7 +36,7 @@ except (IOError, OSError, ValueError) as err:
 
 log.info(f"Triggers: {config['triggers']}")
 
-scheduler = AsyncIOScheduler()
+scheduler = AsyncIOScheduler(timezone=pytz.UTC)
 
 storage = AirtableMealStorage(
     config["authentication"]["airtable_base"], config["authentication"]["airtable_key"]
