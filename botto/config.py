@@ -151,6 +151,7 @@ def parse(config):
             "off-topic": {
                 "trigger": r"off( +|\-)topic",
                 "reactions": ["😆", "🤣", "😂", "🤪"],
+                "exclude_guilds": ["890978723451523083"],
             },
             "favourite_band": {
                 "trigger": rf"What('|’)?s +your +fav(ou?rite)? +band +{bot_id_pattern} ?\?*",
