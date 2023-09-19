@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from datetime import datetime
-from typing import Union, Optional
+from typing import Union, Optional, Literal
 
 import arrow
 import pytz
@@ -11,6 +11,7 @@ from discord import app_commands, Interaction
 
 from botto import responses
 from botto.clients import AppStoreConnectClient
+from botto.clients.stjude_scoreboard import StJudeScoreboardClient
 from botto.message_checks import get_or_fetch_member
 from botto.models import AirTableError, Timezone
 from botto.reminder_manager import (
@@ -37,6 +38,7 @@ def setup_slash(
 ):
     client.tree.clear_commands(guild=None)
     client.tree.clear_commands(guild=client.snailed_it_beta_guild)
+    st_jude_scoreboard_client = StJudeScoreboardClient()
 
     @client.tree.command(
         name="ping",
@@ -512,3 +514,43 @@ def setup_slash(
         log.error("Failed to execute cache command", exc_info=True)
 
     client.tree.add_command(cache)
+
+    st_jude = app_commands.Group(
+        name="st-jude",
+        description="Commands related to Relay FM for St Jude",
+        guild_ids=[
+            client.tld_guild.id,
+        ],
+    )
+
+    st_jude_score = app_commands.Group(
+        name="score",
+        description="Commands related to Relay FM for St Jude",
+        parent=st_jude,
+    )
+
+    @st_jude_score.command(
+        name="update",
+        description="Update the score for a co-founder",
+    )
+    async def update_score(
+        ctx: Interaction, co_founder: Literal["myke", "stephen"], score: float
+    ):
+        import aiohttp
+
+        try:
+            await st_jude_scoreboard_client.update_score(co_founder, score)
+            await ctx.response.send_message(
+                f"Updated {co_founder.capitalize()}'s score to {score}"
+            )
+        except aiohttp.ClientResponseError as e:
+            log.error("Failed to update score", exc_info=True)
+            await ctx.response.send_message(
+                f"Failed to update score due to error: {e.message}"
+            )
+
+    @st_jude_score.error
+    async def on_app_store_error(ctx: Interaction, error: Exception):
+        log.error("Failed to update St Jude score", exc_info=True)
+
+    client.tree.add_command(st_jude)
