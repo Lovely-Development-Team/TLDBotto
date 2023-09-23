@@ -350,6 +350,9 @@ def parse(config):
     if clickup_enabled_guilds := decode_base64_env("TLDBOTTO_CLICKUP_ENABLED_GUILDS"):
         defaults["clickup_enabled_guilds"] = clickup_enabled_guilds
 
+    if st_jude_scoreboard_key := decode_base64_env("ST_JUDE_SCOREBOARD_KEY"):
+        defaults["st_jude_scoreboard_key"] = st_jude_scoreboard_key
+
     defaults["clickup_enabled_guilds"] = set(defaults["clickup_enabled_guilds"])
 
     if id := os.getenv("TLDBOTTO_ID"):
