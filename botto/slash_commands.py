@@ -38,7 +38,9 @@ def setup_slash(
 ):
     client.tree.clear_commands(guild=None)
     client.tree.clear_commands(guild=client.snailed_it_beta_guild)
-    st_jude_scoreboard_client = StJudeScoreboardClient()
+    st_jude_scoreboard_client = StJudeScoreboardClient(
+        token=config.get("st_jude_scoreboard_key")
+    )
 
     @client.tree.command(
         name="ping",
