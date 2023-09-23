@@ -351,7 +351,7 @@ def parse(config):
         defaults["clickup_enabled_guilds"] = clickup_enabled_guilds
 
     if st_jude_scoreboard_key := os.getenv("ST_JUDE_SCOREBOARD_KEY"):
-        defaults["st_jude_scoreboard_key"] = st_jude_scoreboard_key
+        defaults["authentication"]["st_jude_scoreboard_key"] = st_jude_scoreboard_key
 
     defaults["clickup_enabled_guilds"] = set(defaults["clickup_enabled_guilds"])
 
