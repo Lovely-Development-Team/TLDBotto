@@ -48,6 +48,8 @@ class ConfigStorage(Storage):
         filter_by_formula = f"AND({{Server ID}}='{server_id}'"
         if key := key:
             filter_by_formula += f",{{Key}}='{key}')"
+        else:
+            filter_by_formula += ")"
         result_iterator = self._iterate(
             self.config_url,
             filter_by_formula=filter_by_formula,
