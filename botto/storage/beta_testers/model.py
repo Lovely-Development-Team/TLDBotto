@@ -34,6 +34,7 @@ class Tester:
     username: str
     discord_id: str
     email: Optional[str] = None
+    contact_email: Optional[str] = None
     given_name: Optional[str] = None
     family_name: Optional[str] = None
     full_name: Optional[str] = None
@@ -49,6 +50,7 @@ class Tester:
             username=fields["Username"],
             discord_id=fields["Discord ID"],
             email=fields.get("Email"),
+            contact_email=fields.get("Contact Email"),
             given_name=fields.get("Given Name"),
             family_name=fields.get("Family Name"),
             full_name=fields.get("Full Name"),
@@ -64,6 +66,7 @@ class Tester:
                 "username",
                 "discord_id",
                 "email",
+                "contact_email",
                 "given_name",
                 "family_name",
                 "testing_requests",
@@ -77,6 +80,8 @@ class Tester:
             data["Discord ID"] = self.discord_id
         if "email" in fields and self.email is not None:
             data["Email"] = self.email
+        if "contact_email" in fields and self.contact_email is not None:
+            data["Contact Email"] = self.contact_email
         if "given_name" in fields and self.given_name is not None:
             data["Given Name"] = self.given_name
         if "family_name" in fields and self.family_name is not None:
