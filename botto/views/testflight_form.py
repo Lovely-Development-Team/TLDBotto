@@ -20,8 +20,9 @@ class TestFlightForm(discord.ui.Modal, title="TestFlight Registration"):
         super().__init__()
 
     email = discord.ui.TextInput(
-        label="Email Address",
-        placeholder="Your email address",
+        label="TestFlight Email Address (Apple ID)",
+        placeholder="The email address associated with your Apple ID",
+        required=True,
         custom_id="testflight_form:email",
     )
     given_name = discord.ui.TextInput(
