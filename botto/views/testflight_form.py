@@ -25,6 +25,12 @@ class TestFlightForm(discord.ui.Modal, title="TestFlight Registration"):
         required=True,
         custom_id="testflight_form:email",
     )
+    contact_email = discord.ui.TextInput(
+        label="Contact Email Address (Optional)",
+        required=False,
+        placeholder="Your email address for occasional communications",
+        custom_id="testflight_form:contact_email",
+    )
     given_name = discord.ui.TextInput(
         label="Given Name",
         required=True,
@@ -42,6 +48,7 @@ class TestFlightForm(discord.ui.Modal, title="TestFlight Registration"):
             username=interaction.user.name,
             discord_id=str(interaction.user.id),
             email=self.email.value,
+            contact_email=self.contact_email.value,
             given_name=self.given_name.value,
             family_name=self.family_name.value,
         )
