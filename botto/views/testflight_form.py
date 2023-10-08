@@ -76,7 +76,7 @@ class TestFlightForm(discord.ui.Modal, title="TestFlight Registration"):
         ]
 
         await interaction.response.send_message(
-            f"Thanks for registering with {self.email.value}!"
+            f"Thanks for registering with {self.email.value}. You will be notified when your request has been approved."
         )
         try:
             await asyncio.wait(message_sends)
