@@ -23,6 +23,8 @@ from botto.storage.beta_testers.model import (
     TestingRequest,
     ApiKeyNotSetError,
     BetaGroupNotSetError,
+    InvalidAttributeError,
+    AppStoreConnectError,
 )
 
 log = logging.getLogger(__name__)
@@ -471,30 +473,42 @@ class ReactionRoles(ExtendedClient):
                 app, tester.email, tester.given_name, tester.family_name
             )
             log.info(f"Added {tester} to Beta Testers")
-        except ApiKeyNotSetError:
-            log.error(
-                f"App Store Api Key not set for {app}",
-                exc_info=True,
-            )
+        except AppStoreConnectError as error:
             channel = self.get_channel(payload.channel_id)
             message = channel.get_partial_message(payload.message_id)
-            await channel.send(
-                f"{payload.member.mention} No Api Key is set for {app.name}, unable to add tester automatically)",
-                reference=message.to_reference(),
-                mention_author=False,
-            )
-        except BetaGroupNotSetError:
-            log.error(
-                f"Beta group not set for {app}",
-                exc_info=True,
-            )
-            channel = self.get_channel(payload.channel_id)
-            message = channel.get_partial_message(payload.message_id)
-            await channel.send(
-                f"{payload.member.mention} No Beta Group is set for {app.name}, unable to add tester automatically)",
-                reference=message.to_reference(),
-                mention_author=False,
-            )
+            match error:
+                case ApiKeyNotSetError():
+                    log.error(
+                        f"App Store Api Key not set for {app}",
+                        exc_info=True,
+                    )
+                    await channel.send(
+                        f"{payload.member.mention} No Api Key is set for {app.name}, unable to add tester automatically)",
+                        reference=message.to_reference(),
+                        mention_author=False,
+                    )
+                case BetaGroupNotSetError():
+                    log.error(
+                        f"Beta group not set for {app}",
+                        exc_info=True,
+                    )
+                    await channel.send(
+                        f"{payload.member.mention} No Beta Group is set for {app.name}, "
+                        f"unable to add tester automatically)",
+                        reference=message.to_reference(),
+                        mention_author=False,
+                    )
+                case InvalidAttributeError(details=details):
+                    log.error(
+                        f"Invalid tester attribute {details}",
+                        exc_info=True,
+                    )
+                    await channel.send(
+                        f"{payload.member.mention} Tester has an attribute considered invalid by App Store Connect: "
+                        f"`{details}`. Unable to add tester automatically)",
+                        reference=message.to_reference(),
+                        mention_author=False,
+                    )
 
     async def on_raw_member_remove(self, payload: discord.RawMemberRemoveEvent):
         log.debug(f"{payload.user} left server {payload.guild_id}")

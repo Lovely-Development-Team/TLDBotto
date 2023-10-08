@@ -5,12 +5,14 @@ from typing import Optional, Literal
 import aiohttp
 import arrow
 import jwt
+from aiohttp import ClientResponseError
 
 from botto.storage.beta_testers.model import (
     App,
     BetaGroupNotSetError,
     ApiKeyNotSetError,
     ConfigError,
+    InvalidAttributeError,
 )
 
 log = logging.getLogger(__name__)
@@ -139,15 +141,29 @@ class AppStoreConnectClient:
             "betaGroups": {"data": [{"id": app.beta_group_id, "type": "betaGroups"}]}
         }
         async with aiohttp.ClientSession() as session:
-            await session.post(
+            data = {
+                "attributes": tester_attributes,
+                "relationships": relationships,
+                "type": "betaTesters",
+            }
+            response = await session.post(
                 "https://api.appstoreconnect.apple.com/v1/betaTesters",
-                json={
-                    "data": {
-                        "attributes": tester_attributes,
-                        "relationships": relationships,
-                        "type": "betaTesters",
-                    }
-                },
+                json={"data": data},
                 headers=self.make_auth_header(app.app_store_key_id),
-                raise_for_status=True,
             )
+            response_body: dict = await response.json()
+            try:
+                response.raise_for_status()
+            except ClientResponseError:
+                log.error(
+                    f"Unable to create beta tester with data {data}. Response: {response_body}",
+                )
+                if errors := response_body.get("errors"):
+                    invalid_attribute_details = [
+                        error["detail"]
+                        for error in errors
+                        if error.get("code") == "ENTITY_ERROR.ATTRIBUTE.INVALID"
+                        and error.get("detail") is not None
+                    ]
+                    raise InvalidAttributeError(invalid_attribute_details)
+                raise

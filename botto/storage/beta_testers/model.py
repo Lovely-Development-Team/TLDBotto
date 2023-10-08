@@ -254,3 +254,9 @@ class BetaGroupNotSetError(AppStoreConnectError):
 class ConfigError(Exception):
     def __init__(self, message: str, *args: object) -> None:
         super().__init__(message, *args)
+
+
+class InvalidAttributeError(AppStoreConnectError):
+    def __init__(self, details: list[str], *args: object) -> None:
+        self.details = details
+        super().__init__(details, *args)
