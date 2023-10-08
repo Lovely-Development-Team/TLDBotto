@@ -244,7 +244,10 @@ def parse(config):
         "delete_unapproved_after_hours": 24,
         "trigger_on_mention": True,
         "confirm_delete_reaction": "🧨",
-        "support_channel": None,
+        "support": {
+            "channel_id": "890978723451523086",
+            "user_ids": ["328674204780068864"],
+        },
         "watching_statūs": ["for food", "for snails", "for apologies", "for love"],
         "disabled_features": {},
     }
@@ -352,6 +355,12 @@ def parse(config):
 
     if st_jude_scoreboard_key := os.getenv("ST_JUDE_SCOREBOARD_KEY"):
         defaults["authentication"]["st_jude_scoreboard_key"] = st_jude_scoreboard_key
+
+    if channel_id := os.getenv("TLDBOTTO_SUPPORT_CHANNEL_ID"):
+        defaults["support"]["channel_id"] = channel_id
+
+    if user_ids := decode_base64_env("TLDBOTTO_SUPPORT_USER_IDS"):
+        defaults["support"]["user_ids"] = user_ids
 
     defaults["clickup_enabled_guilds"] = set(defaults["clickup_enabled_guilds"])
 
