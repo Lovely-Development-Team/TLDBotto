@@ -44,7 +44,7 @@ class TestFlightForm(discord.ui.Modal, title="TestFlight Registration"):
     )
 
     async def on_submit(self, interaction: discord.Interaction):
-        if "@" not in parseaddr(self.email.value)[1]:
+        if " " not in self.email.value and "@" not in parseaddr(self.email.value)[1]:
             await interaction.response.send_message(
                 f"`{self.email.value}` is not a valid email address. Please enter a valid email address."
             )
