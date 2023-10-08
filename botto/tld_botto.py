@@ -717,43 +717,33 @@ class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
         message_content = message.content.lower().strip()
         dm_channel = await get_dm_channel(message.author)
         if message_content in ("!help", "help", "help!", "halp", "halp!", "!halp"):
-            trigger = (
-                f"@{self.user.display_name}"
-                if self.config["trigger_on_mention"]
-                else "a trigger word"
-            )
-
             help_message = f"""
-Reply to a great motto in the supported channels with {trigger} to tell me about it! You can nominate a section of a message with \"{trigger} <excerpt>\". (Note: you can't nominate yourself.)
-
-You can DM me the following commands:
-`!schedule`: Show the current schedule of reminders
-`!bottoyellat<name>. <message>`: Get Tildy to yell at someone.
-{self.reminders.reminder_syntax}: Get Tildy to remind you. Include '🕰' in `message` to also receive a reminder 15 minutes prior.
-`!emoji <emoji>`: Set your emoji on the leaderboard. A response of {self.config["reactions"]["invalid_emoji"]} means the emoji you requested is not valid.
-`!emoji`: Clear your emoji from the leaderboard.
-`!nick on`: Use your server-specific nickname on the leaderboard instead of your Discord username. Nickname changes will auto-update the next time you approve a motto.
-`!nick off`: Use your Discord username on the leaderboard instead of your server-specific nickname.
+I am a multi-function bot providing assistance and jokes.
 """.strip()
 
-            help_channel = self.config["support_channel"]
-            # users = ", ".join(
-            #     f"<@{user.discord_id}>"
-            #     for user in await self.storage.get_support_users()
-            # )
-            users = ""
+            support_config = self.config["support"]
+            support_channel_id = support_config.get("channel_id")
+            support_user_ids = support_config.get("user_ids")
 
-            if help_channel or users:
-                message_add = "\nIf your question was not answered here, please"
-                if help_channel:
-                    message_add = f"{message_add} ask for help in #{help_channel}"
-                    if users:
-                        message_add = f"{message_add}, or"
-                if users:
+            if support_user_ids or support_channel_id:
+                message_add = "\nIf you need assistance with my operation"
+                if support_channel := self.get_channel(int(support_channel_id)):
+                    support_guild = self.get_guild(support_channel.guild.id)
                     message_add = (
-                        f"{message_add} DM one of the following users: {users}. They are happy to receive "
-                        f"your DMs about MottoBotto without prior permission but otherwise usual rules apply"
+                        f"{message_add} and are a member of `{support_guild.name}`, "
+                        f"please ask for help in {support_channel.mention}"
                     )
+                    if support_user_ids:
+                        message_add = f"{message_add}. Otherwise"
+                if support_user_ids:
+                    users = [
+                        self.get_user(int(user_id)).mention
+                        for user_id in support_user_ids
+                    ]
+                    if len(support_user_ids) > 1:
+                        message_add = f"{message_add}, please DM one of the following users: {', '.join(users)}"
+                    else:
+                        message_add = f"{message_add}, please DM {', '.join(users)}"
                 help_message = f"{help_message}\n{message_add}."
 
             await dm_channel.send(help_message)
