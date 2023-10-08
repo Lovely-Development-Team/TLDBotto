@@ -7,6 +7,7 @@ import discord
 from botto.mixins import ReactionRoles
 from botto.storage.beta_testers.model import Tester
 from botto.storage.beta_testers.beta_testers_storage import BetaTestersStorage
+from email.utils import parseaddr
 
 log = logging.getLogger(__name__)
 
@@ -43,6 +44,11 @@ class TestFlightForm(discord.ui.Modal, title="TestFlight Registration"):
     )
 
     async def on_submit(self, interaction: discord.Interaction):
+        if "@" not in parseaddr(self.email.value)[1]:
+            await interaction.response.send_message(
+                f"`{self.email.value}` is not a valid email address. Please enter a valid email address."
+            )
+            return
         client: ReactionRoles = interaction.client
         updated_tester = Tester(
             username=interaction.user.name,
