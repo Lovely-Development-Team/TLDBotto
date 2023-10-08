@@ -6,6 +6,8 @@ from typing import Union, Optional, TYPE_CHECKING
 import discord
 from discord import Message
 
+from botto.message_checks import is_dm
+
 if TYPE_CHECKING:
     from tld_botto import TLDBotto
 
@@ -42,7 +44,7 @@ async def remove_own_message(
         "{requester_name} triggered deletion of our message (id: {message_id} in {channel_name}): {content}".format(
             requester_name=requester_name,
             message_id=message.id,
-            channel_name=message.channel.name,
+            channel_name=message.channel.name if not is_dm(message) else "DM",
             content=message.content,
         )
     )
