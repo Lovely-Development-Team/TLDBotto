@@ -395,7 +395,11 @@ class ReactionRoles(ExtendedClient):
 
         testing_request.approved = True
 
-        await self.add_tester_to_group(payload, tester, app)
+        try:
+            await self.add_tester_to_group(payload, tester, app)
+        except InvalidAttributeError:
+            log.warning(f"Adding tester failed. Skipping role and notification.")
+            return
 
         roles = [
             guild.get_role(int(role_id))
@@ -509,6 +513,7 @@ class ReactionRoles(ExtendedClient):
                         reference=message.to_reference(),
                         mention_author=False,
                     )
+                    raise
 
     async def on_raw_member_remove(self, payload: discord.RawMemberRemoveEvent):
         log.debug(f"{payload.user} left server {payload.guild_id}")
