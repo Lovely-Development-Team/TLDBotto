@@ -3,11 +3,13 @@ import logging
 from typing import Optional
 
 import discord
+import dns.resolver
 
 from botto.mixins import ReactionRoles
 from botto.storage.beta_testers.model import Tester
 from botto.storage.beta_testers.beta_testers_storage import BetaTestersStorage
 from email.utils import parseaddr
+from dns.asyncresolver import resolve
 
 log = logging.getLogger(__name__)
 
@@ -51,6 +53,16 @@ class TestFlightForm(discord.ui.Modal, title="TestFlight Registration"):
                 f"`{self.email.value}` is not a valid email address. Please enter a valid email address."
             )
             return
+        domain = self.email.value.rsplit("@", 1)[-1]
+        try:
+            await resolve(domain, "MX")
+        except dns.resolver.NoAnswer | dns.resolver.NXDOMAIN:
+            await interaction.response.send_message(
+                f"The domain `{domain}` is not configured to receive email. Please check your email address was "
+                f"entered correctly."
+            )
+            return
+
         client: ReactionRoles = interaction.client
         updated_tester = Tester(
             username=interaction.user.name,
