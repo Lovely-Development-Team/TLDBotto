@@ -56,7 +56,7 @@ class TestFlightForm(discord.ui.Modal, title="TestFlight Registration"):
         domain = self.email.value.rsplit("@", 1)[-1]
         try:
             await resolve(domain, "MX")
-        except dns.resolver.NoAnswer | dns.resolver.NXDOMAIN:
+        except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN):
             await interaction.response.send_message(
                 f"The domain `{domain}` is not configured to receive email. Please check your email address was "
                 f"entered correctly."
