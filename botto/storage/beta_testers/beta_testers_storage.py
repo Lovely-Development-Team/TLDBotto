@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from enum import Enum, auto
 from functools import partial
 from typing import Optional, Union, AsyncGenerator
 
@@ -20,6 +21,12 @@ from botto.storage.beta_testers.model import (
 log = logging.getLogger(__name__)
 
 ConfigCache = dict[str, dict[str, dict[str, ReactionRole]]]
+
+
+class RequestApprovalFilter(Enum):
+    ALL = auto()
+    APPROVED = auto()
+    UNAPPROVED = auto()
 
 
 class BetaTestersStorage(Storage):
@@ -179,13 +186,16 @@ class BetaTestersStorage(Storage):
         self,
         tester_id: Union[str, int],
         app_id: Optional[Union[str, int]] = None,
-        exclude_approved: bool = False,
+        approval_filter: RequestApprovalFilter = RequestApprovalFilter.ALL,
     ) -> AsyncGenerator[TestingRequest, None]:
         formula = f"AND({{Tester Discord ID}}={tester_id}"
         if app_id is not None:
             formula += f",{{App Record ID}}='{app_id}'"
-        if exclude_approved:
-            formula += f",{{Approved}}=FALSE()"
+        match approval_filter:
+            case RequestApprovalFilter.UNAPPROVED:
+                formula += f",{{Approved}}=FALSE()"
+            case RequestApprovalFilter.APPROVED:
+                formula += f",{{Approved}}=TRUE()"
         formula += ")"
         result_iterator = self._iterate(
             self.testing_requests_url,

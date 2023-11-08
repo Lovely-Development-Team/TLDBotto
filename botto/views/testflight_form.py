@@ -7,7 +7,10 @@ import dns.resolver
 
 from botto.mixins import ReactionRoles
 from botto.storage.beta_testers.model import Tester
-from botto.storage.beta_testers.beta_testers_storage import BetaTestersStorage
+from botto.storage.beta_testers.beta_testers_storage import (
+    BetaTestersStorage,
+    RequestApprovalFilter,
+)
 from email.utils import parseaddr
 from dns.asyncresolver import resolve
 
@@ -75,7 +78,8 @@ class TestFlightForm(discord.ui.Modal, title="TestFlight Registration"):
         updated_tester = await self.testflight_storage.upsert_tester(updated_tester)
         log.info(f"Stored tester: {self.email.value}")
         requests_generator = self.testflight_storage.list_requests(
-            tester_id=interaction.user.id, exclude_approved=True
+            tester_id=interaction.user.id,
+            approval_filter=RequestApprovalFilter.UNAPPROVED,
         )
         log.info(
             f"Testing requests from {updated_tester.discord_id} ({updated_tester.username}): {requests_generator}"
