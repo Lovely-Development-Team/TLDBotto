@@ -214,7 +214,9 @@ class ReactionRoles(ExtendedClient):
             existing_testing_requests = [
                 r
                 async for r in self.testflight_storage.list_requests(
-                    tester_id=tester.discord_id, app_id=reaction_role.app_ids[0]
+                    tester_id=tester.discord_id,
+                    app_id=reaction_role.app_ids[0],
+                    exclude_removed=True,
                 )
             ]
             if len(existing_testing_requests) == 0:
@@ -526,7 +528,7 @@ class ReactionRoles(ExtendedClient):
         user_testing_apps = [
             (await self.testflight_storage.fetch_app(r.app)).name
             async for r in self.testflight_storage.list_requests(
-                tester_id=str(payload.user.id)
+                tester_id=str(payload.user.id), exclude_removed=True
             )
         ]
         if len(user_testing_apps) == 0:

@@ -187,6 +187,7 @@ class BetaTestersStorage(Storage):
         tester_id: Union[str, int],
         app_id: Optional[Union[str, int]] = None,
         approval_filter: RequestApprovalFilter = RequestApprovalFilter.ALL,
+        exclude_removed: bool = False,
     ) -> AsyncGenerator[TestingRequest, None]:
         formula = f"AND({{Tester Discord ID}}={tester_id}"
         if app_id is not None:
@@ -196,6 +197,8 @@ class BetaTestersStorage(Storage):
                 formula += f",{{Approved}}=FALSE()"
             case RequestApprovalFilter.APPROVED:
                 formula += f",{{Approved}}=TRUE()"
+        if exclude_removed:
+            formula += f",{{Removed}}=FALSE()"
         formula += ")"
         result_iterator = self._iterate(
             self.testing_requests_url,
