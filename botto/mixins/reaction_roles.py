@@ -525,6 +525,7 @@ class ReactionRoles(ExtendedClient):
         if not exit_notification_channel_id:
             return
 
+        tester = await self.testflight_storage.find_tester(str(payload.user.id))
         user_testing_apps = [
             (await self.testflight_storage.fetch_app(r.app)).name
             async for r in self.testflight_storage.list_requests(
@@ -542,7 +543,9 @@ class ReactionRoles(ExtendedClient):
             return
 
         testing_apps_text = ", ".join(user_testing_apps)
-        await exit_notification_channel.send(
+        message = await exit_notification_channel.send(
             f"{payload.user.mention} is testing {testing_apps_text}"
             f" but has left the server!",
         )
+        tester.leave_message_ids.append(str(message.id))
+        await self.testflight_storage.upsert_tester(tester)
