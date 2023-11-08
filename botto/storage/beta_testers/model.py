@@ -1,5 +1,5 @@
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
 import arrow
@@ -41,10 +41,14 @@ class Tester:
     testing_requests: Optional[list[str]] = None
     id: Optional[str] = None
     registration_message_id: Optional[str] = None
+    leave_message_ids: list[str] = field(default_factory=list)
 
     @classmethod
     def from_airtable(cls, data: dict) -> "Tester":
         fields = data["fields"]
+        split_leave_message_ids = []
+        if leave_message_ids := fields.get("Leave Message IDs"):
+            split_leave_message_ids = leave_message_ids.split(",")
         return cls(
             id=data["id"],
             username=fields["Username"],
@@ -56,6 +60,7 @@ class Tester:
             full_name=fields.get("Full Name"),
             testing_requests=fields.get("Testing Requests"),
             registration_message_id=fields.get("Registration Message ID"),
+            leave_message_ids=split_leave_message_ids,
         )
 
     def to_airtable(self, fields=None) -> dict:
@@ -71,6 +76,7 @@ class Tester:
                 "family_name",
                 "testing_requests",
                 "registration_message_id",
+                "leave_message_ids",
             ]
         )
         data = {}
@@ -96,6 +102,8 @@ class Tester:
         airtable_dict = {
             "fields": data,
         }
+        if "leave_message_ids" in fields:
+            data["Leave Message IDs"] = ",".join(self.leave_message_ids)
         if self.id:
             airtable_dict["id"] = self.id
         return airtable_dict
