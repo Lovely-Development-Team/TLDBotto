@@ -86,7 +86,7 @@ class ReactionRoles(ExtendedClient):
         return None
 
     @cachedmethod(
-        lambda self: self.approvals_channels_cache,
+        lambda self: self.role_approvals_channels_cache,
         key=partial(hashkey, "tester_exit_notification_channel"),
     )
     async def get_tester_exit_notification_channel(
