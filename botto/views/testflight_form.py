@@ -96,13 +96,14 @@ class TestFlightForm(discord.ui.Modal, title="TestFlight Registration"):
         await interaction.response.send_message(
             f"Thanks for registering with {self.email.value}. You will be notified when your request has been approved."
         )
-        try:
-            await asyncio.wait(message_sends)
-        except discord.DiscordException:
-            await interaction.followup.send(
-                f"There was an error submitting your testing requests 😢. Please try again"
-            )
-            raise
+        if len(message_sends) > 0:
+            try:
+                await asyncio.wait(message_sends)
+            except discord.DiscordException:
+                await interaction.followup.send(
+                    f"There was an error submitting your testing requests 😢. Please try again"
+                )
+                raise
 
     async def on_error(self, interaction: discord.Interaction, error: Exception):
         log.error(
