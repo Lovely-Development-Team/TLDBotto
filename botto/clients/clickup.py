@@ -18,6 +18,9 @@ class ClickUpClient:
         self._auth_header = {"Authorization": f"{self._clickup_token}"}
 
     async def get_task(self, task_id) -> Optional["ClickupTask"]:
+        if self._clickup_token is None:
+            log.debug("Skipping task lookup as no ClickUp token is set")
+            return None
         async with aiohttp.ClientSession() as session:
             url = f"{self._url}/task/{task_id}"
             response = await session.get(url, headers=self._auth_header)
