@@ -319,7 +319,9 @@ class ReactionRoles(ExtendedClient):
         log.debug(f"Sent message: {message}")
         if not is_repeat:
             request.notification_message_id = message.id
-            await self.testflight_storage.update_request(request)
+        else:
+            request.add_further_notification_message_id(message.id)
+        await self.testflight_storage.update_request(request)
 
     async def send_approval_notification(self, request: TestingRequest, tester: Tester):
         user = await self.get_or_fetch_user(int(request.tester_discord_id))

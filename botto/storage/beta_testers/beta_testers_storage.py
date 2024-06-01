@@ -162,9 +162,9 @@ class BetaTestersStorage(Storage):
             for data in result["records"]
             if data["fields"]["Discord ID"] == tester.discord_id
         )
-        self.cache[
-            self.generate_fetch_tester_key(self, modified_tester.id)
-        ] = modified_tester
+        self.cache[self.generate_fetch_tester_key(self, modified_tester.id)] = (
+            modified_tester
+        )
         return modified_tester
 
     async def add_request(self, request: TestingRequest) -> TestingRequest:
@@ -210,7 +210,30 @@ class BetaTestersStorage(Storage):
 
     notification_message_id_field = "fldz3nfv1dougxSd4"
 
-    async def fetch_request(
+    async def _fetch_requests_by_further_message_id(
+        self, *message_ids: Union[str, int]
+    ) -> Optional[TestingRequest]:
+        joined_message_ids = ",".join(
+            [
+                f"SEARCH('{message_id}', {{Further Notification Message IDs}})"
+                for message_id in message_ids
+            ]
+        )
+        formula = f"OR({joined_message_ids})"
+        log.debug(f"Fetching request by further message ID: {message_ids}")
+        log.debug(f"Formula: {formula}")
+        result_iterator = self._iterate(
+            self.testing_requests_url,
+            filter_by_formula=formula,
+        )
+        try:
+            return await (
+                TestingRequest.from_airtable(x) async for x in result_iterator
+            ).__anext__()
+        except StopAsyncIteration:
+            return None
+
+    async def _fetch_request_by_original_message_id(
         self, message_id: Union[str, int]
     ) -> Optional[TestingRequest]:
         result_iterator = self._iterate(
@@ -223,6 +246,18 @@ class BetaTestersStorage(Storage):
             ).__anext__()
         except StopAsyncIteration:
             return None
+
+    async def fetch_request(
+        self, message_id: Union[str, int]
+    ) -> Optional[TestingRequest]:
+        if original_request := await self._fetch_request_by_original_message_id(
+            message_id
+        ):
+            return original_request
+        elif further_request := await self._fetch_requests_by_further_message_id(
+            message_id
+        ):
+            return further_request
 
     def url_for_request(self, request: TestingRequest) -> str:
         if request.id is None:
