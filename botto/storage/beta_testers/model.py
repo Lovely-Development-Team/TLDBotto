@@ -1,6 +1,6 @@
 import logging
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, List, Union
 
 import arrow
 
@@ -118,10 +118,12 @@ class TestingRequest:
     app_name: Optional[str] = None  # Formula field
     _approved: Optional[bool] = None
     _notification_message_id: Optional[str] = None
+    _further_notification_message_ids: Optional[List[str]] = None
     approval_channel_id: Optional[str] = None
     app_reaction_roles_ids: Optional[list[str]] = None
     created: Optional[arrow.Arrow] = None
     id: Optional[str] = None
+    removed: Optional[bool] = None
 
     @property
     def approved(self) -> bool:
@@ -136,8 +138,23 @@ class TestingRequest:
         return self._notification_message_id
 
     @notification_message_id.setter
-    def notification_message_id(self, value):
+    def notification_message_id(self, value: Union[str, int]):
         self._notification_message_id = str(value)
+
+    @property
+    def further_notification_message_ids(self) -> Optional[str]:
+        return self._further_notification_message_ids
+
+    @further_notification_message_ids.setter
+    def further_notification_message_ids(self, value: list[Union[str, int]]):
+        self._further_notification_message_ids = [
+            str(message_id) for message_id in value
+        ]
+
+    def add_further_notification_message_id(self, message_id: Union[str, int]):
+        if self._further_notification_message_ids is None:
+            self._further_notification_message_ids = []
+        self._further_notification_message_ids.append(str(message_id))
 
     @classmethod
     def from_airtable(cls, data: dict) -> "TestingRequest":
@@ -166,6 +183,9 @@ class TestingRequest:
                 exc_info=True,
             )
             created = None
+        split_further_notification_message_ids = None
+        if ids := fields.get("Further Notification Message IDs"):
+            split_further_notification_message_ids = ids.split(",")
         return cls(
             id=data["id"],
             tester=tester,
@@ -174,6 +194,7 @@ class TestingRequest:
             app_name=app_name,
             _approved=fields.get("Approved"),
             _notification_message_id=fields.get("Notification Message ID"),
+            _further_notification_message_ids=split_further_notification_message_ids,
             approval_channel_id=fields.get("Approval Channel"),
             app_reaction_roles_ids=fields.get("App Reaction Role IDs"),
             server_id=fields["Server ID"],
@@ -190,6 +211,7 @@ class TestingRequest:
                 "approved",
                 "server_id",
                 "notification_message_id",
+                "further_notification_message_ids",
                 "app_reaction_roles_ids",
             ]
         )
@@ -207,6 +229,13 @@ class TestingRequest:
             and self._notification_message_id is not None
         ):
             data["Notification Message ID"] = self._notification_message_id
+        if (
+            "further_notification_message_ids" in fields
+            and self._further_notification_message_ids is not None
+        ):
+            data["Further Notification Message IDs"] = ",".join(
+                self._further_notification_message_ids
+            )
         airtable_dict = {
             "fields": data,
         }
