@@ -464,7 +464,6 @@ class ReactionRoles(ExtendedClient):
             )
 
         try:
-            message = channel.get_partial_message(payload.message_id)
             await message.add_reaction("✅")
         except discord.DiscordException as e:
             log.error("Failed to mark message with ✅", exc_info=True)
