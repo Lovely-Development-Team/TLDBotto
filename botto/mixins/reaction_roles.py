@@ -32,6 +32,20 @@ log = logging.getLogger(__name__)
 AgreementMessage = namedtuple("AgreementMessage", ["channel_id", "message_id"])
 
 
+async def mark_request_messages_handled(
+    messages: list[discord.Message], reaction: str = "✔️"
+):
+    return asyncio.gather(
+        *[
+            m.add_reaction(reaction)
+            for m in messages
+            if "✅" not in m.reactions
+            and "✔️" not in m.reactions
+            and reaction not in m.reactions
+        ]
+    )
+
+
 class ReactionRoles(ExtendedClient):
     def __init__(
         self,
@@ -457,6 +471,50 @@ class ReactionRoles(ExtendedClient):
             await channel.send(
                 f"{payload.member.mention} Received approval reaction '{payload.emoji.name}' and added roles to member"
                 f" but failed to mark message with ✅ due to error: {e}",
+                reference=message.to_reference(),
+                mention_author=False,
+            )
+            raise
+
+        try:
+            other_messages = [
+                channel.get_partial_message(message_id)
+                for message_id in testing_request.further_notification_message_ids
+                if int(message_id) != payload.message_id
+            ]
+            if int(testing_request.notification_message_id) != payload.message_id:
+                other_messages.append(
+                    channel.get_partial_message(
+                        int(testing_request.notification_message_id)
+                    )
+                )
+            if not other_messages:
+                return
+            log.debug("Marking other messages with ✔️")
+            cached_messages: list[discord.Message] = []
+            non_cached_messages: list[asyncio.Task[discord.Message]] = []
+            async with asyncio.TaskGroup() as g:
+                for other_message in other_messages:
+                    if cached_message := other_message.to_reference().cached_message:
+                        cached_messages.append(cached_message)
+                    else:
+                        non_cached_messages.append(g.create_task(other_message.fetch()))
+            async with asyncio.TaskGroup() as g:
+                g.create_task(mark_request_messages_handled(cached_messages))
+                log.debug("Marked cached messages")
+                log.debug(
+                    f"Marking non-cached messages {[m.result() for m in non_cached_messages]}"
+                )
+                g.create_task(
+                    mark_request_messages_handled(
+                        [m.result() for m in non_cached_messages]
+                    )
+                )
+        except discord.DiscordException as e:
+            log.error("Failed to mark message with ✔️", exc_info=True)
+            await channel.send(
+                f"{payload.member.mention} Received approval reaction '{payload.emoji.name}' and added roles to member"
+                f" but failed to mark other message with ✔️ due to error: {e}",
                 reference=message.to_reference(),
                 mention_author=False,
             )
