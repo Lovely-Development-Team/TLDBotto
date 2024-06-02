@@ -414,18 +414,7 @@ def setup_slash(
         default_permissions=discord.Permissions(administrator=True),
     )
 
-    @app_store.command(
-        name="lookup_tester",
-        description="Lookup details of a Beta Tester",
-    )
-    @app_commands.describe(
-        tester_email="Email address of the tester.",
-    )
-    @app_commands.checks.has_role("Snailed It")
-    async def lookup_tester(
-        ctx: Interaction,
-        tester_email: str,
-    ):
+    async def send_tester_details(ctx, tester_email):
         log.info(f"Finding beta testers with email {tester_email}")
         await ctx.response.defer(ephemeral=True, thinking=True)
         matching_testers = await app_store_connect.find_beta_tester(email=tester_email)
@@ -451,8 +440,41 @@ def setup_slash(
                 response_message += "\n\n"
             else:
                 response_message += "\n"
-
         await ctx.followup.send(f"{response_message}", ephemeral=True)
+
+    @app_store.command(
+        name="lookup_tester",
+        description="Lookup details of a Beta Tester",
+    )
+    @app_commands.describe(
+        tester_email="Email address of the tester.",
+    )
+    @app_commands.checks.has_role("Snailed It")
+    async def lookup_tester(
+        ctx: Interaction,
+        tester_email: str,
+    ):
+        await send_tester_details(ctx, tester_email)
+
+    @app_store.command(
+        name="lookup_user",
+        description="Lookup beta testing details of a user",
+    )
+    @app_commands.describe(
+        member="Member to lookup.",
+    )
+    @app_commands.checks.has_role("Snailed It")
+    async def lookup_user(
+        ctx: Interaction,
+        member: discord.Member,
+    ):
+        tester = await testflight_storage.find_tester(member.id)
+        if not tester:
+            await ctx.response.send_message(
+                f"User {member.mention} is not a beta tester", ephemeral=True
+            )
+            return
+        await send_tester_details(ctx, tester.email)
 
     @app_store.error
     async def on_app_store_error(ctx: Interaction, error: Exception):
