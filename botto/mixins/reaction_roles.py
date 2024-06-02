@@ -224,7 +224,9 @@ class ReactionRoles(ExtendedClient):
                 return
             if role not in payload.member.roles:
                 await payload.member.add_roles(
-                    role, reason="Reaction role (", atomic=False
+                    role,
+                    reason=f"Reaction role for {payload.emoji.name} on message {payload.message_id}",
+                    atomic=True,
                 )
             return
 
