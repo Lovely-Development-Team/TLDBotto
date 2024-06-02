@@ -305,14 +305,14 @@ class BetaTestersStorage(Storage):
     async def list_approvals_channel_ids(self) -> list[str]:
         log.debug("Listing approval channel IDs")
         async with self.approval_channels_lock:
-            reaction_roles_iterator = self._iterate(
-                self.testing_requests_url,
+            apps_iterator = self._iterate(
+                self.apps_url,
                 filter_by_formula="{Approval Channel}",
                 fields="Approval Channel",
             )
             approval_channel_entries = [
                 reaction_role["fields"]["Approval Channel"]
-                async for reaction_role in reaction_roles_iterator
+                async for reaction_role in apps_iterator
                 if reaction_role["fields"].get("Approval Channel")
             ]
             self.approvals_channel_ids = set(approval_channel_entries)
