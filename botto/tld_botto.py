@@ -332,8 +332,9 @@ class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
             payload.emoji.name.startswith(emoji)
             for emoji in self.config["voting"].exclusion_emojis
         )
-        await self.handle_role_reaction(payload)
-        await self.handle_role_approval(payload)
+        handled = await self.handle_reaction(payload)
+        if handled:
+            return
         if not is_vote and not is_delete and not is_vote_exclusion:
             return
 

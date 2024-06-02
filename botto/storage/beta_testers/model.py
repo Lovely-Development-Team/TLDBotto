@@ -199,6 +199,7 @@ class TestingRequest:
             app_reaction_roles_ids=fields.get("App Reaction Role IDs"),
             server_id=fields["Server ID"],
             created=created,
+            removed=fields.get("Removed", False),
         )
 
     def to_airtable(self, fields=None) -> dict:
@@ -213,6 +214,7 @@ class TestingRequest:
                 "notification_message_id",
                 "further_notification_message_ids",
                 "app_reaction_roles_ids",
+                "removed",
             ]
         )
         data = {}
@@ -236,6 +238,8 @@ class TestingRequest:
             data["Further Notification Message IDs"] = ",".join(
                 self._further_notification_message_ids
             )
+        if removed := self.removed and "removed" in fields:
+            data["Removed"] = removed
         airtable_dict = {
             "fields": data,
         }
