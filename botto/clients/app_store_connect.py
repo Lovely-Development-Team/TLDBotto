@@ -167,3 +167,22 @@ class AppStoreConnectClient:
                     ]
                     raise InvalidAttributeError(invalid_attribute_details)
                 raise
+
+    async def delete_beta_tester(self, id: str, app: App):
+        if app.app_store_key_id is None:
+            raise ApiKeyNotSetError(app)
+        async with aiohttp.ClientSession() as session:
+            response = await session.delete(
+                "https://api.appstoreconnect.apple.com/v1/betaTesters/{id}".format(
+                    id=id
+                ),
+                headers=self.make_auth_header(app.app_store_key_id),
+            )
+            response_body: dict = await response.json()
+            try:
+                response.raise_for_status()
+            except ClientResponseError:
+                log.error(
+                    f"Unable to remove beta tester with id {id}. Response: {response_body}",
+                )
+                raise

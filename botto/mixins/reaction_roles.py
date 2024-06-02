@@ -18,6 +18,7 @@ from botto.extended_client import ExtendedClient
 from botto.models import AirTableError
 from botto.storage import BetaTestersStorage, ConfigStorage
 from botto.storage.beta_testers import model
+from botto.storage.beta_testers.beta_testers_storage import RequestApprovalFilter
 from botto.storage.beta_testers.model import (
     Tester,
     TestingRequest,
@@ -45,6 +46,19 @@ async def mark_request_messages_handled(
         ]
     )
 
+
+async def get_or_fetch_message(
+    channel: discord.TextChannel, message_id: int
+) -> discord.Message:
+    partial_message = channel.get_partial_message(message_id)
+    if cached_message := partial_message.to_reference().cached_message:
+        message = cached_message
+    else:
+        message = await partial_message.fetch()
+    return message
+
+
+processing_emoji = "⏳"
 
 class ReactionRoles(ExtendedClient):
     def __init__(
@@ -128,6 +142,13 @@ class ReactionRoles(ExtendedClient):
     async def get_approval_emojis(self, guild_id: str) -> set[str]:
         if result := await self.reaction_roles_config_storage.get_config(
             guild_id, "approval_emojis"
+        ):
+            return set(result.parsed_value)
+        return set()
+
+    async def get_removal_emojis(self, guild_id: str | int) -> set[str]:
+        if result := await self.reaction_roles_config_storage.get_config(
+            str(guild_id), "removal_emojis"
         ):
             return set(result.parsed_value)
         return set()
@@ -229,7 +250,7 @@ class ReactionRoles(ExtendedClient):
                 r
                 async for r in self.testflight_storage.list_requests(
                     tester_id=tester.discord_id,
-                    app_id=reaction_role.app_ids[0],
+                    app_ids=reaction_role.app_ids,
                     exclude_removed=True,
                 )
             ]
@@ -346,29 +367,39 @@ class ReactionRoles(ExtendedClient):
             f"A TestFlight invite should have been sent to `{tester.email}`"
         )
 
+    async def is_approval_channel(self, channel_id: str, guild_id: str | int) -> bool:
+        if channel_id in self.testflight_storage.approvals_channel_ids:
+            return True
+        default_approvals_channel_id = await self.get_default_approvals_channel_id(
+            str(guild_id)
+        )
+        return channel_id == default_approvals_channel_id
+
+    async def is_own_message(
+        self, payload: discord.RawReactionActionEvent
+    ) -> tuple[bool, discord.Message]:
+        channel = self.get_channel(payload.channel_id)
+        message = await get_or_fetch_message(channel, payload.message_id)
+        return message.author.id == self.user.id, message
+
     async def handle_role_approval(self, payload: discord.RawReactionActionEvent):
         guild_id = payload.guild_id
         if guild_id is None:
             return
 
-        if (
-            channel_id := str(payload.channel_id)
-        ) and channel_id not in self.testflight_storage.approvals_channel_ids:
-            default_approvals_channel_id = await self.get_default_approvals_channel_id(
-                str(guild_id)
-            )
-            if channel_id != default_approvals_channel_id:
-                return
+        if not await self.is_approval_channel(str(payload.channel_id), guild_id):
+            return
 
         log.debug(f"Role approval for: {payload}")
-        channel = self.get_channel(payload.channel_id)
-        message = await channel.fetch_message(payload.message_id)
-        if message.author.id != self.user.id:
-            return
 
         guild = self.get_guild(guild_id)
         if guild is None:
             log.warning(f"Found no guild for role approval: {payload}")
+            return
+
+        channel = guild.get_channel(payload.channel_id)
+        (is_self, message) = await self.is_own_message(payload)
+        if not is_self:
             return
 
         approval_emojis = await self.get_approval_emojis(str(payload.guild_id))
@@ -519,6 +550,83 @@ class ReactionRoles(ExtendedClient):
             )
             raise
 
+    async def handle_removal_reaction(
+        self, payload: discord.RawReactionActionEvent
+    ) -> bool:
+        """
+        Handles reactions on leave messages that might be a request to remove a tester from the betas.
+
+        It checks if the reaction was applied to one of the bot's messages, in an appropriate channel, and that it matches a configured removal emoji.
+        If so, it finds the tester associated with the leave message and removes them
+        from the beta groups.
+
+        Args:
+            payload (discord.RawReactionActionEvent): The payload of the reaction event.
+
+        Returns:
+            bool: True if the reaction was recognised as a removal reaction, False otherwise.
+        """
+        if payload.guild_id is None:
+            return False
+
+        if not await self.is_approval_channel(
+            str(payload.channel_id), payload.guild_id
+        ):
+            return False
+
+        log.debug(f"Role removal for: {payload}")
+
+        guild = self.get_guild(payload.guild_id)
+        if guild is None:
+            log.warning(f"Found no guild for role removal: {payload}")
+            return False
+
+        (is_self, message) = await self.is_own_message(payload)
+        if not is_self:
+            return False
+        await message.add_reaction(processing_emoji)
+
+        removal_emojis = await self.get_removal_emojis(payload.guild_id)
+        if payload.emoji.name not in removal_emojis:
+            return False
+
+        tester = await self.testflight_storage.find_tester_by_leave_message(
+            payload.message_id
+        )
+        if not tester:
+            log.warning(f"No tester found for leave message {payload.message_id}")
+            await guild.get_channel(payload.channel_id).send(
+                f"Failed to find tester for leave message {payload.message_id}"
+            )
+            return False
+
+        await self.remove_tester_from_group(payload, tester)
+        return True
+
+    async def handle_reaction(self, payload: discord.RawReactionActionEvent) -> bool:
+        handled = False
+        try:
+            if payload.event_type == "REACTION_ADD":
+                await self.handle_role_reaction(payload)
+                await self.handle_role_approval(payload)
+                handled = handled or await self.handle_removal_reaction(payload)
+        except AirTableError as e:
+            log.error("Failed to handle reaction", exc_info=True)
+            channel = self.get_channel(payload.channel_id)
+            await channel.send(
+                f"{payload.member.mention} Failed to handle reaction: {e}",
+                reference=channel.get_partial_message(
+                    payload.message_id
+                ).to_reference(),
+                mention_author=False,
+            )
+        finally:
+            message = await get_or_fetch_message(
+                self.get_channel(payload.channel_id), payload.message_id
+            )
+            await message.remove_reaction(processing_emoji, self.user)
+        return handled
+
     async def add_tester_to_group(
         self, payload: discord.RawReactionActionEvent, tester: Tester, app: model.App
     ):
@@ -576,6 +684,102 @@ class ReactionRoles(ExtendedClient):
                     )
                     raise
 
+    async def remove_tester_from_group(
+        self,
+        payload: discord.RawReactionActionEvent,
+        tester: Tester,
+        app: Optional[model.App] = None,
+    ):
+        try:
+            testers_with_email = await self.app_store_connect_client.find_beta_tester(
+                tester.email, app
+            )
+
+            channel = self.get_channel(payload.channel_id)
+            message = channel.get_partial_message(payload.message_id)
+
+            if not testers_with_email:
+                log.info(f"Found no testers with email '{tester.email}'")
+                await channel.send(
+                    f"{payload.member.mention} Found no testers with email '{tester.email}'",
+                    reference=message.to_reference(),
+                    mention_author=False,
+                )
+                return
+
+            if len(testers_with_email) > 1:
+                msg = f"Found multiple testers with email '{tester.email}': {testers_with_email}"
+                log.info(msg)
+                await channel.send(
+                    f"{payload.member.mention} {msg}",
+                    reference=message.to_reference(),
+                    mention_author=False,
+                )
+                return
+
+            app_store_tester = testers_with_email[0]
+
+            if app.beta_group_id not in app_store_tester.beta_group_ids:
+                msg = f"{tester.email} not in group {app.beta_group_id}, removal unnecessary"
+                log.info(msg)
+                return
+            await self.app_store_connect_client.delete_beta_tester(
+                app_store_tester.id, app
+            )
+            log.info(f"Removed {tester} from Beta Testers")
+            apps = await self.testflight_storage.find_apps_by_beta_group(
+                *app_store_tester.beta_group_ids
+            )
+            records_to_update = [
+                r
+                async for r in self.testflight_storage.list_requests(
+                    tester_id=str(payload.user_id),
+                    app_ids=[app.id for app in apps],
+                    approval_filter=RequestApprovalFilter.APPROVED,
+                    exclude_removed=True,
+                )
+            ]
+            for r in records_to_update:
+                r.removed = True
+            await self.testflight_storage.update_requests(records_to_update)
+        except AppStoreConnectError as error:
+            channel = self.get_channel(payload.channel_id)
+            message = channel.get_partial_message(payload.message_id)
+            match error:
+                case ApiKeyNotSetError():
+                    log.error(
+                        f"App Store Api Key not set for {app}",
+                        exc_info=True,
+                    )
+                    await channel.send(
+                        f"{payload.member.mention} No Api Key is set for {app.name}, unable to add tester automatically",
+                        reference=message.to_reference(),
+                        mention_author=False,
+                    )
+                case BetaGroupNotSetError():
+                    log.error(
+                        f"Beta group not set for {app}",
+                        exc_info=True,
+                    )
+                    await channel.send(
+                        f"{payload.member.mention} No Beta Group is set for {app.name}, "
+                        f"unable to add tester automatically)",
+                        reference=message.to_reference(),
+                        mention_author=False,
+                    )
+                case InvalidAttributeError(details=details):
+                    log.error(
+                        f"Invalid tester attribute {details}",
+                        exc_info=True,
+                    )
+                    await channel.send(
+                        f"{payload.member.mention} Tester has an attribute considered invalid by App Store Connect: "
+                        f"`{details}`. Unable to add tester automatically)",
+                        reference=message.to_reference(),
+                        mention_author=False,
+                    )
+                    raise
+
     async def on_raw_member_remove(self, payload: discord.RawMemberRemoveEvent):
         log.debug(f"{payload.user} left server {payload.guild_id}")
         exit_notification_channel_id = await self.get_tester_exit_notification_channel(
@@ -584,7 +788,6 @@ class ReactionRoles(ExtendedClient):
         if not exit_notification_channel_id:
             return
 
-        tester = await self.testflight_storage.find_tester(str(payload.user.id))
         user_testing_apps = [
             (await self.testflight_storage.fetch_app(r.app)).name
             async for r in self.testflight_storage.list_requests(
@@ -606,5 +809,19 @@ class ReactionRoles(ExtendedClient):
             f"{payload.user.mention} is testing {testing_apps_text}"
             f" but has left the server!",
         )
+        tester = await self.testflight_storage.find_tester(str(payload.user.id))
+        if not tester:
+            await exit_notification_channel.send(
+                f"Failed to find Tester record for {payload.user.mention}. This should never happen!"
+            )
+            return
         tester.leave_message_ids.append(str(message.id))
-        await self.testflight_storage.upsert_tester(tester)
+        try:
+            await self.testflight_storage.upsert_tester(tester)
+        except AirTableError as e:
+            log.error(
+                f"Failed to update tester {tester} with leave message ID", exc_info=True
+            )
+            await exit_notification_channel.send(
+                f"Failed to update tester {tester} with leave message ID: {e}"
+            )

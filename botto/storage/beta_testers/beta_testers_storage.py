@@ -102,7 +102,7 @@ class BetaTestersStorage(Storage):
         result = await self._get(self.testers_url + "/" + record_id)
         return Tester.from_airtable(result)
 
-    async def find_tester(self, discord_id: str) -> Optional[Tester]:
+    async def find_tester(self, discord_id: str | int) -> Optional[Tester]:
         log.debug(f"Finding tester with ID {discord_id}")
         try:
             result_iterator = self._iterate(
@@ -114,6 +114,22 @@ class BetaTestersStorage(Storage):
             except (StopIteration, StopAsyncIteration):
                 log.info(f"No Tester found with ID {discord_id}")
                 return None
+        except AirTableError as e:
+            if e.error_type == "NOT_FOUND":
+                return None
+            raise
+
+    leave_message_ids_field = "fld4FRFQFuibIsgdm"
+
+    async def find_tester_by_leave_message(
+        self, message_id: str | int
+    ) -> Optional[Tester]:
+        log.debug(f"Finding tester for Leave Message ID {message_id}")
+        try:
+            formula = f"SEARCH('{message_id}', {{{self.leave_message_ids_field}}})"
+            result_iterator = self._iterate(self.testers_url, filter_by_formula=formula)
+            tester_iterator = (Tester.from_airtable(x) async for x in result_iterator)
+            return await anext(tester_iterator, None)
         except AirTableError as e:
             if e.error_type == "NOT_FOUND":
                 return None
@@ -182,16 +198,34 @@ class BetaTestersStorage(Storage):
         )
         return TestingRequest.from_airtable(result)
 
+    async def update_requests(
+        self, requests: list[TestingRequest]
+    ) -> list[TestingRequest]:
+        if any(request.id is None for request in requests):
+            raise MissingRecordIDError([request.id is None for request in requests][0])
+        log.debug(f"Updating requests: {requests}")
+        result = await self._update(
+            self.testing_requests_url,
+            {"records": [request.to_airtable() for request in requests]},
+        )
+        return [
+            TestingRequest.from_airtable(updated_record)
+            for updated_record in result["records"]
+        ]
+
     def list_requests(
         self,
         tester_id: Union[str, int],
-        app_id: Optional[Union[str, int]] = None,
+        app_ids: Optional[list[Union[str, int]]] = None,
         approval_filter: RequestApprovalFilter = RequestApprovalFilter.ALL,
         exclude_removed: bool = False,
     ) -> AsyncGenerator[TestingRequest, None]:
         formula = f"AND({{Tester Discord ID}}={tester_id}"
-        if app_id is not None:
-            formula += f",{{App Record ID}}='{app_id}'"
+        if app_ids:
+            joined_app_ids = ",".join(
+                [f"{{App Record ID}}='{app_id}'" for app_id in app_ids]
+            )
+            formula += f",OR({joined_app_ids})"
         match approval_filter:
             case RequestApprovalFilter.UNAPPROVED:
                 formula += f",{{Approved}}=FALSE()"
