@@ -564,7 +564,8 @@ class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
                 await reaction[1](message)
                 has_matched = True
         if (
-            not await self.is_feature_disabled(
+            message.guild
+            and not await self.is_feature_disabled(
                 "apology_reaction", str(message.guild.id)
             )
             and not self.regexes.sorry.search(message.content)
