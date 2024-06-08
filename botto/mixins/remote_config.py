@@ -25,7 +25,7 @@ class RemoteConfig:
             trigger="cron",
             minute="*/40",
             coalesce=True,
-            next_run_time=datetime.now() + timedelta(seconds=5),
+            next_run_time=datetime.utcnow() + timedelta(seconds=5),
         )
         super().__init__(scheduler=scheduler, **kwargs)
 
