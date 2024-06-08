@@ -43,7 +43,7 @@ class ConfigStorage(Storage):
 
     async def retrieve_config(
         self, server_id: str | int, key: Optional[Union[str, int]]
-    ) -> Optional[ConfigEntry]:
+    ) -> Optional[ConfigEntry | dict[str, ConfigEntry]]:
         log.debug(f"Fetching {key or 'config'} for {server_id}")
         filter_by_formula = f"AND({{Server ID}}='{server_id}'"
         if key := key:
@@ -56,13 +56,13 @@ class ConfigStorage(Storage):
         )
         config_iterator = (ConfigEntry.from_airtable(x) async for x in result_iterator)
         try:
-            config = await config_iterator.__anext__()
             async with self.config_lock:
                 server_config = self.config_cache.get(str(server_id), {})
-                server_config[config.config_key] = config
-                self.config_cache[config.server_id] = server_config
-            return config
-        except (StopIteration, StopAsyncIteration):
+                async for config in config_iterator:
+                    server_config[config.config_key] = config
+                self.config_cache[str(server_id)] = server_config
+                return server_config if not key else server_config[key]
+        except (StopIteration, StopAsyncIteration, KeyError):
             log.info(f"No config found for Key {key} with Server ID {server_id}")
             return None
 
