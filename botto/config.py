@@ -247,6 +247,7 @@ def parse(config):
         "support": {
             "channel_id": "890978723451523086",
             "user_ids": ["328674204780068864"],
+            "dm_log_channel": "935122779643191347",
         },
         "watching_statūs": ["for food", "for snails", "for apologies", "for love"],
         "disabled_features": {},
@@ -361,6 +362,9 @@ def parse(config):
 
     if user_ids := decode_base64_env("TLDBOTTO_SUPPORT_USER_IDS"):
         defaults["support"]["user_ids"] = user_ids
+
+    if channel_id := os.getenv("TLDBOTTO_SUPPORT_DM_LOG_CHANNEL_ID"):
+        defaults["support"]["dm_log_channel"] = channel_id
 
     defaults["clickup_enabled_guilds"] = set(defaults["clickup_enabled_guilds"])
 

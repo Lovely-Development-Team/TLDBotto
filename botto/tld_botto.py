@@ -719,36 +719,10 @@ class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
         message_content = message.content.lower().strip()
         dm_channel = await get_dm_channel(message.author)
         if message_content in ("!help", "help", "help!", "halp", "halp!", "!halp"):
-            help_message = f"""
-I am a multi-function bot providing assistance and jokes.
-""".strip()
-
-            support_config = self.config["support"]
-            support_channel_id = support_config.get("channel_id")
-            support_user_ids = support_config.get("user_ids")
-
-            if support_user_ids or support_channel_id:
-                message_add = "\nIf you need assistance with my operation"
-                if support_channel := self.get_channel(int(support_channel_id)):
-                    support_guild = self.get_guild(support_channel.guild.id)
-                    message_add = (
-                        f"{message_add} and are a member of `{support_guild.name}`, "
-                        f"please ask for help in {support_channel.mention}"
-                    )
-                    if support_user_ids:
-                        message_add = f"{message_add}. Otherwise"
-                if support_user_ids:
-                    users = [
-                        self.get_user(int(user_id)).mention
-                        for user_id in support_user_ids
-                    ]
-                    if len(support_user_ids) > 1:
-                        message_add = f"{message_add}, please DM one of the following users: {', '.join(users)}"
-                    else:
-                        message_add = f"{message_add}, please DM {', '.join(users)}"
-                help_message = f"{help_message}\n{message_add}."
-
-            await dm_channel.send(help_message)
+            async with dm_channel.typing():
+                help_message = await self.make_help_message(message)
+                logging.info(f"Sending help message in response to {message}")
+                await dm_channel.send(help_message)
             return
 
         if message_content == "!version":
@@ -775,7 +749,64 @@ I am a multi-function bot providing assistance and jokes.
                 return
 
         if not await self.react(message):
-            await self.reactions.unknown_dm(message)
+            react_task = asyncio.create_task(self.reactions.unknown_dm(message))
+            log_task = asyncio.create_task(self.log_dm(message))
+            if await self.should_respond_dms(message.author):
+                async with dm_channel.typing():
+                    help_message = await self.make_help_message(message)
+                    logging.info(f"Sending help message in response to {message}")
+                    await dm_channel.send(
+                        "Sorry, I am not currently capable of extended conversation, but I have "
+                        "forwarded your message to my operators. " + help_message
+                    )
+            await asyncio.gather(react_task, log_task)
+
+    async def log_dm(self, message: Message):
+        support_config = self.config["support"]
+        dm_log_channel_id = support_config.get("dm_log_channel")
+        if not dm_log_channel_id:
+            log.warning("No DM log channel configured")
+            return
+        dm_log_channel = self.get_channel(int(dm_log_channel_id))
+        embed = discord.Embed(
+            title=truncate_string(f"New DM", 256),
+            description=(
+                truncate_string(message.content, 4096) if message.content else None
+            ),
+            timestamp=message.created_at,
+        ).set_author(name=f"{message.author.name} ({message.author.mention})")
+        await dm_log_channel.send(embed=embed)
+
+    async def make_help_message(self, responding_to: Message):
+        help_message = f"""
+I am a multi-function bot providing assistance and jokes.
+""".strip()
+        support_config = self.config["support"]
+        support_channel_id = support_config.get("channel_id")
+        support_user_ids = support_config.get("user_ids")
+        if support_user_ids or support_channel_id:
+            message_add = "\nIf you need assistance with my operation"
+            if (
+                (support_channel := self.get_channel(int(support_channel_id)))
+                and support_channel.guild
+                and (support_channel.guild in responding_to.author.mutual_guilds)
+            ):
+                message_add = (
+                    f"{message_add} and are a member of `{support_channel.guild.name}`, "
+                    f"please ask for help in {support_channel.mention}"
+                )
+                if support_user_ids:
+                    message_add = f"{message_add}. Otherwise"
+            if support_user_ids:
+                users = [
+                    self.get_user(int(user_id)).mention for user_id in support_user_ids
+                ]
+                if len(support_user_ids) > 1:
+                    message_add = f"{message_add}, please DM one of the following users: {', '.join(users)}"
+                else:
+                    message_add = f"{message_add}, please DM {', '.join(users)}"
+            help_message = f"{help_message}\n{message_add}."
+        return help_message
 
     @property
     def local_times(self) -> list[datetime]:

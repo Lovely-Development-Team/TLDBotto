@@ -42,7 +42,7 @@ class ConfigStorage(Storage):
             return self.config_cache
 
     async def retrieve_config(
-        self, server_id: str, key: Optional[Union[str, int]]
+        self, server_id: str | int, key: Optional[Union[str, int]]
     ) -> Optional[ConfigEntry]:
         log.debug(f"Fetching {key or 'config'} for {server_id}")
         filter_by_formula = f"AND({{Server ID}}='{server_id}'"
@@ -66,7 +66,7 @@ class ConfigStorage(Storage):
             log.info(f"No config found for Key {key} with Server ID {server_id}")
             return None
 
-    async def get_config(self, server_id: str, key: str) -> Optional[ConfigEntry]:
+    async def get_config(self, server_id: str | int, key: str) -> Optional[ConfigEntry]:
         await self.config_lock.acquire()
         if (server_config := self.config_cache.get(str(server_id))) and (
             config := server_config.get(key)
