@@ -44,9 +44,11 @@ class ClickupMixin:
         task_embed = (
             discord.Embed(
                 title=truncate_string(task.name, 256),
-                description=truncate_string(task.description, 4096)
-                if task.description
-                else discord.Embed.Empty,
+                description=(
+                    truncate_string(task.description, 4096)
+                    if task.description
+                    else None
+                ),
                 colour=discord.Colour.from_rgb(*hex_to_rgb(task.status.colour)),
                 timestamp=task.date_created,
                 url=task.url,

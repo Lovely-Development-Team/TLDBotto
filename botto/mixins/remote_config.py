@@ -1,7 +1,9 @@
+import asyncio
 import json
 from datetime import datetime, timedelta
 from typing import Literal, Optional, Union
 
+import discord
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from botto.storage import ConfigStorage
@@ -41,3 +43,14 @@ class RemoteConfig:
                 str(server_id), "disabled_features"
             )
             return feature_name in disabled_features_for_server.parsed_value
+
+    async def should_respond_dms(self, member: discord.User) -> bool:
+        config_entries = await asyncio.gather(
+            *[
+                self.config_storage.get_config(guild.id, "respond_member_dms")
+                for guild in member.mutual_guilds
+            ]
+        )
+        return any(
+            guild_config.parsed_value for guild_config in config_entries if guild_config
+        )
