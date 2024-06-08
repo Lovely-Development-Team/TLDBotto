@@ -142,7 +142,7 @@ class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
             hour="*/12",
             coalesce=True,
         )
-        initial_refresh_run = datetime.now() + timedelta(seconds=5)
+        initial_refresh_run = datetime.utcnow() + timedelta(seconds=5)
         scheduler.add_job(
             self.storage.update_meals_cache,
             name="Refresh meals cache",

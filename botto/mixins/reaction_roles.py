@@ -80,7 +80,7 @@ class ReactionRoles(ExtendedClient):
             trigger="cron",
             minute="*/30",
             coalesce=True,
-            next_run_time=datetime.now() + timedelta(seconds=5),
+            next_run_time=datetime.utcnow() + timedelta(seconds=5),
             misfire_grace_time=10,
         )
         self.tester_locks = WeakValueDictionary()

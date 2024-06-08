@@ -35,7 +35,7 @@ class ReminderManager:
         self.missed_job_ids = []
         self.get_channel_func = None
 
-        initial_refresh_run = datetime.now() + timedelta(seconds=5)
+        initial_refresh_run = datetime.utcnow() + timedelta(seconds=5)
         scheduler.add_job(
             self.refresh_reminders,
             name="Refresh reminders",
@@ -264,9 +264,9 @@ class ReminderManager:
     ) -> list[Reminder]:
         reminders_for_guild: list[Reminder] = []
         async for reminder in self.storage.retrieve_reminders():
-            reminder_channel: Optional[
-                discord.TextChannel
-            ] = await self.get_channel_func(reminder.channel_id)
+            reminder_channel: Optional[discord.TextChannel] = (
+                await self.get_channel_func(reminder.channel_id)
+            )
             if not reminder_channel or reminder_channel.guild.id != guild.id:
                 continue
             if channel is not None and reminder_channel.id != channel.id:
