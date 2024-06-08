@@ -60,6 +60,7 @@ async def get_or_fetch_message(
 
 processing_emoji = "⏳"
 
+
 class ReactionRoles(ExtendedClient):
     def __init__(
         self,
@@ -509,11 +510,15 @@ class ReactionRoles(ExtendedClient):
             raise
 
         try:
-            other_messages = [
-                channel.get_partial_message(message_id)
-                for message_id in testing_request.further_notification_message_ids
-                if int(message_id) != payload.message_id
-            ]
+            other_messages = (
+                [
+                    channel.get_partial_message(message_id)
+                    for message_id in testing_request.further_notification_message_ids
+                    if int(message_id) != payload.message_id
+                ]
+                if testing_request.further_notification_message_ids
+                else []
+            )
             if int(testing_request.notification_message_id) != payload.message_id:
                 other_messages.append(
                     channel.get_partial_message(
