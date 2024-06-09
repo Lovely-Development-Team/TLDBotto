@@ -11,12 +11,12 @@ class ExtendedClient(discord.Client):
         self.tree = app_commands.CommandTree(self)
 
     async def get_or_fetch_channel(
-        self, channel_id: int
+        self, channel_id: int | str
     ) -> Optional[Union[GuildChannel, PrivateChannel, discord.Thread]]:
-        if channel := self.get_channel(channel_id):
+        if channel := self.get_channel(int(channel_id)):
             return channel
         else:
-            return await self.fetch_channel(channel_id)
+            return await self.fetch_channel(int(channel_id))
 
     async def get_or_fetch_user(self, user_id: int) -> Union[discord.User]:
         if user := self.get_user(user_id):

@@ -96,7 +96,9 @@ class ReactionRoles(ExtendedClient):
         lambda self: self.role_approvals_channels_cache,
         key=partial(hashkey, "approvals_channels"),
     )
-    async def get_default_approvals_channel_id(self, guild_id: str) -> Optional[str]:
+    async def get_default_approvals_channel_id(
+        self, guild_id: str | int
+    ) -> Optional[str]:
         if result := await self.reaction_roles_config_storage.get_config(
             guild_id, "default_approvals_channel"
         ):
@@ -628,12 +630,20 @@ class ReactionRoles(ExtendedClient):
                 handled = handled or await self.handle_removal_reaction(payload)
         except AirTableError as e:
             log.error("Failed to handle reaction", exc_info=True)
-            channel = self.get_channel(payload.channel_id)
+            reaction_channel = await self.get_or_fetch_channel(payload.channel_id)
+            if (guild_id := payload.guild_id) and await self.is_approval_channel(
+                str(payload.channel_id), guild_id
+            ):
+                channel = reaction_channel
+            else:
+                channel = await self.get_or_fetch_channel(
+                    await self.get_default_approvals_channel_id(guild_id)
+                )
             await channel.send(
                 f"{payload.member.mention} Failed to handle reaction: {e}",
-                reference=channel.get_partial_message(
+                reference=reaction_channel.get_partial_message(
                     payload.message_id
-                ).to_reference(),
+                ).to_reference(fail_if_not_exists=False),
                 mention_author=False,
             )
         finally:
