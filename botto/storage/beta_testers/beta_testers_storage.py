@@ -238,6 +238,7 @@ class BetaTestersStorage(Storage):
         result_iterator = self._iterate(
             self.testing_requests_url,
             filter_by_formula=formula,
+            sort=["Created"],
         )
         # PyCharm complains that the return type is actually a `Generator` not an `AsyncGenerator`. PyCharm is wrong.
         # noinspection PyTypeChecker
