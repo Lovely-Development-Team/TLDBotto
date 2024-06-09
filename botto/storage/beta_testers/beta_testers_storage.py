@@ -16,6 +16,7 @@ from botto.storage.beta_testers.model import (
     TestingRequest,
     MissingRecordIDError,
     App,
+    RequestStatus,
 )
 
 log = logging.getLogger(__name__)
@@ -228,9 +229,9 @@ class BetaTestersStorage(Storage):
             formula += f",OR({joined_app_ids})"
         match approval_filter:
             case RequestApprovalFilter.UNAPPROVED:
-                formula += f",{{Approved}}=FALSE()"
+                formula += f",OR({{Approved}}=FALSE(),{{Status}}=BLANK())"
             case RequestApprovalFilter.APPROVED:
-                formula += f",{{Approved}}=TRUE()"
+                formula += f",OR({{Approved}}=TRUE(),{{Status}}={RequestStatus.APPROVED.value})"
         if exclude_removed:
             formula += f",{{Removed}}=FALSE()"
         formula += ")"
