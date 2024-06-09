@@ -33,6 +33,19 @@ log = logging.getLogger(__name__)
 AgreementMessage = namedtuple("AgreementMessage", ["channel_id", "message_id"])
 
 
+class ReactionRoleError(Exception):
+    def __init__(
+        self,
+        message: str,
+        discord_message_reference: discord.MessageReference,
+        mention_member: Optional[discord.User],
+    ) -> None:
+        self.message = message
+        self.discord_message_reference = discord_message_reference
+        self.mention_member = mention_member
+        super().__init__(message)
+
+
 async def mark_request_messages_handled(
     messages: list[discord.Message],
     reaction: str,
@@ -67,6 +80,37 @@ async def get_or_fetch_message(
 
 
 processing_emoji = "⏳"
+
+
+async def get_other_request_messages(
+    channel: discord.TextChannel,
+    message_id: int,
+    testing_request: TestingRequest,
+) -> (list[discord.Message], list[asyncio.Task[discord.Message]]):
+    other_messages = (
+        [
+            channel.get_partial_message(message_id)
+            for message_id in testing_request.further_notification_message_ids
+            if int(message_id) != message_id
+        ]
+        if testing_request.further_notification_message_ids
+        else []
+    )
+    if int(testing_request.notification_message_id) != message_id:
+        other_messages.append(
+            channel.get_partial_message(int(testing_request.notification_message_id))
+        )
+    if not other_messages:
+        return [], []
+    cached_messages: list[discord.Message] = []
+    non_cached_messages: list[asyncio.Task[discord.Message]] = []
+    async with asyncio.TaskGroup() as g:
+        for other_message in other_messages:
+            if cached_message := other_message.to_reference().cached_message:
+                cached_messages.append(cached_message)
+            else:
+                non_cached_messages.append(g.create_task(other_message.fetch()))
+    return cached_messages, non_cached_messages
 
 
 class ReactionRoles(ExtendedClient):
@@ -422,15 +466,14 @@ class ReactionRoles(ExtendedClient):
         if guild is None:
             log.warning(f"Found no guild for role approval: {payload}")
             return
-        (is_self, message) = await self.is_own_message(payload)
+        is_self, message = await self.is_own_message(payload)
         if not is_self:
             return
         return guild, message
 
     async def handle_role_approval(self, payload: discord.RawReactionActionEvent):
-        if not (
-            guild_and_message := await self.check_valid_role_reaction_channel(payload)
-        ):
+        guild_and_message = await self.check_valid_role_reaction_channel(payload)
+        if not guild_and_message:
             return
         guild, message = guild_and_message
 
@@ -464,32 +507,26 @@ class ReactionRoles(ExtendedClient):
         is_previously_approved_testing_request = testing_request.approved
 
         async with asyncio.TaskGroup() as g:
-            fetch_tester = g.create_task(
+            fetch_tester: asyncio.Task[Tester | None] = g.create_task(
                 self.testflight_storage.fetch_tester(testing_request.tester)
             )
 
-            fetch_app = g.create_task(
+            fetch_app: asyncio.Task[model.App | None] = g.create_task(
                 self.testflight_storage.fetch_app(testing_request.app)
             )
         tester = fetch_tester.result()
         if tester is None:
-            await channel.send(
-                f"{payload.member.mention} Received approval reaction '{payload.emoji.name}'"
-                f" but could not find tester!",
-                reference=message.to_reference(),
-                mention_author=False,
+            raise ReactionRoleError(
+                f"Received approval reaction '{payload.emoji.name}' but could not find tester!",
+                message.to_reference(),
+                payload.member,
             )
-            return
         app = fetch_app.result()
         if app is None:
-            log.error(
-                f"Failed fetch app {testing_request.app} ({testing_request.app_name})",
-                exc_info=True,
-            )
-            await channel.send(
-                f"{payload.member.mention} Failed to fetch app {testing_request.app} ({testing_request.app_name})",
-                reference=message.to_reference(),
-                mention_author=False,
+            raise ReactionRoleError(
+                f"Failed to fetch app {testing_request.app} ({testing_request.app_name})",
+                message.to_reference(),
+                payload.member,
             )
 
         testing_request.status = model.RequestStatus.APPROVED
@@ -512,55 +549,46 @@ class ReactionRoles(ExtendedClient):
                     *roles, reason=f"Testflight request for {app.name} approved"
                 )
             except discord.DiscordException as e:
-                log.error("Failed to add roles to member", exc_info=True)
-                await channel.send(
-                    f"{payload.member.mention} Received approval reaction '{payload.emoji.name}'"
-                    f" but failed to add roles to member due to error: {e}",
-                    reference=message.to_reference(),
-                    mention_author=False,
-                )
-                raise
+                raise ReactionRoleError(
+                    f"Received approval reaction '{payload.emoji.name}' but failed to add roles to member",
+                    message.to_reference(),
+                    payload.member,
+                ) from e
 
         if not is_previously_approved_testing_request:
             try:
                 await self.send_approval_notification(testing_request, tester)
             except discord.DiscordException as e:
-                log.error("Failed to add roles to member", exc_info=True)
-                await channel.send(
-                    f"{payload.member.mention} Received approval reaction '{payload.emoji.name}'"
-                    f" and added roles to member but failed to notify member due to error: {e}",
-                    reference=message.to_reference(),
-                    mention_author=False,
-                )
-                raise
+                member = guild.get_member(int(tester.discord_id))
+                raise ReactionRoleError(
+                    f"Added roles to {member.mention if member else tester.username} for {app.name} but failed to "
+                    f"send notification",
+                    message.to_reference(),
+                    payload.member,
+                ) from e
 
         try:
             await self.testflight_storage.update_request(testing_request)
         except AirTableError as e:
-            log.error("Failed to mark request as approved", exc_info=True)
-            await channel.send(
-                f"{payload.member.mention} Failed to mark request as approved in airtable: {e}",
-                reference=message.to_reference(),
-                mention_author=False,
-            )
+            raise ReactionRoleError(
+                "Failed to mark request as approved in airtable",
+                message.to_reference(),
+                payload.member,
+            ) from e
 
         try:
             await message.add_reaction("✅")
         except discord.DiscordException as e:
-            log.error("Failed to mark message with ✅", exc_info=True)
-            await channel.send(
-                f"{payload.member.mention} Received approval reaction '{payload.emoji.name}' and added roles to member"
-                f" but failed to mark message with ✅ due to error: {e}",
-                reference=message.to_reference(),
-                mention_author=False,
-            )
-            raise
+            raise ReactionRoleError(
+                "Received approval reaction '{payload.emoji.name}' and added roles to member but failed to mark "
+                "message with ✅",
+                message.to_reference(),
+                payload.member,
+            ) from e
 
         try:
-            cached_messages, non_cached_messages = (
-                await self.get_other_request_messages(
-                    channel, payload.message_id, testing_request
-                )
+            cached_messages, non_cached_messages = await get_other_request_messages(
+                channel, payload.message_id, testing_request
             )
             if not cached_messages and not non_cached_messages:
                 return [], []
@@ -577,47 +605,12 @@ class ReactionRoles(ExtendedClient):
                     )
                 )
         except discord.DiscordException as e:
-            log.error("Failed to mark message with ✔️", exc_info=True)
-            await channel.send(
-                f"{payload.member.mention} Received approval reaction '{payload.emoji.name}' and added roles to member"
-                f" but failed to mark other message with ✔️ due to error: {e}",
-                reference=message.to_reference(),
-                mention_author=False,
-            )
-            raise
-
-    async def get_other_request_messages(
-        self,
-        channel: discord.TextChannel,
-        message_id: int,
-        testing_request: TestingRequest,
-    ) -> (list[discord.Message], list[asyncio.Task[discord.Message]]):
-        other_messages = (
-            [
-                channel.get_partial_message(message_id)
-                for message_id in testing_request.further_notification_message_ids
-                if int(message_id) != message_id
-            ]
-            if testing_request.further_notification_message_ids
-            else []
-        )
-        if int(testing_request.notification_message_id) != message_id:
-            other_messages.append(
-                channel.get_partial_message(
-                    int(testing_request.notification_message_id)
-                )
-            )
-        if not other_messages:
-            return [], []
-        cached_messages: list[discord.Message] = []
-        non_cached_messages: list[asyncio.Task[discord.Message]] = []
-        async with asyncio.TaskGroup() as g:
-            for other_message in other_messages:
-                if cached_message := other_message.to_reference().cached_message:
-                    cached_messages.append(cached_message)
-                else:
-                    non_cached_messages.append(g.create_task(other_message.fetch()))
-        return cached_messages, non_cached_messages
+            raise ReactionRoleError(
+                f"Received approval reaction '{payload.emoji.name}' and added roles to member but failed to mark other "
+                "message with ✔️",
+                message.to_reference(),
+                payload.member,
+            ) from e
 
     async def handle_role_rejection(
         self, payload: discord.RawReactionActionEvent
@@ -660,30 +653,24 @@ class ReactionRoles(ExtendedClient):
         try:
             await self.testflight_storage.update_request(testing_request)
         except AirTableError as e:
-            log.error("Failed to mark request as approved", exc_info=True)
-            await channel.send(
-                f"{payload.member.mention} Failed to mark request as approved in airtable: {e}",
-                reference=message.to_reference(),
-                mention_author=False,
-            )
+            raise ReactionRoleError(
+                "Failed to mark request as rejected in airtable",
+                message.to_reference(),
+                payload.member,
+            ) from e
 
         try:
             await message.add_reaction("⛔")
         except discord.DiscordException as e:
-            log.error("Failed to mark message with ⛔", exc_info=True)
-            await channel.send(
-                f"{payload.member.mention} Received approval reaction '{payload.emoji.name}' and added roles to member"
-                f" but failed to mark message with ⛔ due to error: {e}",
-                reference=message.to_reference(),
-                mention_author=False,
-            )
-            raise
+            raise ReactionRoleError(
+                f"Received rejection reaction '{payload.emoji.name}' but failed to mark message with ⛔",
+                message.to_reference(),
+                payload.member,
+            ) from e
 
         try:
-            cached_messages, non_cached_messages = (
-                await self.get_other_request_messages(
-                    channel, payload.message_id, testing_request
-                )
+            cached_messages, non_cached_messages = await get_other_request_messages(
+                channel, payload.message_id, testing_request
             )
             if not cached_messages and not non_cached_messages:
                 return True
@@ -700,14 +687,11 @@ class ReactionRoles(ExtendedClient):
                 log.debug(f"Marked non-cached messages")
             return True
         except discord.DiscordException as e:
-            log.error("Failed to mark message with 🚫", exc_info=True)
-            await channel.send(
-                f"{payload.member.mention} Received rejection reaction '{payload.emoji.name}' but failed to mark "
-                f"other message with 🚫 due to error: {e}",
-                reference=message.to_reference(),
-                mention_author=False,
-            )
-            raise
+            raise ReactionRoleError(
+                f"Received rejection reaction '{payload.emoji.name}' but failed to mark other message with 🚫",
+                message.to_reference(),
+                payload.member,
+            ) from e
 
     async def handle_removal_reaction(
         self, payload: discord.RawReactionActionEvent
@@ -725,24 +709,14 @@ class ReactionRoles(ExtendedClient):
         Returns:
             bool: True if the reaction was recognised as a removal reaction, False otherwise.
         """
-        if payload.guild_id is None:
-            return False
-
-        if not await self.is_approval_channel(
-            str(payload.channel_id), payload.guild_id
+        if not (
+            guild_and_message := await self.check_valid_role_reaction_channel(payload)
         ):
             return False
+        guild, message = guild_and_message
 
         log.debug(f"Role removal for: {payload}")
 
-        guild = self.get_guild(payload.guild_id)
-        if guild is None:
-            log.warning(f"Found no guild for role removal: {payload}")
-            return False
-
-        (is_self, message) = await self.is_own_message(payload)
-        if not is_self:
-            return False
         await message.add_reaction(processing_emoji)
 
         removal_emojis = await self.get_removal_emojis(payload.guild_id)
@@ -788,6 +762,15 @@ class ReactionRoles(ExtendedClient):
                 ).to_reference(fail_if_not_exists=False),
                 mention_author=False,
             )
+        except ReactionRoleError as e:
+            log.error(e.message, exc_info=True)
+            channel = await self.get_or_fetch_channel(payload.channel_id)
+            await channel.send(
+                f"{f'{e.mention_member.mention} ' if e.mention_member else ''}{e.message}",
+                reference=e.discord_message_reference,
+                mention_author=False,
+            )
+            handled = True
         finally:
             message = await get_or_fetch_message(
                 self.get_channel(payload.channel_id), payload.message_id
