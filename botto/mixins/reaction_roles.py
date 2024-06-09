@@ -34,17 +34,25 @@ AgreementMessage = namedtuple("AgreementMessage", ["channel_id", "message_id"])
 
 
 async def mark_request_messages_handled(
-    messages: list[discord.Message], reaction: str = "✔️"
+    messages: list[discord.Message],
+    reaction: str,
+    primary_reaction: str,
 ):
     return asyncio.gather(
         *[
             m.add_reaction(reaction)
             for m in messages
-            if "✅" not in m.reactions
-            and "✔️" not in m.reactions
-            and reaction not in m.reactions
+            if primary_reaction not in m.reactions and reaction not in m.reactions
         ]
     )
+
+
+mark_request_message_approved = partial(
+    mark_request_messages_handled, reaction="✔️", primary_reaction="✅"
+)
+mark_request_message_rejected = partial(
+    mark_request_messages_handled, reaction="🚫", primary_reaction="⛔"
+)
 
 
 async def get_or_fetch_message(
@@ -145,6 +153,13 @@ class ReactionRoles(ExtendedClient):
     async def get_approval_emojis(self, guild_id: str) -> set[str]:
         if result := await self.reaction_roles_config_storage.get_config(
             guild_id, "approval_emojis"
+        ):
+            return set(result.parsed_value)
+        return set()
+
+    async def get_rejection_emojis(self, guild_id: str) -> set[str]:
+        if result := await self.reaction_roles_config_storage.get_config(
+            guild_id, "rejection_emojis"
         ):
             return set(result.parsed_value)
         return set()
@@ -306,11 +321,11 @@ class ReactionRoles(ExtendedClient):
                 testing_request,
             )
         else:
-            most_recent_existing_request = existing_testing_requests[-1]
+            oldest_existing_request = existing_testing_requests[0]
             await self.send_request_notification_message(
                 payload.member or await self.get_or_fetch_user(payload.user_id),
                 tester,
-                most_recent_existing_request,
+                oldest_existing_request,
                 is_repeat=True,
             )
 
@@ -396,25 +411,33 @@ class ReactionRoles(ExtendedClient):
         message = await get_or_fetch_message(channel, payload.message_id)
         return message.author.id == self.user.id, message
 
-    async def handle_role_approval(self, payload: discord.RawReactionActionEvent):
+    async def check_valid_role_reaction_channel(
+        self, payload: discord.RawReactionActionEvent
+    ) -> Optional[tuple[discord.Guild, discord.Message]]:
         guild_id = payload.guild_id
         if guild_id is None:
             return
-
         if not await self.is_approval_channel(str(payload.channel_id), guild_id):
             return
-
-        log.debug(f"Role approval for: {payload}")
-
         guild = self.get_guild(guild_id)
         if guild is None:
             log.warning(f"Found no guild for role approval: {payload}")
             return
-
-        channel = guild.get_channel(payload.channel_id)
         (is_self, message) = await self.is_own_message(payload)
         if not is_self:
             return
+        return guild, message
+
+    async def handle_role_approval(self, payload: discord.RawReactionActionEvent):
+        if not (
+            guild_and_message := await self.check_valid_role_reaction_channel(payload)
+        ):
+            return
+        guild, message = guild_and_message
+
+        channel = guild.get_channel(payload.channel_id)
+
+        log.debug(f"Role approval for: {payload}")
 
         approval_emojis = await self.get_approval_emojis(str(payload.guild_id))
         if payload.emoji.name not in approval_emojis:
@@ -432,6 +455,13 @@ class ReactionRoles(ExtendedClient):
                     mention_author=False,
                 )
                 return
+        if testing_request.status is model.RequestStatus.REJECTED:
+            await channel.send(
+                f"Request {testing_request} was previously rejected. Cannot now approve.",
+                reference=message.to_reference(),
+                mention_author=False,
+            )
+            return
         is_previously_approved_testing_request = testing_request.approved
 
         tester = await self.testflight_storage.fetch_tester(testing_request.tester)
@@ -521,40 +551,22 @@ class ReactionRoles(ExtendedClient):
             raise
 
         try:
-            other_messages = (
-                [
-                    channel.get_partial_message(message_id)
-                    for message_id in testing_request.further_notification_message_ids
-                    if int(message_id) != payload.message_id
-                ]
-                if testing_request.further_notification_message_ids
-                else []
-            )
-            if int(testing_request.notification_message_id) != payload.message_id:
-                other_messages.append(
-                    channel.get_partial_message(
-                        int(testing_request.notification_message_id)
-                    )
+            cached_messages, non_cached_messages = (
+                await self.get_other_request_messages(
+                    channel, payload.message_id, testing_request
                 )
-            if not other_messages:
-                return
-            log.debug("Marking other messages with ✔️")
-            cached_messages: list[discord.Message] = []
-            non_cached_messages: list[asyncio.Task[discord.Message]] = []
+            )
+            if not cached_messages and not non_cached_messages:
+                return [], []
             async with asyncio.TaskGroup() as g:
-                for other_message in other_messages:
-                    if cached_message := other_message.to_reference().cached_message:
-                        cached_messages.append(cached_message)
-                    else:
-                        non_cached_messages.append(g.create_task(other_message.fetch()))
-            async with asyncio.TaskGroup() as g:
-                g.create_task(mark_request_messages_handled(cached_messages))
+                log.debug("Marking other messages with ✔️")
+                g.create_task(mark_request_message_approved(cached_messages))
                 log.debug("Marked cached messages")
                 log.debug(
                     f"Marking non-cached messages {[m.result() for m in non_cached_messages]}"
                 )
                 g.create_task(
-                    mark_request_messages_handled(
+                    mark_request_message_approved(
                         [m.result() for m in non_cached_messages]
                     )
                 )
@@ -563,6 +575,129 @@ class ReactionRoles(ExtendedClient):
             await channel.send(
                 f"{payload.member.mention} Received approval reaction '{payload.emoji.name}' and added roles to member"
                 f" but failed to mark other message with ✔️ due to error: {e}",
+                reference=message.to_reference(),
+                mention_author=False,
+            )
+            raise
+
+    async def get_other_request_messages(
+        self,
+        channel: discord.TextChannel,
+        message_id: int,
+        testing_request: TestingRequest,
+    ) -> (list[discord.Message], list[asyncio.Task[discord.Message]]):
+        other_messages = (
+            [
+                channel.get_partial_message(message_id)
+                for message_id in testing_request.further_notification_message_ids
+                if int(message_id) != message_id
+            ]
+            if testing_request.further_notification_message_ids
+            else []
+        )
+        if int(testing_request.notification_message_id) != message_id:
+            other_messages.append(
+                channel.get_partial_message(
+                    int(testing_request.notification_message_id)
+                )
+            )
+        if not other_messages:
+            return [], []
+        cached_messages: list[discord.Message] = []
+        non_cached_messages: list[asyncio.Task[discord.Message]] = []
+        async with asyncio.TaskGroup() as g:
+            for other_message in other_messages:
+                if cached_message := other_message.to_reference().cached_message:
+                    cached_messages.append(cached_message)
+                else:
+                    non_cached_messages.append(g.create_task(other_message.fetch()))
+        return cached_messages, non_cached_messages
+
+    async def handle_role_rejection(
+        self, payload: discord.RawReactionActionEvent
+    ) -> bool:
+        if not (
+            guild_and_message := await self.check_valid_role_reaction_channel(payload)
+        ):
+            return False
+        guild, message = guild_and_message
+
+        channel = guild.get_channel(payload.channel_id)
+
+        log.debug(f"Role rejection for: {payload}")
+
+        rejection_emojis = await self.get_rejection_emojis(str(payload.guild_id))
+        if payload.emoji.name not in rejection_emojis:
+            return False
+
+        testing_request = await self.testflight_storage.fetch_request(
+            payload.message_id
+        )
+        if testing_request is None:
+            async with channel.typing():
+                await channel.send(
+                    f"{payload.member.mention} Received rejection reaction '{payload.emoji.name}'"
+                    f" but no testing requests found for this message!",
+                    reference=message.to_reference(),
+                    mention_author=False,
+                )
+                return False
+        if testing_request.status is model.RequestStatus.APPROVED:
+            await channel.send(
+                f"Request {testing_request} was previously approved. Cannot now reject.",
+                reference=message.to_reference(),
+                mention_author=False,
+            )
+            return True
+
+        testing_request.status = model.RequestStatus.REJECTED
+        try:
+            await self.testflight_storage.update_request(testing_request)
+        except AirTableError as e:
+            log.error("Failed to mark request as approved", exc_info=True)
+            await channel.send(
+                f"{payload.member.mention} Failed to mark request as approved in airtable: {e}",
+                reference=message.to_reference(),
+                mention_author=False,
+            )
+
+        try:
+            await message.add_reaction("⛔")
+        except discord.DiscordException as e:
+            log.error("Failed to mark message with ⛔", exc_info=True)
+            await channel.send(
+                f"{payload.member.mention} Received approval reaction '{payload.emoji.name}' and added roles to member"
+                f" but failed to mark message with ⛔ due to error: {e}",
+                reference=message.to_reference(),
+                mention_author=False,
+            )
+            raise
+
+        try:
+            cached_messages, non_cached_messages = (
+                await self.get_other_request_messages(
+                    channel, payload.message_id, testing_request
+                )
+            )
+            if not cached_messages and not non_cached_messages:
+                return True
+            async with asyncio.TaskGroup() as g:
+                log.debug("Marking other messages with 🚫")
+                g.create_task(mark_request_message_rejected(cached_messages))
+                log.debug("Marked cached messages")
+                log.debug(f"Marking non-cached messages")
+                g.create_task(
+                    mark_request_message_rejected(
+                        [m.result() for m in non_cached_messages]
+                    )
+                )
+                log.debug(f"Marked non-cached messages")
+            return True
+        except discord.DiscordException as e:
+            log.error("Failed to mark message with 🚫", exc_info=True)
+            await channel.send(
+                f"{payload.member.mention} Received rejection reaction '{payload.emoji.name}' but failed to mark "
+                f"other message with 🚫 due to error: {e}",
                 reference=message.to_reference(),
                 mention_author=False,
             )
@@ -627,6 +762,7 @@ class ReactionRoles(ExtendedClient):
             if payload.event_type == "REACTION_ADD":
                 await self.handle_role_reaction(payload)
                 await self.handle_role_approval(payload)
+                handled = handled or await self.handle_role_rejection(payload)
                 handled = handled or await self.handle_removal_reaction(payload)
         except AirTableError as e:
             log.error("Failed to handle reaction", exc_info=True)
