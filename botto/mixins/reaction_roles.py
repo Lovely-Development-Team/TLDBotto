@@ -463,7 +463,15 @@ class ReactionRoles(ExtendedClient):
             return
         is_previously_approved_testing_request = testing_request.approved
 
-        tester = await self.testflight_storage.fetch_tester(testing_request.tester)
+        async with asyncio.TaskGroup() as g:
+            fetch_tester = g.create_task(
+                self.testflight_storage.fetch_tester(testing_request.tester)
+            )
+
+            fetch_app = g.create_task(
+                self.testflight_storage.fetch_app(testing_request.app)
+            )
+        tester = fetch_tester.result()
         if tester is None:
             await channel.send(
                 f"{payload.member.mention} Received approval reaction '{payload.emoji.name}'"
@@ -472,8 +480,7 @@ class ReactionRoles(ExtendedClient):
                 mention_author=False,
             )
             return
-
-        app = await self.testflight_storage.fetch_app(testing_request.app)
+        app = fetch_app.result()
         if app is None:
             log.error(
                 f"Failed fetch app {testing_request.app} ({testing_request.app_name})",
