@@ -70,6 +70,7 @@ class BetaTestersStorage(Storage):
                 async for reaction_role in reaction_roles_iterator
             ]
             self.watched_message_ids = set(reaction_role_entries)
+        log.info(f"Watching {len(self.watched_message_ids)} messages")
         return reaction_role_entries
 
     async def list_reaction_roles(self) -> list[ReactionRole]:
