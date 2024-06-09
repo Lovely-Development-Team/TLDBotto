@@ -326,7 +326,6 @@ class ReactionRoles(ExtendedClient):
                 payload.member or await self.get_or_fetch_user(payload.user_id),
                 tester,
                 oldest_existing_request,
-                is_repeat=True,
             )
 
     async def send_registration_message(
@@ -343,8 +342,8 @@ class ReactionRoles(ExtendedClient):
         user: discord.User,
         tester: Tester,
         request: TestingRequest,
-        is_repeat: bool = False,
     ) -> (TestingRequest, discord.Message):
+        is_repeat = bool(request.notification_message_id)
         if request_approval_channel_id := request.approval_channel_id:
             approval_channel = self.get_channel(int(request_approval_channel_id))
         elif (
