@@ -266,6 +266,15 @@ class ReactionRoles(ExtendedClient):
                         server_id=str(payload.guild_id),
                     )
                 )
+            elif any(
+                r.status is model.RequestStatus.REJECTED
+                for r in existing_testing_requests
+            ):
+                log.info(
+                    f"One of ({tester.id}) {tester.username}'s last request for this app was rejected. Ignoring."
+                )
+                return
+
             if not tester.email:
                 if registration_message_id := tester.registration_message_id:
                     previous_registration_message = await payload.member.fetch_message(
@@ -342,7 +351,7 @@ class ReactionRoles(ExtendedClient):
                 )
                 original_message_link += f" {notification_message.jump_url}"
             text += f"_This is a repeat request. Original request{original_message_link} was {relative_date}_\n"
-            if request.approved:
+            if request.status is model.RequestStatus.APPROVED:
                 text += "**This request was already approved**\n"
         text += (
             f"{user.mention} wants access to **{request.app_name}**\n"
@@ -445,7 +454,7 @@ class ReactionRoles(ExtendedClient):
                 mention_author=False,
             )
 
-        testing_request.approved = True
+        testing_request.status = model.RequestStatus.APPROVED
 
         try:
             await self.add_tester_to_group(payload, tester, app)

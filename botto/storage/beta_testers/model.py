@@ -1,3 +1,4 @@
+import enum
 import logging
 from dataclasses import dataclass, field
 from typing import Optional, List, Union
@@ -109,6 +110,12 @@ class Tester:
         return airtable_dict
 
 
+@enum.unique
+class RequestStatus(enum.StrEnum):
+    APPROVED = "Approved"
+    REJECTED = "Rejected"
+
+
 @dataclass
 class TestingRequest:
     tester: str
@@ -117,6 +124,7 @@ class TestingRequest:
     server_id: str
     app_name: Optional[str] = None  # Formula field
     _approved: Optional[bool] = None
+    status: Optional[RequestStatus] = None
     _notification_message_id: Optional[str] = None
     _further_notification_message_ids: Optional[List[str]] = None
     approval_channel_id: Optional[str] = None
@@ -127,11 +135,7 @@ class TestingRequest:
 
     @property
     def approved(self) -> bool:
-        return self._approved is True
-
-    @approved.setter
-    def approved(self, value: bool):
-        self._approved = value
+        return self._approved is True or self.status == RequestStatus.APPROVED
 
     @property
     def notification_message_id(self) -> Optional[str]:
@@ -176,6 +180,13 @@ class TestingRequest:
         except IndexError:
             app_name = fields["App Name"]
         try:
+            status_value = fields.get("Status")
+            request_status: Optional[RequestStatus] = (
+                RequestStatus(status_value) if status_value else None
+            )
+        except ValueError:
+            request_status = None
+        try:
             created = arrow.get(fields["Created"])
         except arrow.ParserError:
             logging.error(
@@ -193,6 +204,7 @@ class TestingRequest:
             app=app,
             app_name=app_name,
             _approved=fields.get("Approved"),
+            status=request_status,
             _notification_message_id=fields.get("Notification Message ID"),
             _further_notification_message_ids=split_further_notification_message_ids,
             approval_channel_id=fields.get("Approval Channel"),
@@ -210,6 +222,7 @@ class TestingRequest:
                 "tester",
                 "app",
                 "approved",
+                "status",
                 "server_id",
                 "notification_message_id",
                 "further_notification_message_ids",
@@ -224,6 +237,8 @@ class TestingRequest:
             data["App"] = [self.app]
         if "approved" in fields and self._approved is not None:
             data["Approved"] = self._approved
+        if "status" in fields and self.status is not None:
+            data["Status"] = self.status
         if "server_id" in fields:
             data["Server ID"] = self.server_id
         if (
