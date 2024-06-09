@@ -807,7 +807,9 @@ class ReactionRoles(ExtendedClient):
         user_testing_apps = [
             (await self.testflight_storage.fetch_app(r.app)).name
             async for r in self.testflight_storage.list_requests(
-                tester_id=str(payload.user.id), exclude_removed=True
+                tester_id=str(payload.user.id),
+                exclude_removed=True,
+                approval_filter=RequestApprovalFilter.APPROVED,
             )
         ]
         if len(user_testing_apps) == 0:
