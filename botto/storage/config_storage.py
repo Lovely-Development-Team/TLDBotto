@@ -76,7 +76,7 @@ class ConfigStorage(Storage):
     async def get_config(self, server_id: str | int, key: str) -> Optional[ConfigEntry]:
         if (
             not self.config_key_negative_cache_lock.locked()
-            and self.config_key_negative_cache.get(str(server_id), {}).get(key)
+            and key in self.config_key_negative_cache.get(str(server_id), {})
         ):
             return None
         await self.config_lock.acquire()
