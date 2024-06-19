@@ -232,7 +232,7 @@ class BetaTestersStorage(Storage):
             case RequestApprovalFilter.UNAPPROVED:
                 formula += f",OR({{Approved}}=FALSE(),{{Status}}=BLANK())"
             case RequestApprovalFilter.APPROVED:
-                formula += f",OR({{Approved}}=TRUE(),{{Status}}={RequestStatus.APPROVED.value})"
+                formula += f",OR({{Approved}}=TRUE(),{{Status}}='{RequestStatus.APPROVED.value}')"
         if exclude_removed:
             formula += f",{{Removed}}=FALSE()"
         formula += ")"
