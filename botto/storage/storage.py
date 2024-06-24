@@ -68,7 +68,7 @@ class Storage:
         sort: Optional[list[str]] = None,
         session: Optional[ClientSession] = None,
         fields: Optional[Union[list[str], str]] = None,
-    ) -> AsyncGenerator[dict]:
+    ) -> AsyncGenerator[dict, None]:
         params = {}
         if filter_by_formula:
             params = {"filterByFormula": filter_by_formula}

@@ -1,7 +1,7 @@
 import logging
 from typing import AsyncGenerator
 from datetime import datetime
-from typing import Optional, Any
+from typing import Optional
 
 from aiohttp import ClientSession
 
