@@ -4,7 +4,7 @@ import logging
 from collections import namedtuple
 from datetime import datetime, timedelta
 from functools import partial
-from typing import Optional
+from typing import Optional, AsyncGenerator
 from weakref import WeakValueDictionary
 
 import discord
@@ -733,7 +733,8 @@ class ReactionRoles(ExtendedClient):
             )
             return False
 
-        await self.remove_tester_from_group(payload, tester)
+        await self.remove_tester_from_app_store(payload, tester)
+        message.add_reaction("🚪")
         return True
 
     async def handle_reaction(self, payload: discord.RawReactionActionEvent) -> bool:
@@ -835,7 +836,7 @@ class ReactionRoles(ExtendedClient):
                     )
                     raise
 
-    async def remove_tester_from_group(
+    async def remove_tester_from_app_store(
         self,
         payload: discord.RawReactionActionEvent,
         tester: Tester,
@@ -868,31 +869,37 @@ class ReactionRoles(ExtendedClient):
                 )
                 return
 
-            app_store_tester = testers_with_email[0]
+            for app_store_tester in testers_with_email:
+                if app and app.beta_group_id not in app_store_tester.beta_group_ids:
+                    msg = f"{tester.email} not in group {app.beta_group_id}, removal unnecessary"
+                    log.info(msg)
+                    return
 
-            if app.beta_group_id not in app_store_tester.beta_group_ids:
-                msg = f"{tester.email} not in group {app.beta_group_id}, removal unnecessary"
-                log.info(msg)
-                return
-            await self.app_store_connect_client.delete_beta_tester(
-                app_store_tester.id, app
-            )
-            log.info(f"Removed {tester} from Beta Testers")
-            apps = await self.testflight_storage.find_apps_by_beta_group(
-                *app_store_tester.beta_group_ids
-            )
-            records_to_update = [
-                r
-                async for r in self.testflight_storage.list_requests(
-                    tester_id=str(payload.user_id),
-                    app_ids=[app.id for app in apps],
-                    approval_filter=RequestApprovalFilter.APPROVED,
-                    exclude_removed=True,
+                apps = await self.testflight_storage.find_apps_by_beta_group(
+                    *app_store_tester.beta_group_ids
                 )
-            ]
-            for r in records_to_update:
-                r.removed = True
-            await self.testflight_storage.update_requests(records_to_update)
+                apps_by_key = {a.app_store_key_id: a for a in apps}
+                async with asyncio.TaskGroup() as g:
+                    for app in apps_by_key.values():
+                        g.create_task(
+                            self.app_store_connect_client.delete_beta_tester(
+                                app_store_tester.id, app
+                            )
+                        )
+
+                log.info(f"Removed {tester} from Beta Testers")
+                records_to_update = [
+                    r
+                    async for r in self.testflight_storage.list_requests(
+                        tester_id=str(payload.user_id),
+                        app_ids=[app.id for app in apps],
+                        approval_filter=RequestApprovalFilter.APPROVED,
+                        exclude_removed=True,
+                    )
+                ]
+                for r in records_to_update:
+                    r.removed = True
+                await self.testflight_storage.update_requests(records_to_update)
         except AppStoreConnectError as error:
             channel = self.get_channel(payload.channel_id)
             message = channel.get_partial_message(payload.message_id)
@@ -940,11 +947,9 @@ class ReactionRoles(ExtendedClient):
             return
 
         user_testing_apps = [
-            (await self.testflight_storage.fetch_app(r.app)).name
-            async for r in self.testflight_storage.list_requests(
-                tester_id=str(payload.user.id),
-                exclude_removed=True,
-                approval_filter=RequestApprovalFilter.APPROVED,
+            t.name
+            async for t in await self.fetch_apps_for_tester(
+                payload.user.id, RequestApprovalFilter.APPROVED
             )
         ]
         if len(user_testing_apps) == 0:
@@ -978,3 +983,17 @@ class ReactionRoles(ExtendedClient):
             await exit_notification_channel.send(
                 f"Failed to update tester {tester} with leave message ID: {e}"
             )
+
+    async def fetch_apps_for_tester(
+        self,
+        user_id: str | int,
+        approval_filter: RequestApprovalFilter = RequestApprovalFilter.ALL,
+    ) -> AsyncGenerator[model.App, None]:
+        return (
+            await self.testflight_storage.fetch_app(r.app)
+            async for r in self.testflight_storage.list_requests(
+                tester_id=str(user_id),
+                exclude_removed=True,
+                approval_filter=approval_filter,
+            )
+        )
