@@ -419,15 +419,33 @@ def setup_slash(
         default_permissions=discord.Permissions(administrator=True),
     )
 
-    async def send_tester_details(ctx, tester_email):
+    from botto.storage.beta_testers import model
+
+    async def send_tester_details(ctx, tester_or_email: model.Tester | str):
+        tester_email: str
+        try:
+            tester_email = tester_or_email.email
+        except AttributeError:
+            tester_email = tester_or_email
         log.info(f"Finding beta testers with email {tester_email}")
         await ctx.response.defer(ephemeral=True, thinking=True)
         matching_testers = await app_store_connect.find_beta_tester(email=tester_email)
-        apps_to_testers = {}
+        approved_apps_to_testers = {}
+        requested_apps_to_testers = {}
+        beta_tester_to_stored_tester = {}
         for tester in matching_testers:
-            apps_to_testers[tester.id] = asyncio.create_task(
+            approved_apps_to_testers[tester.id] = asyncio.create_task(
                 testflight_storage.find_apps_by_beta_group(*tester.beta_group_ids)
             )
+            if stored_tester := (
+                await testflight_storage.find_tester(email=tester_email)
+                if isinstance(tester_email, str)
+                else tester_email
+            ):
+                beta_tester_to_stored_tester[tester.id] = stored_tester
+                requested_apps_to_testers[tester.id] = asyncio.create_task(
+                    fetch_apps_by_tester_or_email(stored_tester)
+                )
         response_message = ""
         for tester in matching_testers:
             response_message += f"**ID**: {tester.id}\n"
@@ -437,15 +455,37 @@ def setup_slash(
                 response_message += f"**Last name**: {tester.last_name}\n"
             if tester.email:
                 response_message += f"**Email name**: {tester.email}\n"
-            apps = await apps_to_testers[tester.id]
+            requested_apps = await requested_apps_to_testers[tester.id]
+            requested_app_names = [app.name for app in requested_apps]
+            log.debug(f"Requested app names: {requested_app_names}")
+            response_message += (
+                "**Apps (Requested)**: " + ",".join(requested_app_names) + "\n"
+            )
+            apps = await approved_apps_to_testers[tester.id]
             app_names = [app.name for app in apps]
             log.debug(f"App names: {app_names}")
-            response_message += "**Apps**: " + ",".join(app_names)
-            if len(app_names) > 0:
-                response_message += "\n\n"
-            else:
-                response_message += "\n"
+            response_message += "**Apps (in TestFlight)**: " + ",".join(app_names)
+            if len(app_names) == 0:
+                response_message += "*None*"
+            response_message += f"\n{testflight_storage.url_for_tester(beta_tester_to_stored_tester[tester.id])}\n\n"
         await ctx.followup.send(f"{response_message}", ephemeral=True)
+
+    async def fetch_apps_by_tester_or_email(tester: model.Tester) -> list[model.App]:
+        from botto.storage.beta_testers.beta_testers_storage import (
+            RequestApprovalFilter,
+        )
+
+        if not tester:
+            raise ValueError("tester must not be None")
+        apps = [
+            await testflight_storage.fetch_app(r.app)
+            async for r in testflight_storage.list_requests(
+                tester.discord_id,
+                approval_filter=RequestApprovalFilter.UNAPPROVED,
+                exclude_removed=True,
+            )
+        ]
+        return apps
 
     @app_store.command(
         name="lookup_tester",
@@ -473,13 +513,13 @@ def setup_slash(
         ctx: Interaction,
         member: discord.Member,
     ):
-        tester = await testflight_storage.find_tester(member.id)
+        tester = await testflight_storage.find_tester(discord_id=member.id)
         if not tester:
             await ctx.response.send_message(
                 f"User {member.mention} is not a beta tester", ephemeral=True
             )
             return
-        await send_tester_details(ctx, tester.email)
+        await send_tester_details(ctx, tester)
 
     class CommandApp(enum.Enum):
         Pushcut = enum.auto()
@@ -613,6 +653,16 @@ def setup_slash(
 
     client.tree.add_command(app_store)
 
+    @client.tree.context_menu(name="Raise Jira", guilds=[client.snailed_it_beta_guild])
+    @app_commands.checks.has_role("Snailed It")
+    @client.tree.error
+    async def raise_jira(ctx: discord.Interaction, message: discord.Message):
+        try:
+            log.debug("Opening Raise Jira form")
+            await ctx.response.send_message(view=RaiseJiraForm(), ephemeral=True)
+        except:
+            log.error("Failed", exc_info=True)
+
     cache = app_commands.Group(
         name="cache",
         description="Manage caches",
@@ -625,6 +675,13 @@ def setup_slash(
     cache_clear = app_commands.Group(
         name="clear",
         description="Clear caches",
+        parent=cache,
+        default_permissions=discord.Permissions(administrator=True),
+    )
+
+    cache_refresh = app_commands.Group(
+        name="refresh",
+        description="Refresh caches",
         parent=cache,
         default_permissions=discord.Permissions(administrator=True),
     )
@@ -663,6 +720,23 @@ def setup_slash(
     ):
         await client.reaction_roles_config_storage.clear_server_cache(str(ctx.guild_id))
         await ctx.response.send_message(f"Cleared server config cache", ephemeral=True)
+
+    @cache_refresh.command(
+        name="config",
+        description="Refresh all cached config (Note: This refreshes only config, not all caches associated with "
+        "TestFlight approvals)",
+    )
+    @app_commands.checks.has_role("Snailed It")
+    async def refresh_config(
+        ctx: Interaction,
+    ):
+        tasks = asyncio.gather(
+            client.reaction_roles_config_storage.refresh_cache(),
+            client.config_storage.refresh_cache(),
+        )
+        await ctx.response.defer(ephemeral=True, thinking=True)
+        await tasks
+        await ctx.followup.send(f"Refreshed server config cache", ephemeral=True)
 
     @cache.error
     async def on_cache_error(ctx: Interaction, error: Exception):
