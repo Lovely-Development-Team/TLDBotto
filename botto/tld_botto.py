@@ -438,6 +438,13 @@ class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
                 )
 
     async def on_message(self, message: Message):
+        if webhook_id := message.webhook_id:
+            try:
+                webhook = await self.fetch_webhook(webhook_id)
+                if webhook.type != discord.WebhookType.incoming:
+                    return
+            except discord.NotFound:
+                pass
         if message.author.id == self.user.id:
             log.debug(f"Ignoring message {message.id} from self")
             return
