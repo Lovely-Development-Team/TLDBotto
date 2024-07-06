@@ -6,7 +6,7 @@ import asyncio
 import pytz
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-from botto.clients import ClickUpClient, AppStoreConnectClient
+from botto.clients import ClickUpClient, AppStoreConnectClient, AppStoreServerClient
 from botto.reactions import Reactions
 from botto.reminder_manager import ReminderManager
 from botto.storage import (
@@ -78,6 +78,9 @@ clickup_client = ClickUpClient(config["authentication"]["clickup"])
 app_store_connect_client = AppStoreConnectClient(
     config["authentication"]["app_store_connect"]
 )
+app_store_server_client = AppStoreServerClient(
+    config["authentication"]["app_store_server"]
+)
 client = TLDBotto(
     config,
     reactions,
@@ -99,6 +102,7 @@ slash = setup_slash(
     timezone_storage,
     testflight_storage,
     app_store_connect_client,
+    app_store_server_client,
 )
 
 
