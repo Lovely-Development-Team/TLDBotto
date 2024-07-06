@@ -294,7 +294,9 @@ class ReactionRoles(ExtendedClient):
 
         # Acquire a lock so that multiple reactions don't trample over each other
         async with self.tester_locks.setdefault(str(payload.user_id), asyncio.Lock()):
-            tester = await self.testflight_storage.find_tester(str(payload.member.id))
+            tester = await self.testflight_storage.find_tester(
+                discord_id=str(payload.member.id)
+            )
             log.debug(f"Existing tester: {tester and tester.username or 'No'}")
             if tester is None:
                 # This is the first time we've seen this tester
@@ -967,7 +969,9 @@ class ReactionRoles(ExtendedClient):
             f"{payload.user.mention} is testing {testing_apps_text}"
             f" but has left the server!",
         )
-        tester = await self.testflight_storage.find_tester(str(payload.user.id))
+        tester = await self.testflight_storage.find_tester(
+            discord_id=str(payload.user.id)
+        )
         if not tester:
             await exit_notification_channel.send(
                 f"Failed to find Tester record for {payload.user.mention}. This should never happen!"

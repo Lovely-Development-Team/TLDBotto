@@ -104,15 +104,25 @@ class BetaTestersStorage(Storage):
         result = await self._get(self.testers_url + "/" + record_id)
         return Tester.from_airtable(result)
 
-    async def find_tester(self, discord_id: str | int) -> Optional[Tester]:
-        log.debug(f"Finding tester with ID {discord_id}")
+    async def find_tester(
+        self, *, discord_id: Optional[str] = None, email: Optional[str] = None
+    ) -> Optional[Tester]:
+        log.debug(f"Finding tester with {discord_id=}, {email}")
+        if not (discord_id or email):
+            raise ValueError("At least one search parameter is required")
         try:
-            result_iterator = self._iterate(
-                self.testers_url, filter_by_formula=f"{{Discord ID}}='{discord_id}'"
-            )
+            formula = "AND("
+            if discord_id:
+                formula += f"{{Discord ID}}='{discord_id}'"
+            if email:
+                if discord_id:
+                    formula += ","
+                formula += f"{{Email}}='{email}'"
+            formula += ")"
+            result_iterator = self._iterate(self.testers_url, filter_by_formula=formula)
             tester_iterator = (Tester.from_airtable(x) async for x in result_iterator)
             try:
-                return await tester_iterator.__anext__()
+                return await anext(tester_iterator)
             except (StopIteration, StopAsyncIteration):
                 log.info(f"No Tester found with ID {discord_id}")
                 return None
@@ -136,6 +146,13 @@ class BetaTestersStorage(Storage):
             if e.error_type == "NOT_FOUND":
                 return None
             raise
+
+    def url_for_tester(self, tester: Tester) -> str:
+        if tester.id is None:
+            raise MissingRecordIDError(tester)
+        return "https://airtable.com/{base}/tblVndkqCyp1dZShG/{record_id}".format(
+            base=self.airtable_base, record_id=tester.id
+        )
 
     async def _fetch_reaction(
         self, server_id: str, msg_id, reaction_name: str
