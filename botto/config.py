@@ -59,6 +59,7 @@ def parse(config):
             "snailed_it": {"airtable_key": "", "airtable_base": ""},
             # Format: {"theKeyId": "iss": "theIssuerId", "kid": "theKeyId", "secret": "theKey"}
             "app_store_connect": {},
+            "app_store_server": {},
         },
         "channels": {"include": set(), "exclude": set(), "voting": {"voting"}},
         "voting": VotingConfig(
@@ -285,6 +286,20 @@ def parse(config):
         for key, value in app_store_connect_api_keys.items():
             try:
                 defaults["authentication"]["app_store_connect"][key] = {
+                    "iss": value["iss"],
+                    "kid": value["kid"],
+                    "secret": base64.b64decode(value["secret"]).decode("utf-8"),
+                }
+            except binascii.Error:
+                log.error(
+                    f"Unable to decode base64 secret for kid '{key}'", exc_info=True
+                )
+
+    if app_store_server_api_keys := decode_base64_env("APP_STORE_SERVER_API_KEYS"):
+        defaults["authentication"]["app_store_server"] = app_store_server_api_keys
+        for key, value in app_store_server_api_keys.items():
+            try:
+                defaults["authentication"]["app_store_server"][key] = {
                     "iss": value["iss"],
                     "kid": value["kid"],
                     "secret": base64.b64decode(value["secret"]).decode("utf-8"),

@@ -1,16 +1,20 @@
 import asyncio
+import enum
 import logging
 from datetime import datetime
 from typing import Union, Optional, Literal
 
 import arrow
 import pytz
+from appstoreserverlibrary.models.JWSTransactionDecodedPayload import (
+    JWSTransactionDecodedPayload,
+)
 from dateutil import parser as dateparser
 import discord
 from discord import app_commands, Interaction
 
 from botto import responses
-from botto.clients import AppStoreConnectClient
+from botto.clients import AppStoreConnectClient, AppStoreServerClient
 from botto.clients.stjude_scoreboard import StJudeScoreboardClient
 from botto.message_checks import get_or_fetch_member
 from botto.models import AirTableError, Timezone
@@ -35,6 +39,7 @@ def setup_slash(
     timezones: TimezoneStorage,
     testflight_storage: BetaTestersStorage,
     app_store_connect: AppStoreConnectClient,
+    app_store_server: AppStoreServerClient,
 ):
     client.tree.clear_commands(guild=None)
     client.tree.clear_commands(guild=client.snailed_it_beta_guild)
@@ -475,6 +480,132 @@ def setup_slash(
             )
             return
         await send_tester_details(ctx, tester.email)
+
+    class CommandApp(enum.Enum):
+        Pushcut = enum.auto()
+        ToolboxPro = enum.auto()
+
+    @app_store.command(
+        name="lookup_order_id",
+        description="Lookup transactions associated with an order",
+    )
+    @app_commands.describe(
+        app="App associated with the order.",
+        order_id="Order ID to lookup.",
+        show_other_users="Show Tildy's response to other members of the channel.",
+    )
+    @app_commands.checks.has_role("Snailed It")
+    async def lookup_order_id(
+        ctx: Interaction,
+        app: CommandApp,
+        order_id: str,
+        show_other_users: Optional[bool],
+    ):
+        app_record_id: str = ""
+        match app:
+            case CommandApp.Pushcut:
+                app_record_id = "recczpU4YLc2ZJOsd"
+            case CommandApp.ToolboxPro:
+                app_record_id = "recxoKsI2Yvxrh0zM"
+        if not app_record_id:
+            await ctx.response.send_message(
+                "Invalid app specified", ephemeral=not show_other_users
+            )
+            return
+        app = await testflight_storage.fetch_app(app_record_id)
+        transactions = await app_store_server.lookup_order_id(app, order_id)
+
+        if not transactions:
+            await ctx.response.send_message("No transactions found", ephemeral=True)
+            return
+        if len(transactions) > 1:
+            for i, transaction in enumerate(transactions):
+                embed = embed_from(transaction)
+                embed.title = (
+                    f"Order {order_id} (Transaction {i + 1} of {len(transactions)})"
+                )
+                await ctx.followup.send(embed=embed, ephemeral=not show_other_users)
+        else:
+            embed = embed_from(transactions[0])
+            embed.title = f"Order {order_id}"
+            await ctx.response.send_message(embed=embed, ephemeral=not show_other_users)
+
+    def embed_from(transaction: JWSTransactionDecodedPayload) -> discord.Embed:
+        embed = (
+            discord.Embed(
+                title=transaction.webOrderLineItemId,
+                colour=(
+                    discord.Colour.brand_red()
+                    if transaction.revocationDate
+                    else discord.Colour.brand_green()
+                ),
+            )
+            .add_field(name="Transaction ID", value=transaction.transactionId)
+            .add_field(
+                name="Original Transaction ID", value=transaction.originalTransactionId
+            )
+            .add_field(
+                name="Web Order Line Item ID", value=transaction.webOrderLineItemId
+            )
+            .add_field(
+                name="Purchase Date", value=format_timestamp(transaction.purchaseDate)
+            )
+            .add_field(
+                name="Original Purchase Date",
+                value=format_timestamp(transaction.originalPurchaseDate),
+            )
+            .add_field(name="Product ID", value=transaction.productId)
+            .add_field(name="Type", value=transaction.rawType)
+            .add_field(name="Ownership Type", value=transaction.rawInAppOwnershipType)
+            .add_field(
+                name="Transaction Reason", value=transaction.rawTransactionReason
+            )
+            .add_field(name="Storefront", value=transaction.storefront)
+            .add_field(
+                name="Price",
+                value=(
+                    f"{transaction.price / 1000} {transaction.currency}"
+                    if transaction.price
+                    else "*Unknown*"
+                ),
+            )
+            .add_field(
+                name="Promotional Offer ID",
+                value=(
+                    transaction.offerIdentifier
+                    if transaction.offerIdentifier
+                    else "*None*"
+                ),
+            )
+            .add_field(
+                name="Is Upgraded", value=True if transaction.isUpgraded else False
+            )
+            .add_field(
+                name="Subscription Group Identifier",
+                value=(
+                    transaction.subscriptionGroupIdentifier
+                    if transaction.subscriptionGroupIdentifier
+                    else "*None*"
+                ),
+            )
+            .add_field(
+                name="Expires Date", value=format_timestamp(transaction.expiresDate)
+            )
+        )
+        if transaction.revocationDate:
+            embed.set_footer(
+                text=f"Revoked {transaction.revocationDate} with reason {transaction.rawRevocationReason}"
+            )
+        if transaction.quantity and transaction.quantity > 1:
+            embed.add_field(name="Quantity", value=transaction.quantity)
+        return embed
+
+    def format_timestamp(timestamp: Optional[int]) -> str:
+        return (
+            discord.utils.format_dt(arrow.get(timestamp).datetime)
+            if timestamp
+            else "*N/A*"
+        )
 
     @app_store.error
     async def on_app_store_error(ctx: Interaction, error: Exception):

@@ -270,7 +270,10 @@ class App:
     approval_channel: Optional[str]
     reaction_role_ids: list[str]
     app_store_key_id: Optional[str]
+    app_store_server_key_id: Optional[str]
     beta_group_id: Optional[str]
+    bundle_id: Optional[str]
+    apple_id: Optional[str]
 
     @classmethod
     def from_airtable(cls, data: dict) -> "App":
@@ -279,9 +282,12 @@ class App:
             id=data["id"],
             name=fields["Name"],
             approval_channel=fields.get("Approval Channel"),
-            reaction_role_ids=fields["Reaction Role IDs"],
+            reaction_role_ids=fields.get("Reaction Role IDs", []),
             app_store_key_id=fields["App Store Key ID"],
-            beta_group_id=fields["Beta Group ID"],
+            app_store_server_key_id=fields.get("App Store Server Key ID"),
+            beta_group_id=fields.get("Beta Group ID"),
+            bundle_id=fields.get("Bundle ID"),
+            apple_id=fields.get("Apple ID"),
         )
 
 

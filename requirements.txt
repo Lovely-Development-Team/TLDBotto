@@ -13,3 +13,4 @@ pyjwt[crypto]
 cachetools
 asyncache
 dnspython
+app-store-server-library
