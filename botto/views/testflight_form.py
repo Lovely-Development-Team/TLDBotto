@@ -81,9 +81,6 @@ class TestFlightForm(discord.ui.Modal, title="TestFlight Registration"):
             tester_id=interaction.user.id,
             approval_filter=RequestApprovalFilter.UNAPPROVED,
         )
-        log.info(
-            f"Testing requests from {updated_tester.discord_id} ({updated_tester.username}): {requests_generator}"
-        )
         message_sends = [
             asyncio.create_task(
                 client.send_request_notification_message(
