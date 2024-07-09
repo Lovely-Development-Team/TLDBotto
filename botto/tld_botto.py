@@ -443,7 +443,10 @@ class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
                 webhook = await self.fetch_webhook(webhook_id)
                 if webhook.type != discord.WebhookType.incoming:
                     return
-            except discord.NotFound | discord.Forbidden:
+            except discord.NotFound:
+                if message.author.id == self.user.id:
+                    return
+            except discord.Forbidden:
                 pass
         if message.author.id == self.user.id:
             log.debug(f"Ignoring message {message.id} from self")
