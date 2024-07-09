@@ -625,11 +625,11 @@ class ReactionRoles(ExtendedClient):
 
         channel = guild.get_channel(payload.channel_id)
 
-        log.debug(f"Role rejection for: {payload}")
-
         rejection_emojis = await self.get_rejection_emojis(str(payload.guild_id))
         if payload.emoji.name not in rejection_emojis:
             return False
+
+        log.debug(f"Role rejection for: {payload}")
 
         testing_request = await self.testflight_storage.fetch_request(
             payload.message_id
@@ -717,13 +717,13 @@ class ReactionRoles(ExtendedClient):
             return False
         guild, message = guild_and_message
 
-        log.debug(f"Role removal for: {payload}")
-
         await message.add_reaction(processing_emoji)
 
         removal_emojis = await self.get_removal_emojis(payload.guild_id)
         if payload.emoji.name not in removal_emojis:
             return False
+
+        log.debug(f"Role removal for: {payload}")
 
         tester = await self.testflight_storage.find_tester_by_leave_message(
             payload.message_id
