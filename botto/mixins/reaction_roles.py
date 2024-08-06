@@ -893,7 +893,7 @@ class ReactionRoles(ExtendedClient):
                 records_to_update = [
                     r
                     async for r in self.testflight_storage.list_requests(
-                        tester_id=str(payload.user_id),
+                        tester_id=tester.discord_id,
                         app_ids=[app.id for app in apps],
                         approval_filter=RequestApprovalFilter.APPROVED,
                         exclude_removed=True,
