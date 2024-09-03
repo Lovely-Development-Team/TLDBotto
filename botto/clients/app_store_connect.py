@@ -178,7 +178,6 @@ class AppStoreConnectClient:
                 ),
                 headers=self.make_auth_header(app.app_store_key_id),
             )
-            response_body: dict = await response.json()
             try:
                 response.raise_for_status()
             except ClientResponseError:
