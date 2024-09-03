@@ -736,7 +736,7 @@ class ReactionRoles(ExtendedClient):
             return False
 
         await self.remove_tester_from_app_store(payload, tester)
-        message.add_reaction("🚪")
+        await message.add_reaction("🚪")
         return True
 
     async def handle_reaction(self, payload: discord.RawReactionActionEvent) -> bool:
