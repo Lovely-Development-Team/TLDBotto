@@ -26,7 +26,7 @@ from .storage.testflight_config_storage import TestFlightConfigStorage
 from .views.testflight_form import TestFlightForm
 
 if TYPE_CHECKING:
-    from discord.abc import MessageableChannel
+    from discord.abc import MessageableChannel, Snowflake
 
 from botto import responses
 from .date_helpers import convert_24_hours
@@ -211,9 +211,16 @@ class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
         log.info("We have logged in as {0.user}".format(self))
 
         log.info("Syncing commands")
+
+        async def sync_guild(guild: Snowflake):
+            try:
+                return self.get_guild(guild.id).name, await self.tree.sync(guild=guild)
+            except discord.app_commands.CommandSyncFailure as e:
+                return guild.id, e
+
         sync_tasks = [
             asyncio.create_task(
-                self.tree.sync(guild=guild), name=f"Sync commands for guild {guild}"
+                sync_guild(guild), name=f"Sync commands for guild {guild}"
             )
             for guild in self.expected_guilds
         ] + [asyncio.create_task(self.tree.sync(), name=f"Sync global commands")]
@@ -230,8 +237,16 @@ class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
         )
         log.info(f"Meal reminders for: {reminder_log_text}")
 
-        await asyncio.wait(sync_tasks)
-        log.info("Synced commands")
+        commands: tuple[tuple[str, discord.app_commands.AppCommand | Exception]] = (
+            await asyncio.gather(*sync_tasks, return_exceptions=True)
+        )
+        for result in commands:
+            if isinstance(result[1], Exception):
+                log.error(
+                    f"Failed to sync commands for {result[0]}", exc_info=result[1]
+                )
+            else:
+                log.info(f"Synced commands for {result[0]}")
 
     async def on_disconnect(self):
         log.warning("Bot disconnected")
