@@ -642,6 +642,7 @@ def setup_slash(
     @app_store.error
     async def on_app_store_error(ctx: Interaction, error: Exception):
         log.error("Failed to query app store", exc_info=True)
+        await ctx.followup.send(f"Command failed: {error}", ephemeral=True)
 
     client.tree.add_command(app_store)
 
