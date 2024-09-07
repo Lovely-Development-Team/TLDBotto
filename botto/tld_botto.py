@@ -22,6 +22,7 @@ import arrow
 from .clients import ClickUpClient, AppStoreConnectClient
 from .errors import TlderNotFoundError
 from .mixins import ClickupMixin, RemoteConfig, ReactionRoles
+from .storage.testflight_config_storage import TestFlightConfigStorage
 from .views.testflight_form import TestFlightForm
 
 if TYPE_CHECKING:
@@ -109,7 +110,7 @@ class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
         clickup_client: ClickUpClient,
         config_storage: ConfigStorage,
         test_flight_storage: BetaTestersStorage,
-        testflight_config_storage: ConfigStorage,
+        testflight_config_storage: TestFlightConfigStorage,
         app_store_connect_client: AppStoreConnectClient,
     ):
         self.config = config
