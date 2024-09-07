@@ -429,7 +429,6 @@ def setup_slash(
         except AttributeError:
             tester_email = tester_or_email
         log.info(f"Finding beta testers with email {tester_email}")
-        await ctx.response.defer(ephemeral=True, thinking=True)
         matching_testers = await app_store_connect.find_beta_tester(email=tester_email)
         approved_apps_to_testers = {}
         requested_apps_to_testers = {}
@@ -500,6 +499,7 @@ def setup_slash(
         ctx: Interaction,
         tester_email: str,
     ):
+        await ctx.response.defer(ephemeral=True, thinking=True)
         await send_tester_details(ctx, tester_email)
 
     @app_store.command(
@@ -515,8 +515,9 @@ def setup_slash(
         member: discord.Member,
     ):
         tester = await testflight_storage.find_tester(discord_id=member.id)
+        await ctx.response.defer(ephemeral=True, thinking=True)
         if not tester:
-            await ctx.response.send_message(
+            await ctx.followup.send(
                 f"User {member.mention} is not a beta tester", ephemeral=True
             )
             return
