@@ -102,6 +102,7 @@ slash = setup_slash(
     reminder_manager,
     timezone_storage,
     testflight_storage,
+    testflight_config_storage,
     app_store_connect_client,
     app_store_server_client,
 )
