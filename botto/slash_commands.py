@@ -547,8 +547,9 @@ def setup_slash(
         app = await testflight_storage.fetch_app(app_record_id)
         transactions = await app_store_server.lookup_order_id(app, order_id)
 
+        await ctx.response.defer(ephemeral=True, thinking=True)
         if not transactions:
-            await ctx.response.send_message("No transactions found", ephemeral=True)
+            await ctx.followup.send("No transactions found", ephemeral=True)
             return
         if len(transactions) > 1:
             for i, transaction in enumerate(transactions):
