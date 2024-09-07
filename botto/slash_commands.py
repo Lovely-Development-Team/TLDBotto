@@ -13,9 +13,10 @@ from dateutil import parser as dateparser
 import discord
 from discord import app_commands, Interaction
 
-from botto import responses
+from botto import responses, commands
 from botto.clients import AppStoreConnectClient, AppStoreServerClient
 from botto.clients.stjude_scoreboard import StJudeScoreboardClient
+from botto.commands.app_store import CommandApp
 from botto.message_checks import get_or_fetch_member
 from botto.models import AirTableError, Timezone
 from botto.reminder_manager import (
@@ -25,6 +26,7 @@ from botto.reminder_manager import (
 )
 from botto.storage import TimezoneStorage, BetaTestersStorage
 from botto.errors import TlderNotFoundError
+from botto.storage.testflight_config_storage import TestFlightConfigStorage
 from botto.tld_botto import TLDBotto
 from botto.views.testflight_form import TestFlightForm
 
@@ -38,6 +40,7 @@ def setup_slash(
     reminder_manager: ReminderManager,
     timezones: TimezoneStorage,
     testflight_storage: BetaTestersStorage,
+    testflight_config_storage: TestFlightConfigStorage,
     app_store_connect: AppStoreConnectClient,
     app_store_server: AppStoreServerClient,
 ):
@@ -412,12 +415,10 @@ def setup_slash(
 
     client.tree.add_command(testflight)
 
-    app_store = app_commands.Group(
-        name="appstore",
-        description="Commands for the App Store",
-        guild_ids=[client.snailed_it_beta_guild.id],
-        default_permissions=discord.Permissions(administrator=True),
+    app_store_commands = commands.AppStoreCommands(
+        client, testflight_storage, testflight_config_storage, app_store_connect
     )
+    app_store = app_store_commands.group
 
     from botto.storage.beta_testers import model
 
@@ -520,27 +521,6 @@ def setup_slash(
             )
             return
         await send_tester_details(ctx, tester)
-
-    class CommandApp(enum.Enum):
-        Pushcut = enum.auto()
-        ToolboxPro = enum.auto()
-        ToolboxPro2 = enum.auto()
-        MenuBox = enum.auto()
-
-        @property
-        def record_id(self) -> str:
-            """
-            Get the record ID for the app in Airtable
-            """
-            match self:
-                case CommandApp.Pushcut:
-                    return "recczpU4YLc2ZJOsd"
-                case CommandApp.ToolboxPro:
-                    return "recxoKsI2Yvxrh0zM"
-                case CommandApp.ToolboxPro2:
-                    return "recVGXp2JWosd04z9"
-                case CommandApp.MenuBox:
-                    return "recnl6sEm15vMf4H6"
 
     @app_store.command(
         name="lookup_order_id",
