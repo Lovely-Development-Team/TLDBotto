@@ -524,6 +524,23 @@ def setup_slash(
     class CommandApp(enum.Enum):
         Pushcut = enum.auto()
         ToolboxPro = enum.auto()
+        ToolboxPro2 = enum.auto()
+        MenuBox = enum.auto()
+
+        @property
+        def record_id(self) -> str:
+            """
+            Get the record ID for the app in Airtable
+            """
+            match self:
+                case CommandApp.Pushcut:
+                    return "recczpU4YLc2ZJOsd"
+                case CommandApp.ToolboxPro:
+                    return "recxoKsI2Yvxrh0zM"
+                case CommandApp.ToolboxPro2:
+                    return "recVGXp2JWosd04z9"
+                case CommandApp.MenuBox:
+                    return "recnl6sEm15vMf4H6"
 
     @app_store.command(
         name="lookup_order_id",
@@ -541,12 +558,7 @@ def setup_slash(
         order_id: str,
         show_other_users: Optional[bool],
     ):
-        app_record_id: str = ""
-        match app:
-            case CommandApp.Pushcut:
-                app_record_id = "recczpU4YLc2ZJOsd"
-            case CommandApp.ToolboxPro:
-                app_record_id = "recxoKsI2Yvxrh0zM"
+        app_record_id: str = app.record_id
         if not app_record_id:
             await ctx.response.send_message(
                 "Invalid app specified", ephemeral=not show_other_users
