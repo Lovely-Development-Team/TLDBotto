@@ -705,8 +705,7 @@ def setup_slash(
 
     @cache_refresh.command(
         name="config",
-        description="Refresh all cached config (Note: This refreshes only config, not all caches associated with "
-        "TestFlight approvals)",
+        description="Refresh all cached config (Note: This refreshes only config, not all caches)",
     )
     @app_commands.checks.has_role("Snailed It")
     async def refresh_config(
