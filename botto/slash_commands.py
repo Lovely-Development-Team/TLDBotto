@@ -653,16 +653,6 @@ def setup_slash(
 
     client.tree.add_command(app_store)
 
-    @client.tree.context_menu(name="Raise Jira", guilds=[client.snailed_it_beta_guild])
-    @app_commands.checks.has_role("Snailed It")
-    @client.tree.error
-    async def raise_jira(ctx: discord.Interaction, message: discord.Message):
-        try:
-            log.debug("Opening Raise Jira form")
-            await ctx.response.send_message(view=RaiseJiraForm(), ephemeral=True)
-        except:
-            log.error("Failed", exc_info=True)
-
     cache = app_commands.Group(
         name="cache",
         description="Manage caches",
