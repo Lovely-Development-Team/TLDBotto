@@ -13,6 +13,7 @@ from botto.storage import (
     EnablementStorage,
     ConfigStorage,
     BetaTestersStorage,
+    TestFlightConfigStorage,
 )
 from botto.tld_botto import TLDBotto
 
@@ -35,7 +36,7 @@ def test_startup():
         "fake_key",
     )
 
-    testflight_config_storage = ConfigStorage(
+    testflight_config_storage = TestFlightConfigStorage(
         "fake_base",
         "fake_key",
     )

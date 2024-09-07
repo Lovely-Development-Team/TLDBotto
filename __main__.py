@@ -15,6 +15,7 @@ from botto.storage import (
     TimezoneStorage,
     ConfigStorage,
     BetaTestersStorage,
+    TestFlightConfigStorage,
 )
 from botto.storage.enablement_storage import EnablementStorage
 from botto.tld_botto import TLDBotto
@@ -63,7 +64,7 @@ testflight_storage = BetaTestersStorage(
     config["authentication"]["snailed_it"]["airtable_key"],
 )
 
-testflight_config_storage = ConfigStorage(
+testflight_config_storage = TestFlightConfigStorage(
     config["authentication"]["snailed_it"]["airtable_base"],
     config["authentication"]["snailed_it"]["airtable_key"],
 )

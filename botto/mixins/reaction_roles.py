@@ -16,7 +16,7 @@ from cachetools.keys import hashkey
 from botto.clients import AppStoreConnectClient
 from botto.extended_client import ExtendedClient
 from botto.models import AirTableError
-from botto.storage import BetaTestersStorage, ConfigStorage
+from botto.storage import BetaTestersStorage, TestFlightConfigStorage
 from botto.storage.beta_testers import model
 from botto.storage.beta_testers.beta_testers_storage import RequestApprovalFilter
 from botto.storage.beta_testers.model import (
@@ -118,7 +118,7 @@ class ReactionRoles(ExtendedClient):
         self,
         scheduler: AsyncIOScheduler,
         reactions_roles_storage: BetaTestersStorage,
-        testflight_config_storage: ConfigStorage,
+        testflight_config_storage: TestFlightConfigStorage,
         app_store_connect_client: AppStoreConnectClient,
         **kwargs,
     ):
@@ -143,43 +143,6 @@ class ReactionRoles(ExtendedClient):
             self.testflight_storage.list_watched_message_ids(),
             self.testflight_storage.list_approvals_channel_ids(),
         )
-
-    @cachedmethod(
-        lambda self: self.role_approvals_channels_cache,
-        key=partial(hashkey, "approvals_channels"),
-    )
-    async def get_default_approvals_channel_id(
-        self, guild_id: str | int
-    ) -> Optional[str]:
-        if result := await self.reaction_roles_config_storage.get_config(
-            guild_id, "default_approvals_channel"
-        ):
-            return result.value
-        return None
-
-    @cachedmethod(
-        lambda self: self.role_approvals_channels_cache,
-        key=partial(hashkey, "rule_agreement_role"),
-    )
-    async def get_rule_agreement_role_id(self, guild_id: str) -> Optional[str]:
-        if result := await self.reaction_roles_config_storage.get_config(
-            guild_id, "rule_agreement_role"
-        ):
-            return result.value
-        return None
-
-    @cachedmethod(
-        lambda self: self.role_approvals_channels_cache,
-        key=partial(hashkey, "tester_exit_notification_channel"),
-    )
-    async def get_tester_exit_notification_channel(
-        self, guild_id: str
-    ) -> Optional[str]:
-        if result := await self.reaction_roles_config_storage.get_config(
-            guild_id, "tester_exit_notification_channel"
-        ):
-            return result.value
-        return None
 
     async def get_rule_agreement_message(
         self, guild_id: str
@@ -245,7 +208,7 @@ class ReactionRoles(ExtendedClient):
             return
 
         if reaction_role.requires_rules_approval and (
-            rule_agreement_role_id := await self.get_rule_agreement_role_id(
+            rule_agreement_role_id := await self.reaction_roles_config_storage.get_rule_agreement_role_id(
                 str(guild_id)
             )
         ):
@@ -393,7 +356,7 @@ class ReactionRoles(ExtendedClient):
         if request_approval_channel_id := request.approval_channel_id:
             approval_channel = self.get_channel(int(request_approval_channel_id))
         elif (
-            guild_approvals_channel_id := await self.get_default_approvals_channel_id(
+            guild_approvals_channel_id := await self.reaction_roles_config_storage.get_default_approvals_channel_id(
                 request.server_id
             )
         ) and (
@@ -444,8 +407,10 @@ class ReactionRoles(ExtendedClient):
     async def is_approval_channel(self, channel_id: str, guild_id: str | int) -> bool:
         if channel_id in self.testflight_storage.approvals_channel_ids:
             return True
-        default_approvals_channel_id = await self.get_default_approvals_channel_id(
-            str(guild_id)
+        default_approvals_channel_id = (
+            await self.reaction_roles_config_storage.get_default_approvals_channel_id(
+                str(guild_id)
+            )
         )
         return channel_id == default_approvals_channel_id
 
@@ -756,7 +721,9 @@ class ReactionRoles(ExtendedClient):
                 channel = reaction_channel
             else:
                 channel = await self.get_or_fetch_channel(
-                    await self.get_default_approvals_channel_id(guild_id)
+                    await self.reaction_roles_config_storage.get_default_approvals_channel_id(
+                        guild_id
+                    )
                 )
             await channel.send(
                 f"{payload.member.mention} Failed to handle reaction: {e}",
@@ -942,7 +909,7 @@ class ReactionRoles(ExtendedClient):
 
     async def on_raw_member_remove(self, payload: discord.RawMemberRemoveEvent):
         log.debug(f"{payload.user} left server {payload.guild_id}")
-        exit_notification_channel_id = await self.get_tester_exit_notification_channel(
+        exit_notification_channel_id = await self.reaction_roles_config_storage.get_tester_exit_notification_channel(
             str(payload.guild_id)
         )
         if not exit_notification_channel_id:
