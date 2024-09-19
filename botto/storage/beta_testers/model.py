@@ -278,13 +278,22 @@ class App:
     @classmethod
     def from_airtable(cls, data: dict) -> "App":
         fields = data["fields"]
+        app_store_key_id = fields["App Store Key ID"]
+        if not app_store_key_id or len(app_store_key_id) != 1:
+            raise ValueError("App Store Key ID expected to be a list of length 1")
+
+        app_store_server_key_id = fields.get("App Store Server Key ID")
+        if not app_store_server_key_id or len(app_store_server_key_id) != 1:
+            raise ValueError(
+                "App Store Server Key ID expected to be a list of length 1"
+            )
         return cls(
             id=data["id"],
             name=fields["Name"],
             approval_channel=fields.get("Approval Channel"),
             reaction_role_ids=fields.get("Reaction Role IDs", []),
-            app_store_key_id=fields["App Store Key ID"],
-            app_store_server_key_id=fields.get("App Store Server Key ID"),
+            app_store_key_id=app_store_key_id[0],
+            app_store_server_key_id=app_store_server_key_id[0],
             beta_group_id=fields.get("Beta Group ID"),
             bundle_id=fields.get("Bundle ID"),
             apple_id=fields.get("Apple ID"),

@@ -842,12 +842,27 @@ class ReactionRoles(ExtendedClient):
         self,
         payload: discord.RawReactionActionEvent,
         tester: Tester,
-        app: Optional[model.App] = None,
+        apps: Optional[list[model.App]] = None,
     ):
+        log.info(f"Removing {tester} from  {apps or 'all apps'}")
         try:
-            testers_with_email = await self.app_store_connect_client.find_beta_tester(
-                tester.email, app
-            )
+            if apps:
+                testers_with_email = await asyncio.gather(
+                    *[
+                        asyncio.create_task(
+                            self.app_store_connect_client.find_beta_tester(
+                                tester.email, app
+                            )
+                        )
+                        for app in apps
+                    ]
+                )
+            else:
+                testers_with_email = (
+                    await self.app_store_connect_client.find_beta_tester(
+                        tester.email, None
+                    )
+                )
 
             channel = self.get_channel(payload.channel_id)
             message = channel.get_partial_message(payload.message_id)
@@ -861,47 +876,60 @@ class ReactionRoles(ExtendedClient):
                 )
                 return
 
-            if len(testers_with_email) > 1:
-                msg = f"Found multiple testers with email '{tester.email}': {testers_with_email}"
-                log.info(msg)
-                await channel.send(
-                    f"{payload.member.mention} {msg}",
-                    reference=message.to_reference(),
-                    mention_author=False,
-                )
-                return
+            selected_app_beta_group_ids = (
+                {app.beta_group_id for app in apps} if apps else {}
+            )
 
+            removed_app_ids: set[str] = set()
             for app_store_tester in testers_with_email:
-                if app and app.beta_group_id not in app_store_tester.beta_group_ids:
-                    msg = f"{tester.email} not in group {app.beta_group_id}, removal unnecessary"
-                    log.info(msg)
-                    return
-
-                apps = await self.testflight_storage.find_apps_by_beta_group(
-                    *app_store_tester.beta_group_ids
+                apps_for_beta_group = (
+                    await self.testflight_storage.find_apps_by_beta_group(
+                        *app_store_tester.beta_group_ids
+                    )
                 )
-                apps_by_key = {a.app_store_key_id: a for a in apps}
                 async with asyncio.TaskGroup() as g:
-                    for app in apps_by_key.values():
-                        g.create_task(
-                            self.app_store_connect_client.delete_beta_tester(
-                                app_store_tester.id, app
+                    if not apps or all(
+                        groupId in selected_app_beta_group_ids
+                        for groupId in app_store_tester.beta_group_ids
+                    ):
+                        log.debug(f"Apps for beta group: {apps_for_beta_group}")
+                        apps_by_key = {
+                            a.app_store_key_id: a for a in apps_for_beta_group
+                        }
+                        for app in apps_by_key.values():
+                            g.create_task(
+                                self.app_store_connect_client.delete_beta_tester(
+                                    app_store_tester.id, app
+                                )
                             )
-                        )
+                            removed_app_ids.add(app.id)
+                    else:
+                        for app in filter(
+                            lambda app: app.beta_group_id
+                            in selected_app_beta_group_ids,
+                            apps_for_beta_group,
+                        ):
+                            g.create_task(
+                                self.app_store_connect_client.remove_from_beta_group(
+                                    app.beta_group_id, app
+                                )
+                            )
+                            removed_app_ids.add(app.id)
 
                 log.info(f"Removed {tester} from Beta Testers")
-                records_to_update = [
-                    r
-                    async for r in self.testflight_storage.list_requests(
-                        tester_id=tester.discord_id,
-                        app_ids=[app.id for app in apps],
-                        approval_filter=RequestApprovalFilter.APPROVED,
-                        exclude_removed=True,
-                    )
-                ]
-                for r in records_to_update:
-                    r.removed = True
-                await self.testflight_storage.update_requests(records_to_update)
+
+            records_to_update = [
+                r
+                async for r in self.testflight_storage.list_requests(
+                    tester_id=tester.discord_id,
+                    app_ids=removed_app_ids,
+                    approval_filter=RequestApprovalFilter.APPROVED,
+                    exclude_removed=True,
+                )
+            ]
+            for r in records_to_update:
+                r.removed = True
+            await self.testflight_storage.update_requests(records_to_update)
         except AppStoreConnectError as error:
             channel = self.get_channel(payload.channel_id)
             message = channel.get_partial_message(payload.message_id)

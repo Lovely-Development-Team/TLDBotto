@@ -2,7 +2,7 @@ import asyncio
 import logging
 from enum import Enum, auto
 from functools import partial
-from typing import Optional, Union, AsyncGenerator
+from typing import Optional, Union, AsyncGenerator, Iterable
 
 from cachetools import TTLCache
 from cachetools.keys import hashkey
@@ -235,7 +235,7 @@ class BetaTestersStorage(Storage):
     def list_requests(
         self,
         tester_id: Union[str, int],
-        app_ids: Optional[list[Union[str, int]]] = None,
+        app_ids: Optional[Iterable[Union[str, int]]] = None,
         approval_filter: RequestApprovalFilter = RequestApprovalFilter.ALL,
         exclude_removed: bool = False,
     ) -> AsyncGenerator[TestingRequest, None]:
