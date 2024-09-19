@@ -110,7 +110,7 @@ class AppStoreConnectClient:
                                 first_name=attributes.get("firstName"),
                                 last_name=attributes.get("lastName"),
                                 invite_type=attributes.get("inviteType"),
-                                beta_group_ids=beta_groups,
+                                beta_group_ids=beta_groups or [],
                             )
                         )
                 return testers
@@ -182,6 +182,29 @@ class AppStoreConnectClient:
                 response.raise_for_status()
             except ClientResponseError:
                 log.error(
-                    f"Unable to remove beta tester with id {id}. Response: {response_body}",
+                    f"Unable to remove beta tester with id {id}. Response: {await response.json()}",
+                )
+                raise
+
+    async def remove_from_beta_group(self, id: str, app: App):
+        if app.app_store_key_id is None:
+            raise ApiKeyNotSetError(app)
+        async with aiohttp.ClientSession() as session:
+            data = {
+                "id": app.beta_group_id,
+                "type": "betaGroups",
+            }
+            response = await session.delete(
+                "https://api.appstoreconnect.apple.com/v1/betaTesters/{id}/relationships/betaGroups".format(
+                    id=id
+                ),
+                json={"data": data},
+                headers=self.make_auth_header(app.app_store_key_id),
+            )
+            try:
+                response.raise_for_status()
+            except ClientResponseError:
+                log.error(
+                    f"Unable to remove beta tester with id {id} from {app}. Response: {await response.json()}",
                 )
                 raise
