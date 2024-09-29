@@ -88,7 +88,7 @@ class AppStoreServerClient:
                 for t in response.signedTransactions
             ]
             return decoded_transactions
-        except APIException | VerificationException as e:
+        except (APIException, VerificationException) as e:
             raise OrderLookupError(
                 f"Error looking up order ID {order_id} for app {app.bundle_id}"
             ) from e
