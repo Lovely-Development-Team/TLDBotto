@@ -523,10 +523,13 @@ class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
         return actual_motto
 
     def check_triggers(self, message: Message) -> tuple[Callable, re.Match]:
-        def search_triggers(content: str, trigger_dict: dict):
+        def search_triggers(content: str, trigger_dict: dict[Callable, re.Match]):
             for name, triggers in trigger_dict.items():
                 for trigger in triggers:
                     if matched := trigger.match(content):
+                        log.debug(
+                            f"Matched trigger {name} Match groups: {matched.groupdict()}"
+                        )
                         return name, matched
 
         at_command = None
@@ -783,12 +786,13 @@ class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
                     logging.info(f"Sending help message in response to {message}")
                     await dm_channel.send(
                         "Sorry, I am not currently capable of extended conversation, but I have "
-                        "forwarded your message to my operators. " + help_message
+                        "forwarded your message to my operators.\n" + help_message
                     )
             await asyncio.gather(react_task, log_task)
 
     async def log_dm(self, message: Message):
         support_config = self.config["support"]
+        message.embeds
         dm_log_channel_id = support_config.get("dm_log_channel")
         if not dm_log_channel_id:
             log.warning("No DM log channel configured")
