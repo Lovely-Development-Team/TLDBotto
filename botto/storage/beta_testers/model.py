@@ -274,6 +274,7 @@ class App:
     beta_group_id: Optional[str]
     bundle_id: Optional[str]
     apple_id: Optional[str]
+    beta_open: Optional[bool] = None
 
     @classmethod
     def from_airtable(cls, data: dict) -> "App":
@@ -297,6 +298,7 @@ class App:
             beta_group_id=fields.get("Beta Group ID"),
             bundle_id=fields.get("Bundle ID"),
             apple_id=fields.get("Apple ID"),
+            beta_open=fields.get("Beta Open", False),
         )
 
 

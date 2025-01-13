@@ -9,9 +9,7 @@ from weakref import WeakValueDictionary
 
 import discord
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from asyncache import cachedmethod
 from cachetools import TTLCache
-from cachetools.keys import hashkey
 
 from botto.clients import AppStoreConnectClient
 from botto.extended_client import ExtendedClient
@@ -207,6 +205,11 @@ class ReactionRoles(ExtendedClient):
             log.info("No reaction-role mapping found")
             return
 
+        fetch_app_task = [
+            self.testflight_storage.fetch_app(app_id)
+            for app_id in reaction_role.app_ids
+        ]
+
         if reaction_role.requires_rules_approval and (
             rule_agreement_role_id := await self.reaction_roles_config_storage.get_rule_agreement_role_id(
                 str(guild_id)
@@ -238,8 +241,23 @@ class ReactionRoles(ExtendedClient):
                     suppress_embeds=True,
                 )
                 return
+        apps = await asyncio.gather(*fetch_app_task)
+        not_open_betas = [app.name for app in apps if not app.beta_open]
+        if not_open_betas:
+            testflight_message = self.get_channel(
+                payload.channel_id
+            ).get_partial_message(payload.message_id)
+            await payload.member.send(
+                "Hi!\n"
+                f"You've requested access to {', '.join((app.name for app in apps))}, but betas are not open for {', '.join(not_open_betas)}.\n"
+                f"Please only react with emojis for apps listed in [the message]({testflight_message.jump_url}).",
+                suppress_embeds=True,
+            )
+            return
 
-        if len(reaction_role.app_ids) == 0:
+        if not reaction_role.app_ids or any(
+            app_id is None or app_id == "" for app_id in reaction_role.app_ids
+        ):
             log.info(
                 f"Reaction Role {reaction_role} not associated with an app. Adding immediately."
             )
