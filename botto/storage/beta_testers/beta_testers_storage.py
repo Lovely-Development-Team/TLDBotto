@@ -342,14 +342,20 @@ class BetaTestersStorage(Storage):
         self, server_id: str, msg_id: str, key: str
     ) -> Optional[ReactionRole]:
         async with self.reaction_roles_lock:
-            if (
-                (server_config := self.reaction_roles_cache.get(str(server_id)))
-                and (msg_config := server_config.get(str(msg_id)))
-                and (config := msg_config.get(key))
-            ):
-                return config
-            else:
-                return await self._fetch_reaction(server_id, msg_id, key)
+            try:
+                if (
+                    (server_config := self.reaction_roles_cache.get(str(server_id)))
+                    and (msg_config := server_config.get(str(msg_id)))
+                    and (config := msg_config.get(key))
+                ):
+                    return config
+                else:
+                    return await self._fetch_reaction(server_id, msg_id, key)
+            except KeyError as err:
+                log.error(
+                    f"Failed to get reaction role for {server_id}/{msg_id}/{key} due to decoding error: {err}"
+                )
+                return None
 
     @cachedmethod(lambda self: self.cache, key=partial(hashkey, "app"))
     async def fetch_app(self, record_id: str) -> Optional[App]:
