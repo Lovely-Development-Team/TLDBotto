@@ -13,6 +13,7 @@ from botto.storage.beta_testers.model import (
     ApiKeyNotSetError,
     ConfigError,
     InvalidAttributeError,
+    AppResourceNotFoundError,
 )
 
 log = logging.getLogger(__name__)
@@ -81,6 +82,18 @@ class AppStoreConnectClient:
                     raise_for_status=True,
                 )
                 json = await response.json()
+                try:
+                    response.raise_for_status()
+                except ClientResponseError as e:
+                    if e.status == 404 and (errors := json.get("errors")):
+                        not_found_details = [
+                            error["detail"]
+                            for error in errors
+                            if error.get("code") == "NOT_FOUND"
+                            and error.get("detail") is not None
+                        ]
+                        raise AppResourceNotFoundError(not_found_details)
+                    raise
                 testers = []
                 if data := json.get("data"):
                     for tester in data:
