@@ -16,6 +16,7 @@ from botto.storage.beta_testers.model import (
     InvalidAttributeError,
     Tester,
     App,
+    AppResourceNotFoundError,
 )
 from botto.storage.testflight_config_storage import TestFlightConfigStorage
 from botto.tld_botto import TLDBotto
@@ -120,6 +121,18 @@ class AppStoreCommands:
                     )
                     await ctx.followup.send(
                         f"{member.mention} Tester has an attribute considered invalid by App Store Connect: "
+                        f"`{details}`. Unable to add tester automatically)",
+                        mention_author=False,
+                        ephemeral=True,
+                    )
+                    raise
+                case AppResourceNotFoundError(details=details):
+                    log.error(
+                        f"Required resource not found {details}",
+                        exc_info=True,
+                    )
+                    await ctx.followup.send(
+                        f"{member.mention} Unexpected error when looking up Tester: "
                         f"`{details}`. Unable to add tester automatically)",
                         mention_author=False,
                         ephemeral=True,

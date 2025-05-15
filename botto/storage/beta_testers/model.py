@@ -333,3 +333,9 @@ class InvalidAttributeError(AppStoreConnectError):
     def __init__(self, details: list[str], *args: object) -> None:
         self.details = details
         super().__init__(details, *args)
+
+
+class AppResourceNotFoundError(AppStoreConnectError):
+    def __init__(self, details: list[str], *args: object) -> None:
+        self.details = details
+        super().__init__(details, *args)
