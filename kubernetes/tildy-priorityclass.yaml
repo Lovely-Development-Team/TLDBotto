@@ -1,0 +1,7 @@
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: tildy
+value: 500000
+globalDefault: false
+description: "This class gives our Tildy Discord bot a little higher priority, as they operate a bunch of useful features in the Beta Discord."
