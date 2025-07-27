@@ -41,3 +41,4 @@ spec:
             memory: 50Mi
           limits:
             memory: 100Mi
+        priorityClassName: tildy
