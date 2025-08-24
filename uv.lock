@@ -697,10 +697,14 @@ dependencies = [
     { name = "dnspython" },
     { name = "emoji" },
     { name = "pyjwt", extra = ["crypto"] },
-    { name = "pytest" },
     { name = "python-dateutil" },
     { name = "pytz" },
     { name = "yarl" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
 ]
 
 [package.metadata]
@@ -715,11 +719,13 @@ requires-dist = [
     { name = "dnspython", specifier = ">=2.7.0" },
     { name = "emoji", specifier = "==1.2.0" },
     { name = "pyjwt", extras = ["crypto"], specifier = ">=2.10.1" },
-    { name = "pytest", specifier = "~=6.2.4" },
     { name = "python-dateutil", specifier = "~=2.8.1" },
     { name = "pytz", specifier = "~=2021.1" },
     { name = "yarl", specifier = "~=1.12.1" },
 ]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = "~=6.2.4" }]
 
 [[package]]
 name = "toml"
