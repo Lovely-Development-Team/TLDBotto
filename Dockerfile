@@ -3,9 +3,11 @@ LABEL org.opencontainers.image.source=https://github.com/Lovely-Development-Team
 
 RUN apk add --no-cache gcc musl-dev git
 
-COPY requirements.txt .
+COPY pyproject.toml .
+COPY uv.lock .
 
-RUN pip install --no-cache-dir -r requirements.txt
+RUN --mount=from=ghcr.io/astral-sh/uv,source=/uv,target=/bin/uv \
+    uv sync --locked --compile-bytecode --no-dev
 
 ARG bot_version
 ENV TLDBOTTO_VERSION=$bot_version
