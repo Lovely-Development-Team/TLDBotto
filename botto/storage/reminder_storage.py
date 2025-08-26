@@ -5,40 +5,34 @@ from typing import Optional
 
 from aiohttp import ClientSession
 
-from botto.models import Reminder
-from botto.storage.storage import Storage
+from botto.storage.models.reminder import MongoReminder
+from botto.storage.mongo_storage import MongoStorage
+from pymongo.asynchronous.collection import AsyncCollection
 
 log = logging.getLogger(__name__)
 
 
-class ReminderStorage(Storage):
-    def __init__(self, airtable_base: str, airtable_key: str):
-        super().__init__(airtable_base, airtable_key)
-        self.reminders_url = "https://api.airtable.com/v0/{base}/Reminders".format(
-            base=airtable_base
+class ReminderStorage(MongoStorage):
+    def __init__(self, username: str, password: str, host: str):
+        super().__init__(username, password, host)
+        self.database = self.client.get_database("general")
+        self.collection: AsyncCollection[MongoReminder] = self.database.get_collection(
+            "reminders"
         )
 
-    def _list_all_reminders(
+    async def _list_all_reminders(
         self,
-        filter_by_formula: Optional[str],
-        sort: Optional[list[str]] = None,
-        session: Optional[ClientSession] = None,
-    ) -> AsyncGenerator[dict, None]:
-        return self._iterate(
-            self.reminders_url,
-            filter_by_formula=filter_by_formula,
-            sort=sort,
-            session=session,
-        )
+    ) -> AsyncGenerator[MongoReminder, None]:
+        async for reminder in self.collection.find({}):
+            yield reminder
 
-    async def retrieve_reminders(self) -> AsyncGenerator[Reminder, None]:
-        reminders_iterator = self._list_all_reminders(filter_by_formula=None)
+    async def retrieve_reminders(self) -> AsyncGenerator[MongoReminder, None]:
+        reminders_iterator = self._list_all_reminders()
         async for reminder in reminders_iterator:
-            yield Reminder.from_airtable(reminder)
+            yield reminder
 
-    async def retrieve_reminder(self, key: str) -> Reminder:
-        result = await self._get(f"{self.reminders_url}/{key}")
-        return Reminder.from_airtable(result)
+    async def retrieve_reminder(self, key: str) -> MongoReminder:
+        return await self.collection.find_one({"_id": key})
 
     async def add_reminder(
         self,
@@ -48,19 +42,21 @@ class ReminderStorage(Storage):
         channel_id: Optional[str],
         requester_id: Optional[str],
         advance_reminder: bool = False,
-    ) -> Reminder:
-        reminder_data = {
-            "Date": timestamp.isoformat(),
-            "Notes": notes,
-            "15 Minutes Before": advance_reminder,
-            "Message ID": msg_id,
-            "Channel ID": channel_id,
-            "Requester ID": requester_id,
-        }
-        response = await self._insert(self.reminders_url, reminder_data)
-        return Reminder.from_airtable(response)
+    ) -> MongoReminder:
+        new_reminder = MongoReminder(
+            date=timestamp,
+            notes=notes,
+            remind_15_minutes_before=advance_reminder,
+            msg_id=msg_id,
+            channel_id=channel_id,
+            requester_id=requester_id,
+        )
+
+        result = await self.collection.insert_one(new_reminder)
+        new_reminder["_id"] = result.inserted_id
+        return new_reminder
 
     async def remove_reminder(self, *reminder_ids: str):
         log.debug(f"Deleting reminders: {reminder_ids}")
-        await self._delete(self.reminders_url, list(reminder_ids))
+        await self.collection.delete_many({"_id": {"$in": list(reminder_ids)}})
         log.debug(f"Deleted reminders: {reminder_ids}")

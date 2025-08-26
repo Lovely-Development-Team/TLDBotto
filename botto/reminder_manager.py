@@ -11,8 +11,8 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from botto import reactions
 from .date_helpers import is_naive
-from .models import Reminder
 from .storage import TimezoneStorage
+from .storage.models.reminder import MongoReminder
 from .storage.reminder_storage import ReminderStorage
 
 log = logging.getLogger(__name__)
@@ -57,35 +57,35 @@ class ReminderManager:
     async def refresh_reminders(self):
         reminders_processed = 0
         async for reminder in self.storage.retrieve_reminders():
-            if reminder.remind_15_minutes_before:
+            if reminder["remind_15_minutes_before"]:
                 self.scheduler.add_job(
                     self.send_reminder,
-                    id=reminder.id + "_advance",
-                    name=f"Reminder: {reminder.notes.strip()} in 15 minutes!",
+                    id=reminder["_id"].binary.hex() + "_advance",
+                    name=f"Reminder: {reminder['notes'].strip()} in 15 minutes!",
                     trigger="date",
-                    next_run_time=reminder.date - timedelta(minutes=15),
+                    next_run_time=reminder["date"] - timedelta(minutes=15),
                     coalesce=True,
                     replace_existing=True,
                     kwargs={
-                        "reminder_id": reminder.id + "_advance",
-                        "notes": f"{reminder.notes.strip()} in 15 minutes!",
-                        "message_id": reminder.msg_id,
-                        "channel_id": reminder.channel_id,
+                        "reminder_id": reminder["_id"] + "_advance",
+                        "notes": f"{reminder['notes'].strip()} in 15 minutes!",
+                        "message_id": reminder["msg_id"],
+                        "channel_id": reminder["channel_id"],
                     },
                 )
             self.scheduler.add_job(
                 self.send_reminder,
-                id=reminder.id,
-                name=f"Reminder: {reminder.notes.strip()} now ({reminder.date})!",
+                id=reminder["_id"].binary.hex(),
+                name=f"Reminder: {reminder['notes'].strip()} now ({reminder['date']})!",
                 trigger="date",
-                next_run_time=reminder.date,
+                next_run_time=reminder["date"],
                 coalesce=True,
                 replace_existing=True,
                 kwargs={
-                    "reminder_id": reminder.id,
-                    "notes": f"{reminder.notes.strip()} now ({reminder.date})!",
-                    "message_id": reminder.msg_id,
-                    "channel_id": reminder.channel_id,
+                    "reminder_id": reminder["_id"],
+                    "notes": f"{reminder['notes'].strip()} now ({reminder['date']})!",
+                    "message_id": reminder["msg_id"],
+                    "channel_id": reminder["channel_id"],
                 },
             )
             reminders_processed += 1
@@ -152,37 +152,36 @@ class ReminderManager:
             parsed_date = arrow.get(parsed_date)
             if was_parsed_date_naive:
                 if tlder := await self.timezones.get_tlder(str(requester.id)):
-                    tldr_timezone = await self.timezones.get_timezone(tlder.timezone_id)
                     log.debug(f"Parsed reminder datetime: {parsed_date}")
                     parsed_date = arrow.get(parsed_date).replace(
-                        tzinfo=tldr_timezone.name
+                        tzinfo=tlder["timezone"]
                     )
                     log.debug(f"Timezone-adjusted reminder datetime: {parsed_date}")
                 else:
                     log.warning(f"Found no TLDer: {requester}")
             near_now = arrow.utcnow() + timedelta(minutes=1)
             if parsed_date.to(timezone.utc) < near_now:
-                raise TimeTravelError(parsed_date.datetimed, near_now.datetime)
+                raise TimeTravelError(parsed_date.datetime, near_now.datetime)
             return parsed_date.datetime
         except (TypeError, dateutil.parser.ParserError) as error:
             raise ReminderParsingError() from error
 
-    async def build_reminder_description(self, reminder: Reminder):
+    async def build_reminder_description(self, reminder: MongoReminder):
         channel_text = ""
-        if channel_id := reminder.channel_id:
+        if channel_id := reminder["channel_id"]:
             if channel := await self.get_channel_func(channel_id):
                 channel_text = f" in {channel.mention}"
 
         advance_reminder_string = (
-            " with 15 minute reminder" if reminder.remind_15_minutes_before else ""
+            " with 15 minute reminder" if reminder["remind_15_minutes_before"] else ""
         )
         return (
-            f"'{reminder.notes}' at "
-            f"{reminder.date.strftime('%a %H:%M:%S %Z')}{advance_reminder_string}{channel_text}. "
-            f"Reference `{reminder.id}`."
+            f"'{reminder['notes']}' at "
+            f"<t:{int(reminder['date'].timestamp())}:t>{advance_reminder_string}{channel_text}. "
+            f"Reference `{reminder['_id']}`."
         )
 
-    async def build_reminder_message(self, reminder: Reminder):
+    async def build_reminder_message(self, reminder: MongoReminder):
         return f"Added reminder {await self.build_reminder_description(reminder)}"
 
     async def create_reminder(
@@ -232,6 +231,7 @@ class ReminderManager:
                 text=text,
                 msg_id=reply_to.id,
                 channel_id=reply_to.channel.id,
+                requester_id=str(reply_to.author.id),
             )
             await reply_to.reply(await self.build_reminder_message(created_reminder))
         await asyncio.gather(self.refresh_reminders(), self.cleanup_missed_reminders())
@@ -261,11 +261,11 @@ class ReminderManager:
         self,
         guild: discord.Guild,
         channel: Optional[discord.TextChannel] = None,
-    ) -> list[Reminder]:
-        reminders_for_guild: list[Reminder] = []
+    ) -> list[MongoReminder]:
+        reminders_for_guild: list[MongoReminder] = []
         async for reminder in self.storage.retrieve_reminders():
             reminder_channel: Optional[discord.TextChannel] = (
-                await self.get_channel_func(reminder.channel_id)
+                await self.get_channel_func(reminder["channel_id"])
             )
             if not reminder_channel or reminder_channel.guild.id != guild.id:
                 continue

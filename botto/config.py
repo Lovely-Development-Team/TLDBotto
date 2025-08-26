@@ -60,6 +60,8 @@ def parse(config):
             # Format: {"theKeyId": "iss": "theIssuerId", "kid": "theKeyId", "secret": "theKey"}
             "app_store_connect": {},
             "app_store_server": {},
+            # Format: {"username": "myBot", "password": "strongPassword", "host": "aHostname"}
+            "mongodb": {},
         },
         "channels": {"include": set(), "exclude": set(), "voting": {"voting"}},
         "voting": VotingConfig(
@@ -280,6 +282,15 @@ def parse(config):
 
     if token := os.getenv("SNAILEDIT_AIRTABLE_BASE"):
         defaults["authentication"]["snailed_it"]["airtable_base"] = token
+
+    if token := os.getenv("MONGODB_USERNAME"):
+        defaults["authentication"]["mongodb"]["username"] = token
+
+    if token := os.getenv("MONGODB_PASSWORD"):
+        defaults["authentication"]["mongodb"]["password"] = token
+
+    if token := os.getenv("MONGODB_HOST"):
+        defaults["authentication"]["mongodb"]["host"] = token
 
     if app_store_connect_api_keys := decode_base64_env("APP_STORE_CONNECT_API_KEYS"):
         defaults["authentication"]["app_store_connect"] = app_store_connect_api_keys

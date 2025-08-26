@@ -114,9 +114,11 @@ class TLDer:
             id=data["id"],
             discord_id=fields.get(tlder_to_airtable_field["discord_id"]),
             name=fields.get(tlder_to_airtable_field["name"]),
-            timezone_id=fields[tlder_to_airtable_field["timezone_id"]][0]
-            if fields.get(tlder_to_airtable_field["timezone_id"])
-            else None,
+            timezone_id=(
+                fields[tlder_to_airtable_field["timezone_id"]][0]
+                if fields.get(tlder_to_airtable_field["timezone_id"])
+                else None
+            ),
         )
 
     def to_airtable(self, fields=None) -> dict:
@@ -209,7 +211,7 @@ class AirTableError(Exception):
         url: URL,
         response_dict: Union[dict, str],
         request: Optional[Union[dict, str]] = None,
-        *args: object
+        *args: object,
     ) -> None:
         error_dict: dict = response_dict["error"]
         self.url = url
