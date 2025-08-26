@@ -27,7 +27,7 @@ class TestFlightConfigStorage(ConfigStorage):
         self, guild_id: str | int
     ) -> Optional[str]:
         if result := await self.get_config(guild_id, "default_approvals_channel"):
-            return result.value
+            return result
         return None
 
     @cachedmethod(
@@ -36,7 +36,7 @@ class TestFlightConfigStorage(ConfigStorage):
     )
     async def get_rule_agreement_role_id(self, guild_id: str) -> Optional[str]:
         if result := await self.get_config(guild_id, "rule_agreement_role"):
-            return result.value
+            return result
         return None
 
     @cachedmethod(
@@ -49,5 +49,5 @@ class TestFlightConfigStorage(ConfigStorage):
         if result := await self.get_config(
             guild_id, "tester_exit_notification_channel"
         ):
-            return result.value
+            return result
         return None
