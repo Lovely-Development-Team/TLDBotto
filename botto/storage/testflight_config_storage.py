@@ -6,12 +6,18 @@ from cachetools import TTLCache
 from cachetools.keys import hashkey
 
 from botto.storage.config_storage import ConfigStorage
+from botto.storage.models.testflight_config import TestFlightServerConfig
+from pymongo.asynchronous.collection import AsyncCollection
 
 
 class TestFlightConfigStorage(ConfigStorage):
-    def __init__(self, airtable_base: str, airtable_key: str):
+    def __init__(self, username: str, password: str, host: str):
+        super().__init__(username, password, host)
         self.cache = TTLCache(20, 600)
-        super().__init__(airtable_base, airtable_key)
+        self.database = self.client.get_database("general")
+        self.collection: AsyncCollection[TestFlightServerConfig] = (
+            self.database.get_collection("config")
+        )
 
     @cachedmethod(
         lambda self: self.cache,

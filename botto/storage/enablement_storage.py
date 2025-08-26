@@ -1,27 +1,47 @@
-from datetime import datetime
+from datetime import datetime, UTC
 from decimal import Decimal
-from typing import Optional
+from typing import Optional, TypedDict
 
-from botto.models import Enablement
-from botto.storage.storage import Storage
+from botto.storage.models.user import DiscordUser
+from botto.storage.mongo_storage import MongoStorage
+from pymongo.asynchronous.collection import AsyncCollection
+from bson.decimal128 import Decimal128
+from bson import ObjectId
 
 
-class EnablementStorage(Storage):
-    def __init__(self, airtable_base: str, airtable_key: str):
-        super().__init__(airtable_base, airtable_key)
-        self.enablement_url = "https://api.airtable.com/v0/{base}/Enablement".format(
-            base=airtable_base
+class EnablementStorage(MongoStorage):
+    def __init__(self, username: str, password: str, host: str):
+        super().__init__(username, password, host)
+        self.database = self.client.get_database("general")
+        self.collection: AsyncCollection = self.database.get_collection("enablements")
+
+    async def add(
+        self,
+        name: str,
+        enabled: DiscordUser,
+        enabled_by: DiscordUser,
+        message_link: str,
+        amount: Optional[Decimal],
+    ):
+        Enablement = TypedDict(
+            "Enablement",
+            {
+                "name": str,
+                "enablee": ObjectId,
+                "enabler": ObjectId,
+                "date": datetime,
+                "message_link": str,
+                "amount": Decimal128,
+            },
+            total=False,
         )
-
-    async def add(self, name: str, enabled: str, enabled_by: str, message_link: str, amount: Optional[Decimal]):
-        enablement_data = {
-            "Name": name,
-            "Enabled": [enabled],
-            "Enabled By": [enabled_by],
-            "Date": datetime.utcnow().isoformat(),
-            "Message Link": message_link,
-        }
+        enablement_data = Enablement(
+            name=name,
+            enablee=enabled["_id"],
+            enabler=enabled_by["_id"],
+            date=datetime.now(UTC),
+            message_link=message_link,
+        )
         if amount := amount:
-            enablement_data["Amount"] = float(amount)
-        response = await self._insert(self.enablement_url, enablement_data)
-        return Enablement.from_airtable(response)
+            enablement_data["amount"] = Decimal128(amount)
+        await self.collection.insert_one(enablement_data)

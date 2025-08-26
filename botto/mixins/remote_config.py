@@ -42,7 +42,11 @@ class RemoteConfig:
             disabled_features_for_server = await self.config_storage.get_config(
                 str(server_id), "disabled_features"
             )
-            return feature_name in disabled_features_for_server.parsed_value
+            if disabled_features_for_server is None:
+                return False
+            return feature_name in disabled_features_for_server
+        else:
+            return False
 
     async def should_respond_dms(self, member: discord.User) -> bool:
         config_entries = await asyncio.gather(
@@ -51,6 +55,4 @@ class RemoteConfig:
                 for guild in member.mutual_guilds
             ]
         )
-        return any(
-            guild_config.parsed_value for guild_config in config_entries if guild_config
-        )
+        return any(config_entries)

@@ -241,12 +241,11 @@ def setup_slash(
             f"{timestamp} (parsed as `{parsed_date}`) is <t:{unix_timestamp}> (<t:{unix_timestamp}:R>)"
         )
 
-    async def _get_timezone(discord_id: str) -> Timezone:
+    async def _get_timezone(discord_id: str) -> str:
         tlder = await timezones.get_tlder(discord_id)
         if tlder is None:
             raise TlderNotFoundError(discord_id)
-        timezone = await timezones.get_timezone(tlder.timezone_id)
-        return timezone
+        return tlder["timezone"]
 
     timezone_commands = app_commands.Group(
         name="timezones",
@@ -274,8 +273,8 @@ def setup_slash(
             timezone = await _get_timezone(str(ctx.user.id))
             await ctx.response.send_message(
                 "Your currently configured timezone is: {timezone_name} (UTC{offset})".format(
-                    timezone_name=timezone.name,
-                    offset=arrow.now(timezone.name).format("Z"),
+                    timezone_name=timezone,
+                    offset=arrow.now(timezone).format("Z"),
                 ),
                 ephemeral=True,
             )
@@ -298,8 +297,8 @@ def setup_slash(
             await ctx.followup.send(
                 "{person_name}'s currently configured timezone is: {timezone_name} (UTC{offset})".format(
                     person_name=person.display_name,
-                    timezone_name=timezone.name,
-                    offset=arrow.now(timezone.name).format("Z"),
+                    timezone_name=timezone,
+                    offset=arrow.now(timezone).format("Z"),
                 )
             )
         except TlderNotFoundError:
@@ -327,14 +326,10 @@ def setup_slash(
             )
             return
         get_tlder_request = timezones.get_tlder(str(ctx.user.id))
-        db_timezone = await timezones.find_timezone(tzinfo.zone)
-        if db_timezone is None:
-            log.info(f"{tzinfo.zone} not found, adding new timezone")
-            db_timezone = await timezones.add_timezone(tzinfo.zone)
         if tlder := await get_tlder_request:
             log.info("Updating existing TLDer's timezone")
             try:
-                await timezones.update_tlder(tlder, timezone_id=db_timezone.id)
+                await timezones.update_tlder(tlder, timezone=tzinfo.zone)
             except AirTableError:
                 log.error(f"Failed to update TLDer", exc_info=True)
                 await ctx.response.send_message(
@@ -351,12 +346,12 @@ def setup_slash(
                 else ctx.user
             )
             await timezones.add_tlder(
-                member.display_name, str(ctx.user.id), db_timezone.id
+                member.display_name, str(ctx.user.id), tzinfo.zone
             )
         await ctx.response.send_message(
             "Your timezone has been set to: {timezone_name} (UTC{offset})".format(
-                timezone_name=db_timezone.name,
-                offset=arrow.now(db_timezone.name).format("Z"),
+                timezone_name=tzinfo.zone,
+                offset=arrow.now(tzinfo.zone).format("Z"),
             ),
             ephemeral=True,
         )

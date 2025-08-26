@@ -7,7 +7,7 @@ from . import testflight_config_storage
 from .beta_testers import beta_testers_storage
 
 MealStorage = meal_storage.MealStorage
-AirtableMealStorage = meal_storage.AirtableMealStorage
+MongoMealStorage = meal_storage.MongoMealStorage
 ReminderStorage = reminder_storage.ReminderStorage
 TimezoneStorage = timezone_storage.TimezoneStorage
 EnablementStorage = enablement_storage.EnablementStorage

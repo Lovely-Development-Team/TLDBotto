@@ -5,12 +5,14 @@ from typing import Optional, AsyncGenerator
 from aiohttp import ClientSession
 
 from botto.models import Intro, Meal
-from botto.storage.storage import Storage
+from botto.storage.models.meal import MongoBaseMeal, MongoMeal, MongoInto
+from botto.storage.mongo_storage import MongoStorage
+from pymongo.asynchronous.collection import AsyncCollection
 
 log = logging.getLogger(__name__)
 
 
-class MealStorage(Storage):
+class MealStorage:
     async def get_intros(self) -> Intro:
         raise NotImplementedError
 
@@ -101,3 +103,36 @@ class AirtableMealStorage(MealStorage):
             await asyncio.gather(*fetches)
             total_fetches += len(fetches)
         log.debug(f"Retrieved {total_fetches} texts")
+
+
+class MongoMealStorage(MealStorage, MongoStorage):
+    def __init__(self, username: str, password: str, host: str):
+        super().__init__(username, password, host)
+        self.database = self.client.get_database("general")
+        self.collection: AsyncCollection[MongoBaseMeal] = self.database.get_collection(
+            "config"
+        )
+        self.meals_cache: list[MongoMeal] = []
+
+    async def get_intros(self) -> MongoInto:
+        intro = await self.collection.find_one({"name": "Intro"})
+        return intro
+
+    async def retrieve_meals(self) -> list[MongoMeal]:
+        meals = [
+            MongoMeal.from_mongo(meal)
+            async for meal in self.collection.find({"name": {"$ne": "Intro"}})
+        ]
+        self.meals_cache = meals
+        log.info(f"Retrieved {len(meals)} meals")
+        return meals
+
+    async def get_meals(self) -> list[Meal]:
+        if self.meals_cache is not None and len(self.meals_cache) > 0:
+            return self.meals_cache
+        else:
+            return await self.retrieve_meals()
+
+    async def update_meals_cache(self):
+        retrieved_meals = await self.retrieve_meals()
+        log.debug(f"Ensured {len(retrieved_meals)} meals are cached")

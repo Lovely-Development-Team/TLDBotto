@@ -148,9 +148,8 @@ class ReactionRoles(ExtendedClient):
         if result := await self.reaction_roles_config_storage.get_config(
             guild_id, "rule_agreement_message"
         ):
-            parsed_result = result.parsed_value
-            if (channel_id := parsed_result.get("channel")) and (
-                message_id := parsed_result.get("message")
+            if (channel_id := result.get("channel")) and (
+                message_id := result.get("message")
             ):
                 return AgreementMessage(channel_id, message_id)
         return None
@@ -159,21 +158,21 @@ class ReactionRoles(ExtendedClient):
         if result := await self.reaction_roles_config_storage.get_config(
             guild_id, "approval_emojis"
         ):
-            return set(result.parsed_value)
+            return set(result)
         return set()
 
     async def get_rejection_emojis(self, guild_id: str) -> set[str]:
         if result := await self.reaction_roles_config_storage.get_config(
             guild_id, "rejection_emojis"
         ):
-            return set(result.parsed_value)
+            return set(result)
         return set()
 
     async def get_removal_emojis(self, guild_id: str | int) -> set[str]:
         if result := await self.reaction_roles_config_storage.get_config(
             str(guild_id), "removal_emojis"
         ):
-            return set(result.parsed_value)
+            return set(result)
         return set()
 
     async def handle_role_reaction(self, payload: discord.RawReactionActionEvent):

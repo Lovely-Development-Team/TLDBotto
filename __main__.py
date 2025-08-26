@@ -10,7 +10,7 @@ from botto.clients import ClickUpClient, AppStoreConnectClient, AppStoreServerCl
 from botto.reactions import Reactions
 from botto.reminder_manager import ReminderManager
 from botto.storage import (
-    AirtableMealStorage,
+    MongoMealStorage,
     ReminderStorage,
     TimezoneStorage,
     ConfigStorage,
@@ -39,24 +39,34 @@ log.info(f"Triggers: {config['triggers']}")
 
 scheduler = AsyncIOScheduler(timezone=pytz.UTC)
 
-storage = AirtableMealStorage(
-    config["authentication"]["airtable_base"], config["authentication"]["airtable_key"]
+storage = MongoMealStorage(
+    config["authentication"]["mongodb"]["username"],
+    config["authentication"]["mongodb"]["password"],
+    config["authentication"]["mongodb"]["host"],
 )
 
 reminder_storage = ReminderStorage(
-    config["authentication"]["airtable_base"], config["authentication"]["airtable_key"]
+    config["authentication"]["mongodb"]["username"],
+    config["authentication"]["mongodb"]["password"],
+    config["authentication"]["mongodb"]["host"],
 )
 
 timezone_storage = TimezoneStorage(
-    config["authentication"]["airtable_base"], config["authentication"]["airtable_key"]
+    config["authentication"]["mongodb"]["username"],
+    config["authentication"]["mongodb"]["password"],
+    config["authentication"]["mongodb"]["host"],
 )
 
 enablement_storage = EnablementStorage(
-    config["authentication"]["airtable_base"], config["authentication"]["airtable_key"]
+    config["authentication"]["mongodb"]["username"],
+    config["authentication"]["mongodb"]["password"],
+    config["authentication"]["mongodb"]["host"],
 )
 
 config_storage = ConfigStorage(
-    config["authentication"]["airtable_base"], config["authentication"]["airtable_key"]
+    config["authentication"]["mongodb"]["username"],
+    config["authentication"]["mongodb"]["password"],
+    config["authentication"]["mongodb"]["host"],
 )
 
 testflight_storage = BetaTestersStorage(
@@ -65,8 +75,9 @@ testflight_storage = BetaTestersStorage(
 )
 
 testflight_config_storage = TestFlightConfigStorage(
-    config["authentication"]["snailed_it"]["airtable_base"],
-    config["authentication"]["snailed_it"]["airtable_key"],
+    config["authentication"]["mongodb"]["username"],
+    config["authentication"]["mongodb"]["password"],
+    config["authentication"]["mongodb"]["host"],
 )
 
 reactions = Reactions(config)

@@ -22,6 +22,7 @@ import arrow
 from .clients import ClickUpClient, AppStoreConnectClient
 from .errors import TlderNotFoundError
 from .mixins import ClickupMixin, RemoteConfig, ReactionRoles
+from .storage.models.user import DiscordUser
 from .storage.testflight_config_storage import TestFlightConfigStorage
 from .views.testflight_form import TestFlightForm
 
@@ -152,21 +153,6 @@ class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
             coalesce=True,
             next_run_time=initial_refresh_run,
         )
-        scheduler.add_job(
-            self.storage.update_text_cache,
-            name="Refresh text cache",
-            trigger="cron",
-            hour="*/3",
-            coalesce=True,
-        )
-
-        scheduler.add_job(
-            self.timezones.update_tlder_timezone_cache,
-            name="Refresh TLDer timezone cache",
-            trigger="cron",
-            hour="*/6",
-            coalesce=True,
-        )
 
         self.regexes: Optional[SuggestionRegexes] = None
 
@@ -216,6 +202,8 @@ class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
             try:
                 return self.get_guild(guild.id).name, await self.tree.sync(guild=guild)
             except discord.app_commands.CommandSyncFailure as e:
+                return guild.id, e
+            except AttributeError as e:
                 return guild.id, e
 
         sync_tasks = [
@@ -286,6 +274,13 @@ class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
             except discord.NotFound:
                 log.error(
                     "Meal channel {channel_id} not found".format(
+                        channel_id=guild["channel"]
+                    ),
+                    exc_info=True,
+                )
+            except discord.Forbidden:
+                log.error(
+                    "No permission for meal channel {channel_id}".format(
                         channel_id=guild["channel"]
                     ),
                     exc_info=True,
@@ -671,11 +666,7 @@ class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
         self, message: Message, matches: list[re.Match]
     ) -> list[str]:
         author = message.author
-        tlder = await self.timezones.get_tlder(str(author.id))
-        try:
-            timezone = await self.timezones.get_timezone(tlder.timezone_id)
-        except AttributeError:
-            raise TlderNotFoundError(str(author.id))
+        tlder: DiscordUser | None = await self.timezones.get_tlder(str(author.id))
 
         parsed_local_times = []
         for match in matches:
@@ -688,7 +679,7 @@ class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
             now = arrow.now()
             try:
                 parsed_time = now.replace(
-                    hour=hours, minute=minutes, second=0, tzinfo=timezone.name
+                    hour=hours, minute=minutes, second=0, tzinfo=tlder["timezone"]
                 )
             except ValueError:
                 log.error(
@@ -704,10 +695,10 @@ class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
 
             parsed_local_times.append((match.group(0), parsed_time))
 
-        tlder_name = tlder.name
+        tlder_name = tlder["name"]
         if message.guild:
             fetched_member = await get_or_fetch_member(
-                message.guild, int(tlder.discord_id)
+                message.guild, int(tlder["discord_id"])
             )
             fetched_member_name = fetched_member.display_name
             # Strip pronouns, as we're addressing them by name
@@ -792,7 +783,6 @@ class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
 
     async def log_dm(self, message: Message):
         support_config = self.config["support"]
-        message.embeds
         dm_log_channel_id = support_config.get("dm_log_channel")
         if not dm_log_channel_id:
             log.warning("No DM log channel configured")
@@ -879,14 +869,12 @@ I am a multi-function bot providing assistance and jokes.
                             end=end_time,
                         )
                     )
-                    meal_text_ref = random.choice(meal.texts)
-                    meal_text = await self.storage.get_text(meal_text_ref)
+                    meal_text = random.choice(meal.texts)
                     zones_for_meal = meals.get(meal.name, ([], meal.emoji, meal_text))
                     zones_for_meal[0].append(local_timezone.tzname())
                     meals.update({meal.name: zones_for_meal})
 
-        intro_ref = random.choice((await intro_fetch).texts)
-        intro_text = await self.storage.get_text(intro_ref)
+        intro_text = random.choice((await intro_fetch).texts)
         reminder_list = [
             " & ".join(meal_details[0])
             + f" ({meal_details[1]})"
@@ -1126,12 +1114,12 @@ I am a multi-function bot providing assistance and jokes.
                 error_reaction_func = self.reactions.unknown_amount
 
         log.info(
-            f"Recording enablement of {enabled.name} by {enabler.name} for {name} (message {referenced_message.id})"
+            f"Recording enablement of {enabled['name']} by {enabler['name']} for {name} (message {referenced_message.id})"
         )
         await self.enablement.add(
             name=name,
-            enabled=enabled.id,
-            enabled_by=enabler.id,
+            enabled=enabled,
+            enabled_by=enabler,
             message_link=referenced_message.jump_url,
             amount=amount,
         )

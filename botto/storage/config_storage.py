@@ -1,42 +1,46 @@
 import asyncio
 import logging
-from typing import Optional, Union
+from typing import Optional, Union, Any
 
 from botto.models import ConfigEntry
-from botto.storage.storage import Storage
+from botto.storage.models.server_config import (
+    ServerConfig,
+    ConfigValues,
+    GeneralServerConfig,
+)
+from botto.storage.mongo_storage import MongoStorage
+from pymongo.asynchronous.collection import AsyncCollection
 
 log = logging.getLogger(__name__)
 
-ConfigCache = dict[str, dict[str, ConfigEntry]]
+ConfigCache = dict[str, ServerConfig]
 NegativeConfigKeyCache = dict[str, set[str]]
 
 
-class ConfigStorage(Storage):
-    def __init__(self, airtable_base: str, airtable_key: str):
-        super().__init__(airtable_base, airtable_key)
-        self.airtable_key = airtable_key
-        self.config_url = "https://api.airtable.com/v0/{base}/Config".format(
-            base=airtable_base
+class ConfigStorage(MongoStorage):
+    def __init__(self, username: str, password: str, host: str):
+        super().__init__(username, password, host)
+        self.database = self.client.get_database("general")
+        self.collection: AsyncCollection[GeneralServerConfig] = (
+            self.database.get_collection("config")
         )
         self.config_lock = asyncio.Lock()
         self.config_cache: ConfigCache = {}
         self.config_key_negative_cache_lock = asyncio.Lock()
         self.config_key_negative_cache: NegativeConfigKeyCache = {}
-        self.auth_header = {"Authorization": f"Bearer {self.airtable_key}"}
 
     async def clear_server_cache(self, server_id: str):
         log.debug(f"Clearing cache for server {server_id}")
         async with self.config_lock:
             self.config_cache.pop(server_id, None)
 
-    async def list_config(self) -> list[ConfigEntry]:
-        config_iterator = self._iterate(self.config_url, filter_by_formula=None)
-        config_entries = [ConfigEntry.from_airtable(x) async for x in config_iterator]
+    async def list_config(self) -> list[ServerConfig]:
+        config_iterator = self.collection.find({})
+        config_entries: list[ServerConfig] = []
         async with self.config_lock:
-            for config in config_entries:
-                server_config = self.config_cache.get(config.server_id, {})
-                server_config[config.config_key] = config
-                self.config_cache[config.server_id] = server_config
+            async for config in config_iterator:
+                self.config_cache[config["server_id"]] = config
+                config_entries.append(config)
         return config_entries
 
     async def list_config_by_server(self) -> ConfigCache:
@@ -46,25 +50,18 @@ class ConfigStorage(Storage):
 
     async def retrieve_config(
         self, server_id: str | int, key: Optional[Union[str, int]]
-    ) -> Optional[ConfigEntry | dict[str, ConfigEntry]]:
-        log.debug(f"Fetching {key or 'config'} for {server_id}")
-        filter_by_formula = f"AND({{Server ID}}='{server_id}'"
-        if key := key:
-            filter_by_formula += f",{{Key}}='{key}')"
-        else:
-            filter_by_formula += ")"
-        result_iterator = self._iterate(
-            self.config_url,
-            filter_by_formula=filter_by_formula,
-        )
-        config_iterator = (ConfigEntry.from_airtable(x) async for x in result_iterator)
+    ) -> Optional[ServerConfig | ConfigValues]:
+        server_config = await self.collection.find_one({"server_id": str(server_id)})
+        if not server_config:
+            async with self.config_key_negative_cache_lock:
+                self.config_key_negative_cache.setdefault(str(server_id), set()).add(
+                    key
+                )
+            return None
         try:
             async with self.config_lock:
-                server_config = self.config_cache.get(str(server_id), {})
-                async for config in config_iterator:
-                    server_config[config.config_key] = config
                 self.config_cache[str(server_id)] = server_config
-                return server_config if not key else server_config[key]
+                return server_config if not key else server_config["config"][key]
         except (StopIteration, StopAsyncIteration, KeyError):
             log.info(f"No config found for Key {key} with Server ID {server_id}")
             async with self.config_key_negative_cache_lock:
@@ -73,7 +70,7 @@ class ConfigStorage(Storage):
                 )
             return None
 
-    async def get_config(self, server_id: str | int, key: str) -> Optional[ConfigEntry]:
+    async def get_config(self, server_id: str | int, key: str) -> Optional[Any]:
         if (
             not self.config_key_negative_cache_lock.locked()
             and key in self.config_key_negative_cache.get(str(server_id), {})
