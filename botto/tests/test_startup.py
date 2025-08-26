@@ -27,7 +27,7 @@ def test_startup():
 
     timezone_storage = TimezoneStorage("fake_user", "fake_pass", "fake_host")
 
-    enablement_storage = EnablementStorage("fake_base", "fake_key")
+    enablement_storage = EnablementStorage("fake_user", "fake_pass", "fake_host")
 
     config_storage = ConfigStorage("fake_user", "fake_pass", "fake_host")
 
