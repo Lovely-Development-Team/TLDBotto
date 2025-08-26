@@ -14,7 +14,7 @@ class TestFlightConfigStorage(ConfigStorage):
     def __init__(self, username: str, password: str, host: str):
         super().__init__(username, password, host)
         self.cache = TTLCache(20, 600)
-        self.database = self.client.get_database("general")
+        self.database = self.client.get_database("testflight")
         self.collection: AsyncCollection[TestFlightServerConfig] = (
             self.database.get_collection("config")
         )
