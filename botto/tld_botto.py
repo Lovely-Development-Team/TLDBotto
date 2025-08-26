@@ -24,6 +24,7 @@ from .errors import TlderNotFoundError
 from .mixins import ClickupMixin, RemoteConfig, ReactionRoles
 from .storage.models.user import DiscordUser
 from .storage.testflight_config_storage import TestFlightConfigStorage
+from .views.dm_reply_button import DMReplyButton
 from .views.testflight_form import TestFlightForm
 
 if TYPE_CHECKING:
@@ -190,6 +191,7 @@ class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
         )
 
     async def setup_hook(self) -> None:
+        self.add_dynamic_items(DMReplyButton)
         if not self.regexes:
             self.regexes = SuggestionRegexes(str(self.user.id), self.config)
 
@@ -787,7 +789,7 @@ class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
         if not dm_log_channel_id:
             log.warning("No DM log channel configured")
             return
-        dm_log_channel = self.get_channel(int(dm_log_channel_id))
+        dm_log_channel = self.get_channel(int(923385114547879987))
         embed = discord.Embed(
             title=truncate_string(f"New DM", 256),
             description=(
@@ -795,7 +797,9 @@ class TLDBotto(ClickupMixin, RemoteConfig, ReactionRoles, ExtendedClient):
             ),
             timestamp=message.created_at,
         ).set_author(name=f"{message.author.name} ({message.author.mention})")
-        await dm_log_channel.send(embed=embed)
+        view = discord.ui.View(timeout=None)
+        view.add_item(DMReplyButton(message.author.id, message.id))
+        await dm_log_channel.send(embed=embed, view=view)
 
     async def make_help_message(self, responding_to: Message):
         help_message = f"""
