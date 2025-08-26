@@ -841,7 +841,7 @@ I am a multi-function bot providing assistance and jokes.
     async def calculate_meal_reminders(
         self, timezones: list[datetime], configured_meals: list[Meal]
     ):
-        intro_fetch = self.storage.get_intros()
+        intro_fetch = asyncio.create_task(self.storage.get_intros())
         meals = {}
         for local_timezone in timezones:
             for meal in configured_meals:

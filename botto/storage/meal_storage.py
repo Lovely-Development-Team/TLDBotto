@@ -5,7 +5,7 @@ from typing import Optional, AsyncGenerator
 from aiohttp import ClientSession
 
 from botto.models import Intro, Meal
-from botto.storage.models.meal import MongoBaseMeal, MongoMeal, MongoInto
+from botto.storage.models.meal import MongoBaseMeal, MongoMeal, MongoIntro
 from botto.storage.mongo_storage import MongoStorage
 from pymongo.asynchronous.collection import AsyncCollection
 
@@ -110,13 +110,13 @@ class MongoMealStorage(MealStorage, MongoStorage):
         super().__init__(username, password, host)
         self.database = self.client.get_database("general")
         self.collection: AsyncCollection[MongoBaseMeal] = self.database.get_collection(
-            "config"
+            "meals"
         )
         self.meals_cache: list[MongoMeal] = []
 
-    async def get_intros(self) -> MongoInto:
+    async def get_intros(self) -> MongoIntro:
         intro = await self.collection.find_one({"name": "Intro"})
-        return intro
+        return MongoIntro.from_mongo(intro)
 
     async def retrieve_meals(self) -> list[MongoMeal]:
         meals = [
@@ -127,7 +127,7 @@ class MongoMealStorage(MealStorage, MongoStorage):
         log.info(f"Retrieved {len(meals)} meals")
         return meals
 
-    async def get_meals(self) -> list[Meal]:
+    async def get_meals(self) -> list[MongoMeal]:
         if self.meals_cache is not None and len(self.meals_cache) > 0:
             return self.meals_cache
         else:

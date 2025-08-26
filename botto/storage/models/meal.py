@@ -13,14 +13,14 @@ class MongoBaseMeal:
     texts: list[str]
 
 
-class MongoInto(MongoBaseMeal, Intro):
+class MongoIntro(MongoBaseMeal, Intro):
 
     @property
     def messages(self):
         return self.texts
 
     @classmethod
-    def from_mongo(cls, data: dict) -> "MongoInto":
+    def from_mongo(cls, data: dict) -> "MongoIntro":
         return cls(
             _id=data.get("_id"),
             name=data.get("name"),
@@ -28,6 +28,7 @@ class MongoInto(MongoBaseMeal, Intro):
         )
 
 
+@dataclass
 class MongoMeal(MongoBaseMeal, Meal):
 
     @property
