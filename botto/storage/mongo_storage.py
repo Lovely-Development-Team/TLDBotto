@@ -6,6 +6,7 @@ from pymongo import AsyncMongoClient
 logging.getLogger("pymongo.command").setLevel(logging.DEBUG)
 logging.getLogger("pymongo.topology").setLevel(logging.INFO)
 logging.getLogger("pymongo.connection").setLevel(logging.INFO)
+logging.getLogger("pymongo.serverSelection").setLevel(logging.INFO)
 
 
 class MongoStorage:
