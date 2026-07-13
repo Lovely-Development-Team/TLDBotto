@@ -76,7 +76,7 @@ wheels = [
 
 [[package]]
 name = "app-store-server-library"
-version = "1.9.0"
+version = "3.1.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "asn1" },
@@ -87,9 +87,9 @@ dependencies = [
     { name = "pyopenssl" },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/20/7a/6038e6f9e6fa4a219c61e77adad96fb1affcf48e0ece54087a70801ba32f/app_store_server_library-1.9.0.tar.gz", hash = "sha256:55b68f6ae5349ccb6fbdceaa09409d77b865f5e9081a8b97b48bcdde4acc9a90", size = 58042, upload-time = "2025-06-12T23:37:58.476Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/8c/c2/1b2b39f910b6359dd1954dd6e6ae050b1e9e8e57d17f57efb32afdd713eb/app_store_server_library-3.1.2.tar.gz", hash = "sha256:0b9005c93298674c934dfa9bc164cd44bfc3f43a8d0dc3834eaf6f66c3572d45", size = 90451, upload-time = "2026-06-01T18:36:37.376Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6a/92/ce10d25598313087e6b81b1ad4d18cdba79cd2635b65cee3b349047e5d55/app_store_server_library-1.9.0-py3-none-any.whl", hash = "sha256:69710a805a8b2f66d9ab23bd4cd406e9dd27364032077caeb314d2fa7e0c61be", size = 68955, upload-time = "2025-06-12T23:37:57.388Z" },
+    { url = "https://files.pythonhosted.org/packages/62/f9/1908c439040359869a42ba2f4aa3bb80134cc929e03de1b4d33a6c2d4194/app_store_server_library-3.1.2-py3-none-any.whl", hash = "sha256:8007b3dca89fd08a1123fae2ffdbe7bc72b99a7eabfb0a32e21b45a344159e62", size = 131461, upload-time = "2026-06-01T18:36:35.946Z" },
 ]
 
 [[package]]
@@ -122,14 +122,14 @@ wheels = [
 
 [[package]]
 name = "asn1"
-version = "2.8.0"
+version = "3.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "enum-compat" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/00/35/9d0709bf09340ddb1796dfc52d1b1ef2f18e690b5cbf32b7be02c702532c/asn1-2.8.0.tar.gz", hash = "sha256:adf77ddc2707cf420c0eae3b99ee30e913afcf0936467d42669820ce6b7d150a", size = 29584, upload-time = "2025-02-20T14:53:44.268Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/cc/9b/17b20f2ccdeca7f6e61d201a5bc3bd7cafc3d97889e7b3dd0ef673177cf1/asn1-3.2.0.tar.gz", hash = "sha256:0860ad40bbffd6475d2d54b82f50d9196e31b7cee985812ed9559b40e7d809c7", size = 51343, upload-time = "2026-02-07T16:34:18.223Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/20/44/a156ba1d955c2251b14998a356043247f9e01b5f63c133987d27634ba613/asn1-2.8.0-py2.py3-none-any.whl", hash = "sha256:1438ac9a53cbc4064330af43b054ae042374f7c8ab46c55358241c15e29f1461", size = 10304, upload-time = "2025-02-20T14:53:38.849Z" },
+    { url = "https://files.pythonhosted.org/packages/26/50/fed4dc9ac21c77ddbb7893093d4208c7da8a35b83b13ebb880b1633c3349/asn1-3.2.0-py2.py3-none-any.whl", hash = "sha256:3c1788508d49f4f101c3c6b842b5a6d0fc9f68e2782e891d41af19bf321fedbb", size = 17781, upload-time = "2026-02-07T16:34:16.875Z" },
 ]
 
 [[package]]
@@ -782,7 +782,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "aiohttp", specifier = "~=3.10.11" },
-    { name = "app-store-server-library", specifier = ">=1.9.0" },
+    { name = "app-store-server-library", specifier = ">=3.1.2" },
     { name = "apscheduler", specifier = "~=3.7.0" },
     { name = "arrow", specifier = "~=1.3.0" },
     { name = "asyncache", specifier = ">=0.3.1" },
